@@ -75,7 +75,8 @@ export async function classifyLatestMessage(env, latestText) {
   const positiveOnly = normalizedText.length > 0 &&
     normalizedText.length <= 400 &&
     /^(?:(?:you(?:'re| are)|ur)\s+(?:a\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\s+(?:(?:so|really)\s+)?proud\s+of\s+you[.!? ]*|(?:so\s+|really\s+)?proud\s+of\s+you[.!? ]*|you\s+did\s+(?:a\s+)?(?:great|good|amazing|awesome|wonderful)\s+job[.!? ]*)+$/i.test(normalizedText);
-  if (positiveOnly) return false;
+  const harmlessAffirmation = /^(?:ye+s+\\s+you\\s+know|yes+\\s+you\\s+know)[.!?]*$/i.test(normalizedText);
+  if (positiveOnly || harmlessAffirmation) return false;
   // Llama Guard expects alternating user/assistant turns. It also emits
   // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
   // JSON mode is not listed as supported for this model by Cloudflare.
