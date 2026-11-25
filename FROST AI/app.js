@@ -1073,7 +1073,7 @@ import {
 
   const MAX_IMAGES = 4;
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
-  const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+  const MAX_VIDEO_SIZE = 250 * 1024 * 1024;
   const MAX_VIDEO_DURATION = 180;
   const MAX_FILES = 3;
   const MAX_FILE_SIZE = 100 * 1024;
@@ -3490,7 +3490,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           continue;
         }
         if (file.size > MAX_VIDEO_SIZE) {
-          addMessage("assistant", "This video is too large. The video upload limit is 50 MB.");
+          addMessage("assistant", "This video is too large. The video upload limit is 250 MB.");
           continue;
         }
         const usedVisionSlots = attachments.filter(item => item.kind !== "file")
