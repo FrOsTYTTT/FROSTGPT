@@ -63,7 +63,7 @@ export async function verifyFirebaseIdentity(request) {
   if (!match) return null;
 
   try {
-    const response = await fetch(\`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=\${FIREBASE_API_KEY}\`, {
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken: match[1] })
@@ -94,12 +94,12 @@ export async function verifyFirebaseUser(request) {
 }
 
 export async function recordSafetyViolation(db, userId) {
-  const row = await db.prepare(\`INSERT INTO safety_accounts (user_id, violation_count, updated_at)
+  const row = await db.prepare(`INSERT INTO safety_accounts (user_id, violation_count, updated_at)
     VALUES (?, 1, CURRENT_TIMESTAMP)
     ON CONFLICT(user_id) DO UPDATE SET
       violation_count = safety_accounts.violation_count + 1,
       updated_at = CURRENT_TIMESTAMP
-    RETURNING violation_count\`).bind(userId).first();
+    RETURNING violation_count`).bind(userId).first();
 
   if (!row || !Number.isInteger(row.violation_count)) {
     throw new Error("Safety counter update failed.");
