@@ -20,7 +20,8 @@ import {
   query,
   setDoc,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 (() => {
@@ -58,6 +59,7 @@ import {
   const githubSignInButton = $("githubSignInButton");
   const appElement = $("app");
   const signOutButton = $("signOutButton");
+  const refreshChatsButton = $("refreshChats");
   const accountName = $("accountName");
   const accountPhoto = $("accountPhoto");
 
@@ -344,6 +346,9 @@ import {
   let requestId = 0;
 
   const deletingChats = new Set();
+  const pendingLocalChatIds = new Set();
+  let chatsUnsubscribe = null;
+  let messagesUnsubscribe = null;
 
   function updateSetting(key, value) {
     const previous = settings[key];
@@ -357,6 +362,7 @@ import {
       if (value) {
         loadUserConversations(currentUserId);
       } else {
+        stopLiveChatSync();
         if (isThinking) stopGenerating();
 
         const active = getConversation();
@@ -1836,6 +1842,7 @@ import {
     try {
       const now = Date.now();
       conversation.updatedAt = now;
+      pendingLocalChatIds.add(conversation.id);
 
       await setDoc(
         chatDocument(conversation.id),
@@ -1849,6 +1856,8 @@ import {
     } catch (error) {
       console.error("FROSTGPT: Metadata save failed.", error);
       setStatus("Chat saving failed");
+    } finally {
+      pendingLocalChatIds.delete(conversation.id);
     }
   }
 
@@ -1878,6 +1887,131 @@ import {
     } catch (error) {
       console.error("FROSTGPT: Message save failed.", error);
       setStatus("Message saving failed");
+    }
+  }
+
+  // ==========================================
+  // LIVE CHAT SYNC (ALL TABS + DEVICES)
+  // ==========================================
+
+  function stopLiveChatSync() {
+    if (chatsUnsubscribe) chatsUnsubscribe();
+    if (messagesUnsubscribe) messagesUnsubscribe();
+    chatsUnsubscribe = null;
+    messagesUnsubscribe = null;
+  }
+
+  function watchActiveConversationMessages() {
+    if (messagesUnsubscribe) messagesUnsubscribe();
+    messagesUnsubscribe = null;
+    if (!currentUserId || !firebaseReady || !settings.chatHistory || !activeConversationId) return;
+
+    const userId = currentUserId;
+    const conversationId = activeConversationId;
+    const messagesQuery = query(chatMessagesCollection(conversationId), orderBy("createdAt", "asc"));
+
+    messagesUnsubscribe = onSnapshot(messagesQuery, snapshot => {
+      if (currentUserId !== userId || activeConversationId !== conversationId) return;
+      const conversation = conversations.find(item => item.id === conversationId);
+      if (!conversation) return;
+
+      const previousMessages = conversation.display.filter(message => !message.typing);
+      const previousById = new Map(previousMessages.filter(message => message.id).map(message => [message.id, message]));
+      const remoteMessages = snapshot.docs.map(messageSnapshot => {
+        const data = messageSnapshot.data();
+        const previous = previousById.get(messageSnapshot.id);
+        return {
+          id: messageSnapshot.id,
+          role: data.role || "assistant",
+          text: data.text || "",
+          images: previous?.images || [],
+          generatedImage: previous?.generatedImage || null,
+          mode: data.mode || "flash",
+          contextContent: data.contextContent ?? null,
+          createdAt: data.createdAt || Date.now()
+        };
+      });
+      const remoteIds = new Set(remoteMessages.map(message => message.id));
+      const pending = previousMessages.filter(message => message.id && !remoteIds.has(message.id));
+      const merged = [...remoteMessages, ...pending].sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+      const changed = merged.length !== previousMessages.length || merged.some((message, index) =>
+        !previousMessages[index] || previousMessages[index].id !== message.id || previousMessages[index].text !== message.text
+      );
+      if (!changed) return;
+
+      conversation.display = merged;
+      conversation.flash = [];
+      conversation.classic = [];
+      merged.forEach(message => {
+        if (message.contextContent === null || message.contextContent === undefined) return;
+        const contextMessage = { role: message.role, content: message.contextContent };
+        if (message.mode === "classic") conversation.classic.push(contextMessage);
+        else conversation.flash.push(contextMessage);
+      });
+      renderConversation();
+      renderHistory();
+    }, error => {
+      console.error("FROSTGPT: Live message sync failed.", error);
+      if (currentUserId === userId && activeConversationId === conversationId) setStatus("Live sync paused — try refresh");
+    });
+  }
+
+  function startLiveChatSync(userId) {
+    stopLiveChatSync();
+    if (!userId || !firebaseReady || !settings.chatHistory) return;
+
+    chatsUnsubscribe = onSnapshot(userChatsCollection(), snapshot => {
+      if (currentUserId !== userId) return;
+      const remoteIds = new Set();
+      snapshot.docs.forEach(chatSnapshot => {
+        remoteIds.add(chatSnapshot.id);
+        const data = chatSnapshot.data();
+        const existing = conversations.find(item => item.id === chatSnapshot.id);
+        if (existing) {
+          existing.title = data.title || existing.title || "New chat";
+          existing.createdAt = data.createdAt || existing.createdAt || Date.now();
+          existing.updatedAt = data.updatedAt || existing.updatedAt || existing.createdAt;
+        } else {
+          conversations.push({
+            id: chatSnapshot.id,
+            title: data.title || "New chat",
+            createdAt: data.createdAt || Date.now(),
+            updatedAt: data.updatedAt || data.createdAt || Date.now(),
+            display: [], flash: [], classic: []
+          });
+        }
+      });
+      const previousActiveId = activeConversationId;
+      conversations = conversations.filter(item => remoteIds.has(item.id) || pendingLocalChatIds.has(item.id));
+      conversations.sort((x, y) => (y.updatedAt || y.createdAt) - (x.updatedAt || x.createdAt));
+      if (activeConversationId && !conversations.some(item => item.id === activeConversationId)) {
+        activeConversationId = conversations[0]?.id || null;
+        watchActiveConversationMessages();
+        attachments = [];
+        updateAttachmentPreview();
+      }
+      renderHistory();
+      if (previousActiveId !== activeConversationId) {
+        renderConversation();
+        watchActiveConversationMessages();
+      }
+      if (refreshChatsButton) refreshChatsButton.title = "Live sync is active across your devices";
+    }, error => {
+      console.error("FROSTGPT: Live chat list sync failed.", error);
+      if (currentUserId === userId) setStatus("Live sync unavailable — use refresh");
+    });
+    watchActiveConversationMessages();
+  }
+
+  async function refreshChatsNow() {
+    if (!currentUserId || !firebaseReady) return setStatus("Sign in to refresh chats");
+    if (refreshChatsButton) { refreshChatsButton.disabled = true; refreshChatsButton.textContent = "…"; }
+    try {
+      await loadUserConversations(currentUserId);
+      startLiveChatSync(currentUserId);
+      setStatus("Chats refreshed · live sync on");
+    } finally {
+      if (refreshChatsButton) { refreshChatsButton.disabled = false; refreshChatsButton.textContent = "↻ Refresh chats"; }
     }
   }
 
@@ -2360,6 +2494,7 @@ import {
           if (isThinking) stopGenerating();
 
           activeConversationId = item.id;
+          watchActiveConversationMessages();
           attachments = [];
 
           updateAttachmentPreview();
@@ -2409,6 +2544,7 @@ import {
 
     conversations.unshift(conversation);
     activeConversationId = conversation.id;
+    watchActiveConversationMessages();
 
     attachments = [];
     updateAttachmentPreview();
@@ -2492,6 +2628,7 @@ import {
     if (!userId || !firebaseReady) return;
 
     currentUserId = userId;
+    stopLiveChatSync();
     conversations = [];
     activeConversationId = null;
 
@@ -2584,6 +2721,7 @@ import {
         newConversation();
       }
 
+      startLiveChatSync(userId);
       setStatus(modeName());
     } catch (error) {
       console.error("FROSTGPT: History loading failed.", error);
@@ -2702,6 +2840,7 @@ import {
     stopVoiceInput();
     stopSpeaking();
 
+    stopLiveChatSync();
     currentUser = null;
     currentUserId = null;
 
@@ -3497,6 +3636,8 @@ import {
       if (!isThinking) sendMessage();
     }
   });
+
+  refreshChatsButton?.addEventListener("click", refreshChatsNow);
 
   newChat?.addEventListener("click", () => {
     if (isThinking) stopGenerating();
