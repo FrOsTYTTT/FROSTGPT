@@ -214,6 +214,18 @@
         <input class="setting-toggle" id="settingAnimations" type="checkbox">
       </div>
 
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>AI Model</strong>
+          <small>Choose automatic switching or manually prioritize a backup model. Image and GIF requests keep using the vision model.</small>
+        </div>
+        <select class="setting-control" id="settingBackupModel" aria-label="AI model preference">
+          <option value="auto">Automatic (recommended)</option>
+          <option value="@cf/zai-org/glm-4.7-flash">GLM 4.7 Flash (Backup)</option>
+          <option value="@cf/google/gemma-7b-it-lora">Gemma 7B (Backup)</option>
+        </select>
+      </div>
+
       <div class="settings-footer">
         <button id="resetSettings" type="button">Reset to defaults</button>
         <span id="settingsSaved" role="status">Settings ready</span>
@@ -329,6 +341,6 @@
   </script>
 
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261125-5"></script>
+  <script type="module" src="/app.js?v=20261125-6"></script>
 </body>
 </html>
