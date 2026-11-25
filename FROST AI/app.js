@@ -3196,7 +3196,12 @@ import {
 
       items.forEach(item => {
         const previewURL = item.images?.fixed_width?.url || item.images?.downsized?.url;
-        const originalURL = item.images?.original?.url || item.images?.downsized_large?.url;
+        // Prefer GIPHY's smaller animated rendition to avoid rejecting
+        // otherwise valid GIFs just because the original file exceeds 4 MB.
+        const originalURL =
+          item.images?.downsized?.url ||
+          item.images?.downsized_large?.url ||
+          item.images?.original?.url;
         if (!previewURL || !originalURL) return;
 
         const button = document.createElement("button");
