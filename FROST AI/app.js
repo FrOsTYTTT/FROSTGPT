@@ -730,19 +730,9 @@ import {
   }
 
   function getAssetVersionFromHTML(html, assetName) {
-    const escapedName = assetName.replace(/[.*+?^${}()|[\]\\]/g, "\\  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", async () => {
-      try {
-        const registration =
-          await navigator.serviceWorker.register("/sw.js");
-
-        console.log("FROSTGPT: Service worker registered.", registration.scope);
-      } catch (error) {
-        console.error("FROSTGPT: Service worker registration failed.", error);
-      }
-    });
-  }");
-    const match = html.match(new RegExp(`(?:src|href)=["']([^"']*\\/${escapedName}\\?[^"']*)["']`));
+    const match = assetName === "app.js"
+      ? html.match(/<script[^>]+src=["']([^"']*\/app\.js\?[^"']*)["']/i)
+      : html.match(/<link[^>]+href=["']([^"']*\/styles\.css\?[^"']*)["']/i);
     return match ? match[1] : null;
   }
 
@@ -2684,7 +2674,7 @@ import {
     conversation.title = String(message || "New chat").slice(0, 35);
 
     renderHistory();
-    saveConversationMetadata(conversation);
+    trackChatWrite(saveConversationMetadata(conversation));
   }
 
   // ==========================================
