@@ -2572,7 +2572,12 @@ import {
         emailVerified: auth.currentUser.emailVerified
       });
 
-      if (authStatus) authStatus.textContent = "Sign-in successful. Loading your account...";
+      // Do not rely solely on the auth-state listener to switch the UI.
+      // Handle the returned user immediately, then let the listener safely
+      // ignore the duplicate event for this same session.
+      await handleSignedInUser(signInResult.user);
+
+      if (authStatus) authStatus.textContent = "";
     } catch (error) {
       openSettingsAfterSignIn = false;
       console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
@@ -3414,19 +3419,39 @@ import {
   showWelcome();
   setStatus("Waiting for sign-in...");
 
+  let handledAuthUid = null;
+
+  async function handleSignedInUser(user) {
+    if (!user) return;
+
+    // Set this before awaiting anything so the popup result and Firebase's
+    // auth-state event cannot start two competing history loads.
+    if (handledAuthUid === user.uid) return;
+    handledAuthUid = user.uid;
+
+    try {
+      showApp(user);
+
+      if (openSettingsAfterSignIn) {
+        openSettingsAfterSignIn = false;
+        openSettings();
+      }
+
+      await loadUserConversations(user.uid);
+
+      console.log("FROSTGPT: Account interface is ready.", user.uid);
+    } catch (error) {
+      console.error("FROSTGPT: Account loading failed.", error);
+      setStatus("Signed in, but account loading failed. Check the console.");
+    }
+  }
+
   if (firebaseReady) {
     onAuthStateChanged(auth, async user => {
       if (user) {
-        showApp(user);
-
-        if (openSettingsAfterSignIn) {
-          openSettingsAfterSignIn = false;
-          openSettings();
-        }
-
-        await loadUserConversations(user.uid);
-
+        await handleSignedInUser(user);
       } else {
+        handledAuthUid = null;
         openSettingsAfterSignIn = false;
         showLogin();
       }
