@@ -26,8 +26,10 @@ The site is static HTML/CSS/JavaScript and does not require a frontend build com
 ### Required Cloudflare configuration
 
 1. Add a Workers AI binding named **`AI`** to the Pages project.
-2. Add a Pages secret named **`GIPHY_API_KEY`** for GIF search.
-3. Redeploy after changing bindings or secrets.
+2. Create a Cloudflare D1 database and bind it to the Pages project with the exact binding name **`SAFETY_DB`**.
+3. Apply the SQL in `FROST AI/migrations/0001_safety.sql` to that D1 database before using the chat and safety endpoints.
+4. Add a Pages secret named **`GIPHY_API_KEY`** for GIF search.
+5. Redeploy after changing bindings, applying the migration, or changing secrets.
 
 Do not put the GIPHY key in browser JavaScript or commit it to GitHub.
 
