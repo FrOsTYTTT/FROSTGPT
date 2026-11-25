@@ -2812,6 +2812,25 @@ import {
     return data;
   }
 
+  async function checkClassicSafety(conversation, message, signal) {
+    if (!auth?.currentUser) throw new Error("Please sign in again before sending a message.");
+    const idToken = await auth.currentUser.getIdToken();
+    const response = await fetch("/api/safety", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${idToken}`
+      },
+      signal,
+      body: JSON.stringify({
+        conversationId: conversation.id,
+        message
+      })
+    });
+    return await parseResponse(response);
+  }
+
   // ==========================================
   // CLASSIC AI
   // ==========================================
@@ -3090,7 +3109,15 @@ import {
       let reply;
 
       if (mode === "classic") {
-        if (imageData.length) {
+        const safetyResult = await checkClassicSafety(conversation, apiContent, controller.signal);
+        if (safetyResult.action === "delete_conversation") {
+          removeTyping();
+          await deleteConversation(conversation.id, { safety: true });
+          return;
+        }
+        if (safetyResult.action === "refused") {
+          reply = safetyResult.reply;
+        } else if (imageData.length) {
           reply =
             "FROSTGPT™ Classic is offline and cannot inspect images. Switch to Flash to ask questions about your image.";
         } else {
