@@ -3134,7 +3134,8 @@ import {
       messages: conversation.flash.slice(-80),
       conversationId: conversation.id,
       preferredBackupModel: settings.preferredBackupModel,
-      customPersonality: getSavedPersonality()
+      customPersonality: getSavedPersonality(),
+      userNickname: getSavedNickname().trim().slice(0, 30)
     }, signal);
     const data = await parseResponse(response);
     if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Cloudflare returned no AI reply.");
