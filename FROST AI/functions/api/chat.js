@@ -1,4 +1,6 @@
 
+import { verifyFirebaseUser, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
+
 const MODELS = [
   "@cf/google/gemma-4-26b-a4b-it",
   "@cf/zai-org/glm-4.7-flash",
@@ -258,6 +260,15 @@ export async function onRequest({ request, env }) {
     }, 400);
   }
 
+  if (!env.SAFETY_DB) {
+    return json({ error: "FROSTGPT safety storage is not connected." }, 503);
+  }
+  const userId = await verifyFirebaseUser(request);
+  if (!userId) return json({ error: "Your sign-in session expired. Please sign in again." }, 401);
+  if (typeof body.conversationId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(body.conversationId)) {
+    return json({ error: "A valid conversation ID is required." }, 400);
+  }
+
   const messages = body.messages;
 
   if (!messages.some(message => message.role === "user")) {
@@ -274,6 +285,40 @@ export async function onRequest({ request, env }) {
     return json({
       error: "A user message is required."
     }, 400);
+  }
+
+  const latestText = getTextContent(latestMessage.content);
+  let isUnsafe;
+  try {
+    isUnsafe = await classifyLatestMessage(env, latestText);
+  } catch (error) {
+    console.error("FROSTGPT: Safety classification failed.", error);
+    return json({ error: "The safety check is temporarily unavailable. Please try again shortly." }, 503);
+  }
+
+  if (isUnsafe) {
+    let violationCount;
+    try {
+      violationCount = await recordSafetyViolation(env.SAFETY_DB, userId);
+    } catch (error) {
+      console.error("FROSTGPT: Safety counter update failed.", error);
+      return json({ error: "The safety counter could not be saved. Please try again." }, 503);
+    }
+    if (violationCount >= 21) {
+      return json({
+        reply: "This conversation is being deleted because your account has reached 21 qualifying safety violations. Your account and other conversations are not affected.",
+        action: "delete_conversation",
+        violationCount
+      });
+    }
+    const warning = violationCount === 11
+      ? " This is your safety warning: further violations may result in deletion of the current conversation at 21 qualifying violations."
+      : "";
+    return json({
+      reply: "I can't help with that request. Please keep the conversation safe and appropriate." + warning,
+      action: "refused",
+      violationCount
+    });
   }
 
   // Official creator response: no model generation required.
