@@ -188,6 +188,41 @@
       font-weight:600;
     }
 
+    #modeSelect[hidden] { display:none !important; }
+    .model-picker { position:relative;flex:0 1 auto;min-width:0;z-index:30; }
+    .model-picker-trigger {
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      max-width:230px;min-width:0;min-height:40px;padding:10px 14px 10px 16px;
+      border:1px solid var(--border);border-radius:999px;background:var(--surface);
+      color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+    }
+    .model-picker-trigger:hover,.model-picker-trigger[aria-expanded="true"] {
+      border-color:var(--accent);background:var(--surface-hover);
+    }
+    .model-picker-trigger:disabled { opacity:.55;cursor:not-allowed; }
+    .model-picker-label { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .model-picker-chevron { color:var(--muted);font-size:12px; }
+    .model-picker-menu {
+      position:absolute;top:calc(100% + 9px);left:0;min-width:100%;width:max-content;
+      max-width:min(260px,calc(100vw - 24px));padding:7px;
+      border:1px solid var(--border);border-radius:18px;background:var(--surface);
+      box-shadow:0 14px 38px rgba(0,0,0,.32);z-index:100;
+      transform-origin:top left;animation:modelMenuIn .14s ease-out;
+    }
+    .model-picker-menu[hidden] { display:none !important; }
+    .model-picker-option {
+      display:block;width:100%;padding:11px 13px;border:0;border-radius:12px;
+      background:transparent;color:var(--text);text-align:left;font-size:13px;
+      font-weight:600;white-space:nowrap;cursor:pointer;
+    }
+    .model-picker-option:hover,.model-picker-option.selected {
+      background:rgba(54,148,255,.18);color:var(--accent);
+    }
+    @keyframes modelMenuIn {
+      from { opacity:0;transform:translateY(-4px) scale(.98); }
+      to { opacity:1;transform:translateY(0) scale(1); }
+    }
+
     #statusText { margin-left:auto;color:var(--muted);font-size:12px; }
 
     #openSettings {
@@ -506,7 +541,7 @@
     @media(max-width:900px) {
       #statusText { display:none; }
       .header { gap:8px;padding:8px; }
-      #modeSelect { max-width:160px; }
+      .model-picker-trigger { max-width:160px; }
       #accountName { max-width:95px; }
     }
 
@@ -532,7 +567,7 @@
 
     @media(max-width:520px) {
       .header { gap:5px;padding:7px 5px; }
-      #modeSelect { max-width:105px;padding:9px 10px;font-size:10px; }
+      .model-picker-trigger { max-width:105px;padding:9px 10px;font-size:10px;gap:6px; }
       #openSettings { padding:9px 8px;font-size:12px; }
       #accountName,#accountArea>span:last-child { display:none; }
       #accountArea { padding:3px; }
