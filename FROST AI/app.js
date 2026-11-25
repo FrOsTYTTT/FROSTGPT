@@ -3441,7 +3441,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     document.body.appendChild(video);
     try {
       await new Promise((resolve, reject) => {
-        video.onloadedmetadata = resolve;
+        video.onloadeddata = resolve;
         video.onerror = () => reject(new Error("This video could not be opened. Try an MP4 or WebM file."));
         video.src = objectURL;
         video.load();
