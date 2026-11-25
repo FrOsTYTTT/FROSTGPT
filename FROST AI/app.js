@@ -3518,7 +3518,6 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       }
       const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
       const supportedImageTypes = ["image/png", "image/jpeg", "image/webp"];
-      const extension = file.name.split(".").pop().toLowerCase();
       const supportedTextFiles = ["txt", "md", "csv", "json"];
       const isImage = isGif || supportedImageTypes.includes(file.type);
       const isTextFile = supportedTextFiles.includes(extension) ||
