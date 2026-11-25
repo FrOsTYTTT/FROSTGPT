@@ -63,6 +63,13 @@ export async function verifyFirebaseUser(request) {
   return identity?.uid || null;
 }
 
+// A narrow message filter for this exact phrase. Keep it separate from the
+// age-safety classifier so it does not create a safety violation or warning.
+export function isBlockedInsultMessage(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  return /^you are so bad ai[.!?]*$/.test(normalized);
+}
+
 export async function classifyLatestMessage(env, latestText) {
   // GIF-only/image-only messages contain no user-authored text to classify.
   if (!String(latestText || "").trim()) return false;
