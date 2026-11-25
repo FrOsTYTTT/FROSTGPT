@@ -411,11 +411,19 @@
       width:min(520px,100%);
       max-height:min(88vh,760px);
       overflow:auto;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
       padding:22px;
       border:1px solid var(--border);
       border-radius:18px;
       background:var(--background);
       color:var(--text);
+    }
+
+    .settings-card::-webkit-scrollbar {
+      display:none;
+      width:0;
+      height:0;
     }
 
     .settings-header,.settings-footer,.setting-row {
