@@ -1826,18 +1826,21 @@ import {
   // DELETE CHAT
   // ==========================================
 
-  async function deleteConversation(conversationId) {
-    if (!currentUserId || !firebaseReady || !settings.chatHistory) return;
+  async function deleteConversation(conversationId, options = {}) {
+    const safetyDeletion = options.safety === true;
+    if (!currentUserId || !firebaseReady || (!settings.chatHistory && !safetyDeletion)) return;
     if (deletingChats.has(conversationId)) return;
-
     const conversation = conversations.find(item => item.id === conversationId);
     if (!conversation) return;
 
-    const confirmed = confirm(
-      `Delete "${conversation.title}"?\n\nThis permanently deletes this conversation and its saved messages.`
-    );
-
-    if (!confirmed) return;
+    if (safetyDeletion) {
+      alert("FROSTGPT Safety: Your account has reached 21 qualifying safety violations. This conversation will now be deleted. Your other conversations and account remain untouched.");
+    } else {
+      const confirmed = confirm(
+        `Delete "${conversation.title}"?\n\nThis permanently deletes this conversation and its saved messages.`
+      );
+      if (!confirmed) return;
+    }
 
     deletingChats.add(conversationId);
 
@@ -2788,28 +2791,25 @@ import {
   // ==========================================
 
   async function callFlashAI(conversation, signal) {
+    if (!auth?.currentUser) throw new Error("Please sign in again before sending a message.");
+    const idToken = await auth.currentUser.getIdToken();
     const response = await fetch(CHAT_API, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "Authorization": `Bearer ${idToken}`
       },
       signal,
       body: JSON.stringify({
-        // The API accepts at most 80 messages per request. Keep the newest
-        // context without deleting the full conversation from local history.
         messages: conversation.flash.slice(-80),
+        conversationId: conversation.id,
         preferredBackupModel: settings.preferredBackupModel
       })
     });
-
     const data = await parseResponse(response);
-
-    if (typeof data.reply !== "string" || !data.reply.trim()) {
-      throw new Error("Cloudflare returned no AI reply.");
-    }
-
-    return data.reply;
+    if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Cloudflare returned no AI reply.");
+    return data;
   }
 
   // ==========================================
@@ -3097,11 +3097,16 @@ import {
           reply = await callClassicAI(conversation, message);
         }
       } else {
-        reply = await callFlashAI(conversation, controller.signal);
+        const result = await callFlashAI(conversation, controller.signal);
+        reply = result.reply;
+        if (result.action === "delete_conversation") {
+          removeTyping();
+          await deleteConversation(conversation.id, { safety: true });
+          return;
+        }
       }
 
       if (currentRequest !== requestId) return;
-
       removeTyping();
 
       if (mode === "flash") {
