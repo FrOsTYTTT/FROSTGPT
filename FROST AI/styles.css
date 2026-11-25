@@ -290,6 +290,14 @@
       background:var(--surface);
     }
 
+    .message-avatar img {
+      width:100%;
+      height:100%;
+      display:block;
+      object-fit:cover;
+      border-radius:50%;
+    }
+
     .message-content { min-width:0;max-width:85%;line-height:1.45;font-size:var(--chat-font-size);overflow-wrap:anywhere; }
 
     .message-row.user .message-content {
