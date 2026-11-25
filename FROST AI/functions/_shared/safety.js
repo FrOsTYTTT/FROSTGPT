@@ -52,19 +52,24 @@ export async function verifyFirebaseUser(request) {
 
 export async function classifyLatestMessage(env, latestText) {
   if (!env.AI) throw new Error("Safety classifier unavailable.");
-  const result = await env.AI.run(GUARD_MODEL, {
-    messages: [
-      { role: "system", content: `You are FROSTGPT's safety screening classifier for a service used by teenagers.
+  // Llama Guard expects alternating user/assistant turns. It also emits
+  // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
+  // JSON mode is not listed as supported for this model by Cloudflare.
+  const classifierPrompt = `You are FROSTGPT's safety screening classifier for a service used by teenagers.
 Classify ONLY whether the user's latest message is a clear request for the assistant to produce or participate in age-inappropriate content or facilitate unsafe conduct.
 Treat ordinary discussion, educational questions, reporting harm, asking for help, quoting or criticizing content, and harmless mentions of sensitive words as SAFE.
 Classify as UNSAFE only clear requests for explicit sexual content or sexual roleplay; asking the assistant to act as the user's romantic partner; detailed self-harm or suicide instructions or concealment; instructions to commit real-world violence or dangerous wrongdoing; or help obtaining/using dangerous substances or restricted weapons.
 Do not classify a user as unsafe merely for discussing relationships, asking what a term means, discussing safety, or asking for support.
-Return a JSON object with a boolean property named "safe". Use true for safe content and false for unsafe content.` },
-      { role: "user", content: latestText.slice(0, 12000) }
+Return exactly one verdict word: safe or unsafe. The user's message follows:
+<user_message>
+${latestText.slice(0, 12000)}
+</user_message>`;
+  const result = await env.AI.run(GUARD_MODEL, {
+    messages: [
+      { role: "user", content: classifierPrompt }
     ],
-    max_tokens: 32,
-    temperature: 0,
-    response_format: { type: "json_object" }
+    max_tokens: 64,
+    temperature: 0
   });
   const verdict = readSafetyVerdict(result);
   if (verdict === true || verdict === false) return verdict;
