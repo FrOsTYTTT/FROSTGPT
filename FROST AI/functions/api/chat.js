@@ -5,7 +5,7 @@ import { analyzeVideoUrl } from "../_shared/video-links.js";
 const MODELS = [
   "@cf/google/gemma-4-26b-a4b-it",
   "@cf/zai-org/glm-4.7-flash",
-  "@cf/google/gemma-7b-it-lora"
+  "@cf/qwen/qwen3.8-27b"
 ];
 
 const MAX_BODY_SIZE = 24_000_000;
@@ -526,8 +526,8 @@ export async function onRequest({ request, env }) {
     message.content.some(part => part?.type === "image_url")
   );
 
-  // Only Gemma 4 in this fallback list is configured for vision.
-  // Do not silently send image requests to text-only fallback models.
+  // Gemma 4 and Qwen 3.8 both support vision. Keep image requests
+  // on those models only; GLM 4.7 Flash is text-only.
   const allowedBackupModels = MODELS.slice(1);
   const requestedBackupModel = body.preferredBackupModel;
   const preferredBackupModel = allowedBackupModels.includes(requestedBackupModel)
@@ -536,11 +536,13 @@ export async function onRequest({ request, env }) {
 
   // A manually selected backup is tried first for text-only chats. If it
   // fails, the remaining configured models are still attempted automatically.
-  // Image requests always stay on the vision-capable primary model.
+  // Image requests use only the configured vision-capable models.
+  // A text-only backup is never sent image payloads.
   const textModelsToTry = preferredBackupModel
     ? [preferredBackupModel, ...MODELS.filter(model => model !== preferredBackupModel)]
     : MODELS;
-  const modelsToTry = requestHasImages ? [MODELS[0]] : textModelsToTry;
+  const visionModelsToTry = [MODELS[0], MODELS[2]];
+  const modelsToTry = requestHasImages ? visionModelsToTry : textModelsToTry;
 
   for (const model of modelsToTry) {
     try {
