@@ -2558,7 +2558,15 @@ import {
 
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
-    avatar.textContent = message.role === "user" ? "Y" : "❄";
+    if (message.role === "user" && currentUser?.photoURL) {
+      const profileImage = document.createElement("img");
+      profileImage.src = currentUser.photoURL;
+      profileImage.alt = "Your Google profile picture";
+      profileImage.referrerPolicy = "no-referrer";
+      avatar.appendChild(profileImage);
+    } else {
+      avatar.textContent = message.role === "user" ? "Y" : "❄";
+    }
 
     const content = document.createElement("div");
     content.className = "message-content";
