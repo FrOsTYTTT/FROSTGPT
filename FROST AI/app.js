@@ -559,6 +559,7 @@ import {
   $("resetSettings")?.addEventListener("click", resetSettings);
 
   $("openPersonality")?.addEventListener("click", openPersonalityEditor);
+  $("openPersonalityHeader")?.addEventListener("click", openPersonalityEditor);
   $("closePersonality")?.addEventListener("click", closePersonalityEditor);
   $("savePersonality")?.addEventListener("click", () => {
     if (savePersonality($("personalityInput")?.value || "")) closePersonalityEditor();
@@ -3680,8 +3681,17 @@ import {
 
   searchChats?.addEventListener("input", renderHistory);
 
+  function updatePersonalityEntryLocation() {
+    const appRoot = $("app");
+    if (!appRoot || !sidebar) return;
+    const sidebarUnavailable = sidebar.classList.contains("collapsed") ||
+      (window.innerWidth <= 700 && !sidebar.classList.contains("open"));
+    appRoot.classList.toggle("personality-in-settings", sidebarUnavailable);
+  }
+
   collapseSidebar?.addEventListener("click", () => {
     sidebar?.classList.toggle("collapsed");
+    updatePersonalityEntryLocation();
   });
 
   openSidebar?.addEventListener("click", () => {
@@ -3692,7 +3702,11 @@ import {
     } else {
       sidebar.classList.toggle("collapsed");
     }
+    updatePersonalityEntryLocation();
   });
+
+  window.addEventListener("resize", updatePersonalityEntryLocation);
+  updatePersonalityEntryLocation();
 
   // ==========================================
   // START FROSTGPT™
