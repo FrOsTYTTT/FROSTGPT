@@ -2534,16 +2534,29 @@ import {
         image.alt = "AI-generated image";
         content.appendChild(image);
 
+        const downloadPrompt = document.createElement("div");
+        downloadPrompt.className = "download-image-prompt";
+
+        const clickLabel = document.createElement("span");
+        clickLabel.className = "download-image-label";
+        clickLabel.textContent = "Click >";
+
         const downloadButton = document.createElement("button");
         downloadButton.className = "download-image-button";
         downloadButton.type = "button";
-        downloadButton.textContent = "↓ Download image";
+        downloadButton.textContent = "Here!";
+        downloadButton.setAttribute("aria-label", "Download generated image");
+
+        const downloadLabel = document.createElement("span");
+        downloadLabel.className = "download-image-label";
+        downloadLabel.textContent = "To download";
 
         downloadButton.addEventListener("click", () => {
           downloadGeneratedImage(message.generatedImage, downloadButton);
         });
 
-        content.appendChild(downloadButton);
+        downloadPrompt.append(clickLabel, downloadButton, downloadLabel);
+        content.appendChild(downloadPrompt);
       }
     }
 
