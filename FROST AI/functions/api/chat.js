@@ -60,7 +60,7 @@ function validateMessage(message) {
     return message.content.length <= MAX_TEXT_LENGTH;
   }
 
-  if (!Array.isArray(message.content) || message.content.length > 10) {
+  if (!Array.isArray(message.content) || message.content.length > 16) {
     return false;
   }
 
