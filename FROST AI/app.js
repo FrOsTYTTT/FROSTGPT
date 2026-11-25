@@ -2554,7 +2554,8 @@ import {
       // Start the popup directly inside the user's click gesture.
       // Awaiting setPersistence() here can consume the browser's transient
       // user activation and cause the Google popup to be blocked.
-      openSettingsAfterSignIn = true;
+      // Keep the app unobstructed after sign-in; settings should open only
+      // when the user chooses the Settings button.
 
       const signInResult = await signInWithPopup(auth, provider);
 
@@ -3431,11 +3432,6 @@ import {
 
     try {
       showApp(user);
-
-      if (openSettingsAfterSignIn) {
-        openSettingsAfterSignIn = false;
-        openSettings();
-      }
 
       await loadUserConversations(user.uid);
 
