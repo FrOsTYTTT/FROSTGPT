@@ -967,6 +967,72 @@ import {
     return;
   }
 
+  // Rounded custom model picker; the native select remains the source of truth.
+  const modelPicker = document.createElement("div");
+  modelPicker.className = "model-picker";
+  modelPicker.innerHTML = `
+    <button class="model-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <span class="model-picker-label"></span><span class="model-picker-chevron" aria-hidden="true">▾</span>
+    </button>
+    <div class="model-picker-menu" role="listbox" aria-label="Choose AI model" hidden></div>
+  `;
+  const modelPickerButton = modelPicker.querySelector(".model-picker-trigger");
+  const modelPickerLabel = modelPicker.querySelector(".model-picker-label");
+  const modelPickerMenu = modelPicker.querySelector(".model-picker-menu");
+  modeSelect.parentNode.insertBefore(modelPicker, modeSelect);
+  modelPicker.appendChild(modeSelect);
+  modeSelect.hidden = true;
+
+  function syncModelPicker() {
+    const selected = modeSelect.selectedOptions[0];
+    if (selected) modelPickerLabel.textContent = selected.textContent;
+    modelPickerMenu.querySelectorAll("[data-model-value]").forEach(option => {
+      const active = option.dataset.modelValue === modeSelect.value;
+      option.classList.toggle("selected", active);
+      option.setAttribute("aria-selected", String(active));
+    });
+    modelPickerButton.disabled = modeSelect.disabled;
+  }
+
+  [...modeSelect.options].forEach(option => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "model-picker-option";
+    item.setAttribute("role", "option");
+    item.dataset.modelValue = option.value;
+    item.textContent = option.textContent;
+    item.addEventListener("click", () => {
+      modeSelect.value = option.value;
+      modeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      modelPickerMenu.hidden = true;
+      modelPickerButton.setAttribute("aria-expanded", "false");
+      syncModelPicker();
+      modelPickerButton.focus();
+    });
+    modelPickerMenu.appendChild(item);
+  });
+
+  modelPickerButton.addEventListener("click", () => {
+    if (modelPickerButton.disabled) return;
+    modelPickerMenu.hidden = !modelPickerMenu.hidden;
+    modelPickerButton.setAttribute("aria-expanded", String(!modelPickerMenu.hidden));
+  });
+  document.addEventListener("click", event => {
+    if (!modelPicker.contains(event.target)) {
+      modelPickerMenu.hidden = true;
+      modelPickerButton.setAttribute("aria-expanded", "false");
+    }
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !modelPickerMenu.hidden) {
+      modelPickerMenu.hidden = true;
+      modelPickerButton.setAttribute("aria-expanded", "false");
+      modelPickerButton.focus();
+    }
+  });
+  modeSelect.addEventListener("change", syncModelPicker);
+  syncModelPicker();
+
   const CHAT_API = "/api/chat";
   const IMAGE_API = "/api/image";
 
@@ -3033,6 +3099,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       messageInput.disabled = true;
       messageInput.placeholder = "FROSTGPT™ is thinking...";
       modeSelect.disabled = true;
+      modelPickerButton.disabled = true;
 
       if (attachButton) attachButton.disabled = true;
       if (imageButton) imageButton.disabled = true;
@@ -3045,6 +3112,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       messageInput.disabled = false;
       messageInput.placeholder = "Message FROSTGPT™...";
       modeSelect.disabled = false;
+      modelPickerButton.disabled = false;
 
       if (attachButton) attachButton.disabled = false;
       updateImageGenerationLimitUI();
