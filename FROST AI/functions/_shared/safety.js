@@ -100,10 +100,10 @@ export async function classifyLatestMessage(env, latestText) {
   // This exact allowlist applies only when a supported public video URL is
   // present and the remaining user-authored text contains no other request.
   const includesSupportedVideoLink =
-    /https?:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|tiktok\\.com|vm\\.tiktok\\.com|vt\\.tiktok\\.com|vimeo\\.com)(?:[/:?#]|$)/i.test(String(latestText || ""));
+    /https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com|vimeo\.com)(?:[/:?#]|$)/i.test(String(latestText || ""));
   const plainVideoRequest = normalizedText
     .replace(/[^a-z0-9' ]+/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   const harmlessVideoRequest = includesSupportedVideoLink &&
     /^(?:please )?(?:try|test|check|analyze|analyse|watch|review)(?: (?:it|this|now|the video|this video|the link))?(?: please)?(?: (?:do not lie|dont lie|don't lie))?$/.test(plainVideoRequest);
