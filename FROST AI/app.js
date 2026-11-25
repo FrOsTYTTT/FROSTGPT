@@ -1125,6 +1125,10 @@ import {
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   let voiceRecognition = null;
+  let micRecorder = null;
+  let micStream = null;
+  let micChunks = [];
+  let micRecordingTimer = null;
   let voiceListening = false;
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
@@ -1683,27 +1687,36 @@ import {
     updateVoiceButtons();
   }
 
-  function stopVoiceInput() {
-    voiceSessionActive = false;
+  function stopVoiceInput(shouldTranscribe = false) {
     voiceListening = false;
+    if (micRecordingTimer) {
+      clearTimeout(micRecordingTimer);
+      micRecordingTimer = null;
+    }
 
-    if (voiceRecognition) {
+    if (!shouldTranscribe) voiceSessionActive = false;
+
+    if (micRecorder && micRecorder.state !== "inactive") {
       try {
-        voiceRecognition.stop();
-      } catch {
-        // Recognition may already have stopped.
+        micRecorder.stop();
+      } catch (error) {
+        console.warn("FROSTGPT: Could not stop microphone recorder.", error);
       }
+    } else if (!micRecorder && voiceRecognition) {
+      try { voiceRecognition.stop(); } catch {}
+    }
+
+    if (!micRecorder && micStream) {
+      micStream.getTracks().forEach(track => track.stop());
+      micStream = null;
     }
 
     updateVoiceButtons();
   }
 
-  function startVoiceInput() {
-    if (!SpeechRecognition) {
-      alert(
-        "Voice input is not supported by this browser. Try a recent version of Chrome or Edge."
-      );
-
+  async function startVoiceInput() {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setStatus("Microphone recording is not supported here. Try the latest Chrome or Edge over HTTPS.");
       return;
     }
 
@@ -1711,110 +1724,132 @@ import {
       setStatus("Wait until FROSTGPT finishes responding.");
       return;
     }
-
     if (voiceListening) return;
 
     stopSpeaking();
-
-    voiceFinalTranscript = "";
     voiceSessionActive = true;
     voiceListening = true;
-
-    voiceRecognition = new SpeechRecognition();
-
-    voiceRecognition.lang = "en-US";
-    voiceRecognition.continuous = false;
-    voiceRecognition.interimResults = true;
-    voiceRecognition.maxAlternatives = 1;
-
-    voiceRecognition.onstart = () => {
-      voiceListening = true;
-      updateVoiceButtons();
-      setStatus("🎙️ Listening...");
-    };
-
-    voiceRecognition.onresult = event => {
-      let interimTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        const transcript = result[0]?.transcript || "";
-
-        if (result.isFinal) {
-          voiceFinalTranscript += transcript + " ";
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-
-      const currentTranscript =
-        (voiceFinalTranscript + interimTranscript).trim();
-
-      if (currentTranscript) {
-        messageInput.value = currentTranscript;
-        messageInput.dispatchEvent(
-          new Event("input", { bubbles: true })
-        );
-      }
-    };
-
-    voiceRecognition.onerror = event => {
-      console.warn(
-        "FROSTGPT: Voice recognition error.",
-        event.error
-      );
-
-      voiceListening = false;
-      voiceSessionActive = false;
-
-      updateVoiceButtons();
-
-      if (
-        event.error === "not-allowed" ||
-        event.error === "service-not-allowed"
-      ) {
-        setStatus("Microphone permission was denied.");
-      } else if (event.error === "no-speech") {
-        setStatus("No speech detected. Try again.");
-      } else if (event.error !== "aborted") {
-        setStatus("Voice input encountered an error.");
-      }
-    };
-
-    voiceRecognition.onend = () => {
-      voiceListening = false;
-      updateVoiceButtons();
-
-      if (!voiceSessionActive) return;
-
-      voiceSessionActive = false;
-
-      const transcript = voiceFinalTranscript.trim();
-
-      if (transcript) {
-        messageInput.value = transcript;
-        setStatus("Sending voice message...");
-        sendMessage();
-      } else {
-        setStatus(modeName());
-      }
-    };
-
+    micChunks = [];
     updateVoiceButtons();
+    setStatus("🎙️ Requesting microphone permission...");
 
     try {
-      voiceRecognition.start();
-    } catch (error) {
-      console.error(
-        "FROSTGPT: Could not start voice input.",
-        error
-      );
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
 
-      voiceListening = false;
-      voiceSessionActive = false;
+      if (!voiceSessionActive) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+        return;
+      }
 
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "");
+      if (!mimeType) throw new Error("This browser cannot record WebM audio. Try Chrome or Edge.");
+
+      micRecorder = new MediaRecorder(micStream, {
+        mimeType,
+        audioBitsPerSecond: 96000
+      });
+
+      micRecorder.ondataavailable = event => {
+        if (event.data?.size) micChunks.push(event.data);
+      };
+
+      micRecorder.onerror = event => {
+        console.error("FROSTGPT: Microphone recording error.", event.error);
+        voiceSessionActive = false;
+        voiceListening = false;
+        setStatus("Microphone recording failed.");
+        updateVoiceButtons();
+      };
+
+      micRecorder.onstop = async () => {
+        const shouldSend = voiceSessionActive;
+        voiceSessionActive = false;
+        voiceListening = false;
+
+        micStream?.getTracks().forEach(track => track.stop());
+        micStream = null;
+
+        const audioBlob = new Blob(micChunks, { type: mimeType });
+        micChunks = [];
+        micRecorder = null;
+        updateVoiceButtons();
+
+        if (!shouldSend) {
+          setStatus(modeName());
+          return;
+        }
+
+        if (!audioBlob.size) {
+          setStatus("No microphone audio was captured. Try again.");
+          return;
+        }
+        if (audioBlob.size > 10 * 1024 * 1024) {
+          setStatus("That recording is too large. Please record a shorter message.");
+          return;
+        }
+
+        try {
+          setStatus("Transcribing your microphone audio...");
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) throw new Error("Sign in again to use microphone transcription.");
+
+          const form = new FormData();
+          form.append("audio", audioBlob, "microphone.webm");
+          const response = await fetch("/api/transcribe", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: form
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || "Microphone transcription failed.");
+
+          const transcript = typeof data.text === "string" ? data.text.trim() : "";
+          if (!transcript) {
+            setStatus("No speech was detected. Try speaking a little closer to the microphone.");
+            return;
+          }
+
+          messageInput.value = transcript;
+          messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+          setStatus("Sending your voice message...");
+          sendMessage();
+        } catch (error) {
+          console.error("FROSTGPT: Microphone transcription failed.", error);
+          setStatus(error.message || "Could not transcribe microphone audio.");
+        }
+      };
+
+      micRecorder.start(500);
+      setStatus("🎙️ Recording... Press the microphone button again or Stop audio when finished.");
       updateVoiceButtons();
-      setStatus("Could not start microphone.");
+
+      // Limit a single microphone recording to 60 seconds.
+      micRecordingTimer = setTimeout(() => {
+        if (voiceListening) {
+          setStatus("60-second recording limit reached. Transcribing...");
+          stopVoiceInput(true);
+        }
+      }, 60000);
+    } catch (error) {
+      console.error("FROSTGPT: Could not start microphone recording.", error);
+      voiceSessionActive = false;
+      voiceListening = false;
+      micStream?.getTracks().forEach(track => track.stop());
+      micStream = null;
+      micRecorder = null;
+      updateVoiceButtons();
+      setStatus(error.name === "NotAllowedError"
+        ? "Microphone permission was denied."
+        : (error.message || "Could not start microphone."));
     }
   }
 
@@ -1872,7 +1907,7 @@ import {
 
     voiceMicButton.addEventListener("click", () => {
       if (voiceListening) {
-        stopVoiceInput();
+        stopVoiceInput(true);
       } else {
         startVoiceInput();
       }
@@ -1889,7 +1924,7 @@ import {
     });
 
     voiceStopButton.addEventListener("click", () => {
-      stopVoiceInput();
+      stopVoiceInput(true);
       stopSpeaking();
       updateVoiceButtons();
     });
