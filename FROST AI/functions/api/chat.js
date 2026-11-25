@@ -1,5 +1,5 @@
 
-import { verifyFirebaseUser, verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
+import { verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
 
 const MODELS = [
   "@cf/google/gemma-4-26b-a4b-it",
@@ -126,15 +126,6 @@ function isFounderClaim(message) {
   return claimsRole && namesProject;
 }
 
-function normalizeNickname(value) {
-  return typeof value === "string" ? value.trim().toLocaleLowerCase("en-US") : "";
-}
-
-const FOUNDER_NICKNAMES = new Set([
-  "frostai",
-  "frost",
-  "frostgpt founder; frost"
-]);
 
 function extractText(value) {
   if (typeof value === "string") {
@@ -300,7 +291,6 @@ export async function onRequest({ request, env }) {
   const messages = body.messages;
   const customPersonality = typeof body.customPersonality === "string" ? body.customPersonality.trim().slice(0, 1200) : "";
   const userNickname = typeof body.userNickname === "string" ? body.userNickname.trim().slice(0, 30) : "";
-  const hasFounderNickname = FOUNDER_NICKNAMES.has(normalizeNickname(userNickname));
 
   if (!messages.some(message => message.role === "user")) {
     return json({
