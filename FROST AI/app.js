@@ -69,6 +69,8 @@ import {
   let firebaseReady = false;
   let currentUserId = null;
   let currentUser = null;
+  // Declared with the other auth state to avoid temporal-dead-zone errors.
+  let handledAuthUid = null;
 
   let openSettingsAfterSignIn = false;
 
@@ -3418,8 +3420,6 @@ import {
 
   showWelcome();
   setStatus("Waiting for sign-in...");
-
-  let handledAuthUid = null;
 
   async function handleSignedInUser(user) {
     if (!user) return;
