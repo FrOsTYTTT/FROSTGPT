@@ -547,3 +547,23 @@
 }
 .refresh-chats:hover { background: rgba(100, 170, 255, .12); }
 .refresh-chats:disabled { opacity: .6; cursor: wait; }
+
+
+/* Personality shortcut follows the sidebar: Settings is its home when collapsed. */
+.personality-header-button {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.personality-header-button:hover { background: var(--surface-hover); }
+#personalitySettingRow { display: none; }
+.app.personality-in-settings #personalitySettingRow { display: flex; }
+@media(max-width:700px) {
+  .personality-header-button { font-size: 11px; padding: 7px 8px; }
+}
