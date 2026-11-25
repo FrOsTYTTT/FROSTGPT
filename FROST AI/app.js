@@ -265,7 +265,7 @@ import {
         settings = {
           ...DEFAULT_SETTINGS,
           ...parsed,
-          preferredBackupModel: ["auto", "@cf/zai-org/glm-4.7-flash", "@cf/google/gemma-7b-it-lora"].includes(parsed.preferredBackupModel)
+          preferredBackupModel: ["auto", "@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3.8-27b"].includes(parsed.preferredBackupModel)
             ? parsed.preferredBackupModel
             : "auto"
         };
