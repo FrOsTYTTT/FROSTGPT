@@ -3432,13 +3432,13 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   // Find supported public video URLs in a user's message. The server performs
   // provider checks and retrieves only public metadata/captions.
   function extractVideoLinks(value) {
-    const candidates = String(value || "").match(/https?:\\/\\/[^\\s<>"']+/gi) || [];
+    const candidates = String(value || "").match(/https?:\/\/[^\s<>"']+/gi) || [];
     const supported = [];
     for (const candidate of candidates) {
       const clean = candidate.replace(/[),.!?;:]+$/g, "");
       try {
         const url = new URL(clean);
-        const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+        const host = url.hostname.toLowerCase().replace(/^www\./, "");
         const isYouTube = ["youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"].includes(host);
         const isTikTok = host === "tiktok.com" || host.endsWith(".tiktok.com");
         const isVimeo = host === "vimeo.com" || host === "player.vimeo.com";
