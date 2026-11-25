@@ -3600,8 +3600,12 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           continue;
         }
         try {
-          const sampled = await extractVideoFrames(file, Math.min(8, remainingVisionSlots));
-          const audioResult = await extractVideoAudio(file);
+          // Start both decoders immediately from the file-picker interaction so
+          // browsers are more likely to allow the audio context to start.
+          const [sampled, audioResult] = await Promise.all([
+            extractVideoFrames(file, Math.min(8, remainingVisionSlots)),
+            extractVideoAudio(file)
+          ]);
           const frames = sampled.frames.map(frame => frame.data);
           attachments.push({
             kind: "video",
