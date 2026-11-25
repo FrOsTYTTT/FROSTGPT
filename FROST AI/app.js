@@ -812,7 +812,9 @@ import {
   }
 
   function updateImageGenerationLimitUI() {
+    const imageButton = $("imageButton");
     if (!imageButton) return;
+
     const remaining = Math.max(0, MAX_GENERATED_IMAGES_PER_DAY - getImageUsage());
     imageButton.title = remaining > 0
       ? `Generate image (${remaining} of ${MAX_GENERATED_IMAGES_PER_DAY} left today)`
@@ -2623,6 +2625,7 @@ import {
   function showApp(user) {
     currentUser = user;
     currentUserId = user.uid;
+    updateImageGenerationLimitUI();
 
     // Load this account's saved voice preferences.
     loadVoicePreferences();
