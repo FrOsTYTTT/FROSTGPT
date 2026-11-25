@@ -3913,6 +3913,14 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
   sendButton.addEventListener("click", sendMessage);
 
+  // Hide the message field's scrollbar when the draft contains a newline.
+  function updateMessageInputScrollbar() {
+    messageInput.classList.toggle("has-hidden-scrollbar", messageInput.value.includes("\n"));
+  }
+
+  messageInput.addEventListener("input", updateMessageInputScrollbar);
+  updateMessageInputScrollbar();
+
   messageInput.addEventListener("keydown", event => {
     if (event.key !== "Enter" || event.shiftKey) return;
 
