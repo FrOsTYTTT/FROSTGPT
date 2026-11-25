@@ -793,6 +793,44 @@ import {
 
   const MAX_IMAGES = 4;
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+  const MAX_FILES = 3;
+  const MAX_FILE_SIZE = 1 * 1024 * 1024;
+  const MAX_GENERATED_IMAGES_PER_DAY = 5;
+
+  function getImageUsageKey() {
+    return `frostgpt_image_usage_${currentUserId || "guest"}`;
+  }
+
+  function getImageUsage() {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const saved = JSON.parse(localStorage.getItem(getImageUsageKey()) || "{}");
+      return saved.date === today && Number.isFinite(saved.count) ? saved.count : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function updateImageGenerationLimitUI() {
+    if (!imageButton) return;
+    const remaining = Math.max(0, MAX_GENERATED_IMAGES_PER_DAY - getImageUsage());
+    imageButton.title = remaining > 0
+      ? `Generate image (${remaining} of ${MAX_GENERATED_IMAGES_PER_DAY} left today)`
+      : "Daily image generation limit reached";
+    imageButton.setAttribute("aria-label", imageButton.title);
+    imageButton.disabled = remaining <= 0;
+  }
+
+  function recordGeneratedImage() {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = getImageUsage() + 1;
+    try {
+      localStorage.setItem(getImageUsageKey(), JSON.stringify({ date: today, count }));
+    } catch (error) {
+      console.warn("FROSTGPT: Could not save image generation usage.", error);
+    }
+    updateImageGenerationLimitUI();
+  }
 
   // ==========================================
   // FROSTGPT CUSTOM VOICE SYSTEM
@@ -2747,29 +2785,35 @@ import {
 
   function updateAttachmentPreview() {
     if (!attachmentPreview) return;
-
     attachmentPreview.replaceChildren();
 
     attachments.forEach((attachment, index) => {
       const wrapper = document.createElement("div");
       wrapper.className = "attachment-item";
 
-      const image = document.createElement("img");
-      image.src = attachment.data;
-      image.alt = attachment.name;
+      if (attachment.kind === "file") {
+        const fileLabel = document.createElement("span");
+        fileLabel.className = "attachment-file-label";
+        fileLabel.textContent = `📄 ${attachment.name}`;
+        wrapper.appendChild(fileLabel);
+      } else {
+        const image = document.createElement("img");
+        image.src = attachment.data;
+        image.alt = attachment.name;
+        wrapper.appendChild(image);
+      }
 
       const remove = document.createElement("button");
       remove.className = "remove-attachment";
       remove.type = "button";
       remove.textContent = "×";
-      remove.title = "Remove image";
-
+      remove.title = "Remove attachment";
       remove.addEventListener("click", () => {
         attachments.splice(index, 1);
         updateAttachmentPreview();
       });
 
-      wrapper.append(image, remove);
+      wrapper.appendChild(remove);
       attachmentPreview.appendChild(wrapper);
     });
   }
@@ -2828,45 +2872,72 @@ import {
 
   async function handleFiles(fileList) {
     for (const file of Array.from(fileList)) {
-      if (attachments.length >= MAX_IMAGES) {
-        addMessage("assistant", `You can attach up to ${MAX_IMAGES} images at a time.`);
-        break;
-      }
+      const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
+      const supportedImageTypes = ["image/png", "image/jpeg", "image/webp"];
+      const extension = file.name.split(".").pop().toLowerCase();
+      const supportedTextFiles = ["txt", "md", "csv", "json"];
+      const isImage = isGif || supportedImageTypes.includes(file.type);
+      const isTextFile = supportedTextFiles.includes(extension) ||
+        ["text/plain", "text/markdown", "text/csv", "application/json"].includes(file.type);
 
-      const isGif = file.type === "image/gif" ||
-        file.name.toLowerCase().endsWith(".gif");
-      const supportedTypes = ["image/png", "image/jpeg", "image/webp"];
-
-      if (!isGif && !supportedTypes.includes(file.type)) {
-        addMessage("assistant", "Use a PNG, JPG, WEBP, or animated GIF image.");
+      if (!isImage && !isTextFile) {
+        addMessage("assistant", "Supported uploads: PNG, JPG, WEBP, GIF, TXT, MD, CSV, and JSON. PDF and other document formats aren't supported yet.");
         continue;
       }
 
-      if (file.size > MAX_IMAGE_SIZE) {
-        addMessage("assistant", `${file.name} is too large. The maximum is 4 MB per image.`);
+      if (isImage) {
+        const imageCount = attachments.filter(item => item.kind !== "file").length;
+        if (imageCount >= MAX_IMAGES) {
+          addMessage("assistant", `You can attach up to ${MAX_IMAGES} images per message.`);
+          break;
+        }
+        if (file.size > MAX_IMAGE_SIZE) {
+          addMessage("assistant", `${file.name} is too large. The image limit is 4 MB each.`);
+          continue;
+        }
+
+        const usedVisionSlots = attachments
+          .filter(item => item.kind !== "file")
+          .reduce((total, item) => total + (item.visionImages?.length || 1), 0);
+        const remainingVisionSlots = 8 - usedVisionSlots;
+        if (remainingVisionSlots < 1) {
+          addMessage("assistant", "This message can contain up to 8 images or sampled GIF frames for AI analysis.");
+          break;
+        }
+
+        try {
+          const data = await readImage(file);
+          const visionImages = isGif
+            ? await extractGifFrames(file, Math.min(6, remainingVisionSlots))
+            : [data];
+          attachments.push({ kind: "image", name: file.name, data, isGif, visionImages });
+        } catch (error) {
+          addMessage("assistant", error.message);
+        }
         continue;
       }
 
-      const usedVisionSlots = attachments.reduce(
-        (total, item) => total + (item.visionImages?.length || 1), 0
-      );
-      const remainingVisionSlots = 8 - usedVisionSlots;
-      if (remainingVisionSlots < 1) {
-        addMessage("assistant", "This message can contain up to 8 images or GIF frames for AI analysis.");
+      const fileCount = attachments.filter(item => item.kind === "file").length;
+      if (fileCount >= MAX_FILES) {
+        addMessage("assistant", `You can attach up to ${MAX_FILES} documents per message.`);
         break;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        addMessage("assistant", `${file.name} is too large. The document limit is 1 MB each.`);
+        continue;
       }
 
       try {
-        const data = await readImage(file);
-        const visionImages = isGif
-          ? await extractGifFrames(file, Math.min(6, remainingVisionSlots))
-          : [data];
-        attachments.push({ name: file.name, data, isGif, visionImages });
-      } catch (error) {
-        addMessage("assistant", error.message);
+        const text = await file.text();
+        if (text.length > MAX_FILE_SIZE) {
+          addMessage("assistant", `${file.name} contains too much text. The limit is 1 MB per document.`);
+          continue;
+        }
+        attachments.push({ kind: "file", name: file.name, text });
+      } catch {
+        addMessage("assistant", `Could not read ${file.name}.`);
       }
     }
-
     updateAttachmentPreview();
   }
 
@@ -2882,11 +2953,13 @@ import {
 
     const conversation = ensureConversation();
     const mode = currentMode();
-    const imageData = attachments.map(item => item.data);
-    const visionImageData = attachments.flatMap(item =>
+    const imageAttachments = attachments.filter(item => item.kind !== "file");
+    const fileAttachments = attachments.filter(item => item.kind === "file");
+    const imageData = imageAttachments.map(item => item.data);
+    const visionImageData = imageAttachments.flatMap(item =>
       item.visionImages?.length ? item.visionImages : [item.data]
     );
-    const hasGif = attachments.some(item => item.isGif);
+    const hasGif = imageAttachments.some(item => item.isGif);
 
     let apiContent = message;
 
@@ -2911,6 +2984,13 @@ import {
         });
       });
 
+      fileAttachments.forEach(file => {
+        parts.push({
+          type: "text",
+          text: `Attached document: ${file.name}\n\n${file.text}`
+        });
+      });
+
       apiContent = parts.length === 1 && parts[0].type === "text"
         ? message
         : parts;
@@ -2928,7 +3008,10 @@ import {
       });
     }
 
-    addMessage("user", message, {
+    const attachmentNames = fileAttachments.map(file => `📄 ${file.name}`);
+    const displayText = [message, ...attachmentNames].filter(Boolean).join("\n");
+
+    addMessage("user", displayText, {
       images: imageData,
       mode,
       contextContent: apiContent
@@ -3033,6 +3116,14 @@ import {
       return;
     }
 
+    const remainingImageGenerations =
+      MAX_GENERATED_IMAGES_PER_DAY - getImageUsage();
+
+    if (remainingImageGenerations <= 0) {
+      addMessage("assistant", `You've reached today's image generation limit (${MAX_GENERATED_IMAGES_PER_DAY}). Your limit resets tomorrow.`);
+      return;
+    }
+
     const mode = currentMode();
 
     addMessage("user", `Generate an image: ${prompt}`, { mode });
@@ -3076,6 +3167,7 @@ import {
         mode
       });
 
+      recordGeneratedImage();
       playSound(760);
     } catch (error) {
       if (error.name === "AbortError") {
@@ -3118,6 +3210,8 @@ import {
       setStatus("Could not sign out.");
     }
   });
+
+  updateImageGenerationLimitUI();
 
   // ==========================================
   // EVENTS
