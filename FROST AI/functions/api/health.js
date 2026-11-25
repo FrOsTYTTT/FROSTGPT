@@ -18,7 +18,7 @@ export async function onRequestGet({ request, env }) {
     safetyDatabaseBindingConfigured: Boolean(env.SAFETY_DB)
   };
 
-  // Run an actual Llama Guard inference only when explicitly requested.
+  // Run a real Llama Guard inference only when explicitly requested.
   // This keeps the ordinary health endpoint inexpensive.
   const deep = new URL(request.url).searchParams.get("deep") === "1";
   let safetyModelError = null;
@@ -30,8 +30,8 @@ export async function onRequestGet({ request, env }) {
     } catch (error) {
       checks.safetyModelResponding = false;
       const message = String(error?.message || error || "Unknown error")
-        .replace(/Bearer\\s+[^\\s]+/gi, "Bearer [redacted]")
-        .replace(/(token|api[_ -]?key|secret)\\s*[:=]\\s*[^\\s,;]+/gi, "$1=[redacted]")
+        .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]")
+        .replace(/(token|api[_ -]?key|secret)\s*[:=]\s*[^\s,;]+/gi, "$1=[redacted]")
         .slice(0, 180);
       safetyModelError = message;
       console.error("FROSTGPT health check: live safety model test failed.", error);
