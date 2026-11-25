@@ -3491,6 +3491,11 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     updateAttachmentPreview();
   }
 
+  function isBlockedInsultMessage(value) {
+    const normalized = String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    return /^you are so bad ai[.!?]*$/.test(normalized);
+  }
+
   async function sendMessage() {
     if (isThinking) {
       stopGenerating();
@@ -3500,6 +3505,12 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     const message = messageInput.value.trim();
 
     if (!message && attachments.length === 0) return;
+
+    if (isBlockedInsultMessage(message)) {
+      setStatus("That message wasn't sent. Please keep the chat respectful.");
+      messageInput.focus();
+      return;
+    }
 
     const conversation = ensureConversation();
     const mode = currentMode();
