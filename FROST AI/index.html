@@ -15,7 +15,7 @@
   <title>FROSTGPT™</title>
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261125-3">
+  <link rel="stylesheet" href="/styles.css?v=20261125-4">
 </head>
 
 <body>
@@ -58,7 +58,8 @@
     <aside id="sidebar">
       <div class="sidebar-top">
         <div class="brand">❄ FROSTGPT™</div>
-        <button class="icon-button" id="collapseSidebar" type="button">☰</button>
+        <button class="personality-header-button" id="openPersonalityHeader" type="button" title="Customize FROSTGPT personality">❄ Personality</button>
+        <button class="icon-button" id="collapseSidebar" type="button" aria-label="Collapse sidebar">☰</button>
       </div>
 
       <button class="new-chat" id="newChat" type="button">＋ New chat</button>
@@ -227,7 +228,7 @@
         </select>
       </div>
 
-      <div class="setting-row personality-setting-row">
+      <div class="setting-row personality-setting-row" id="personalitySettingRow">
         <div class="setting-copy"><strong>❄ FROSTGPT™ Personality</strong><small>Customize the assistant’s response style and tone.</small></div>
         <button id="openPersonality" type="button">Customize</button>
       </div>
@@ -359,6 +360,6 @@
   </script>
 
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261125-9"></script>
+  <script type="module" src="/app.js?v=20261125-10"></script>
 </body>
 </html>
