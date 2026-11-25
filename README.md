@@ -47,6 +47,7 @@ The Firebase web configuration is client-side configuration, not a substitute fo
 ## API endpoints
 
 - `POST /api/chat` — accepts a JSON body containing a `messages` array and returns `{ "reply": "..." }`.
+- `GET /api/health` — reports the deployed backend build, verifies the harmless-message safety bypass, and checks whether the Workers AI and D1 bindings are configured.
 - `POST /api/image` — accepts `{ "prompt": "..." }` and returns a generated image data URL.
 - `GET /api/gifs` — returns trending GIFs; `GET /api/gifs?search=...` searches GIPHY.
 
@@ -63,3 +64,11 @@ Before publishing changes:
 5. Check the browser console and Cloudflare Pages Function logs if an API action fails.
 
 A source-code check cannot replace testing against the deployed Firebase and Cloudflare configuration.
+
+## Workers AI model routing
+
+- Primary chat and vision model: `@cf/google/gemma-4-26b-a4b-it`.
+- Text backup: `@cf/zai-org/glm-4.7-flash`.
+- Additional text and vision backup: `@cf/qwen/qwen3.8-27b`.
+- Image requests are routed only to vision-capable models. Text-only models are never sent image payloads.
+- Safety classification uses `@cf/meta/llama-guard-3-8b`; uploaded-audio transcription uses `@cf/openai/whisper-large-v3-turbo`; image generation uses `@cf/black-forest-labs/flux-1-schnell`.
