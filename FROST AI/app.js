@@ -1,3 +1,4 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
 import {
@@ -794,7 +795,7 @@ import {
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
   // ==========================================
-  // FROSTGPT VOICE SYSTEM
+  // FROSTGPT CUSTOM VOICE SYSTEM
   // ==========================================
 
   const SpeechRecognition =
@@ -805,14 +806,176 @@ import {
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
   let voiceFinalTranscript = "";
+
   let voiceMicButton = null;
   let voiceToggleButton = null;
   let voiceStopButton = null;
+  let voiceOptionsButton = null;
+  let voiceOptionsPanel = null;
 
-  function stopSpeaking() {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+  let voiceSelector = null;
+  let voiceRateSlider = null;
+  let voicePitchSlider = null;
+  let voiceVolumeSlider = null;
+
+  let voiceRateLabel = null;
+  let voicePitchLabel = null;
+  let voiceVolumeLabel = null;
+
+  const DEFAULT_VOICE_PREFERENCES = {
+    voiceURI: "",
+    rate: 1,
+    pitch: 1,
+    volume: 1
+  };
+
+  let voicePreferences = { ...DEFAULT_VOICE_PREFERENCES };
+
+  // Each Firebase account has its own voice settings.
+  // Guest preferences are stored separately.
+
+  function getVoiceStorageKey() {
+    return `frostgpt_voice_${currentUserId || "guest"}`;
+  }
+
+  function getAvailableVoices() {
+    if (!("speechSynthesis" in window)) return [];
+
+    return window.speechSynthesis.getVoices();
+  }
+
+  function saveVoicePreferences() {
+    try {
+      localStorage.setItem(
+        getVoiceStorageKey(),
+        JSON.stringify(voicePreferences)
+      );
+    } catch (error) {
+      console.warn(
+        "FROSTGPT: Could not save voice preferences.",
+        error
+      );
     }
+  }
+
+  function loadVoicePreferences() {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(getVoiceStorageKey()) || "{}"
+      );
+
+      voicePreferences = {
+        voiceURI:
+          typeof saved.voiceURI === "string"
+            ? saved.voiceURI
+            : "",
+
+        rate:
+          Number.isFinite(Number(saved.rate))
+            ? Math.min(1.5, Math.max(0.7, Number(saved.rate)))
+            : 1,
+
+        pitch:
+          Number.isFinite(Number(saved.pitch))
+            ? Math.min(2, Math.max(0.5, Number(saved.pitch)))
+            : 1,
+
+        volume:
+          Number.isFinite(Number(saved.volume))
+            ? Math.min(1, Math.max(0, Number(saved.volume)))
+            : 1
+      };
+    } catch {
+      voicePreferences = { ...DEFAULT_VOICE_PREFERENCES };
+    }
+
+    updateVoiceSettingsUI();
+    populateVoiceSelector();
+  }
+
+  function updateVoicePreferenceLabels() {
+    if (voiceRateLabel) {
+      voiceRateLabel.textContent =
+        `${Number(voicePreferences.rate).toFixed(1)}×`;
+    }
+
+    if (voicePitchLabel) {
+      voicePitchLabel.textContent =
+        Number(voicePreferences.pitch).toFixed(1);
+    }
+
+    if (voiceVolumeLabel) {
+      voiceVolumeLabel.textContent =
+        `${Math.round(voicePreferences.volume * 100)}%`;
+    }
+  }
+
+  function updateVoiceSettingsUI() {
+    if (voiceRateSlider) {
+      voiceRateSlider.value = voicePreferences.rate;
+    }
+
+    if (voicePitchSlider) {
+      voicePitchSlider.value = voicePreferences.pitch;
+    }
+
+    if (voiceVolumeSlider) {
+      voiceVolumeSlider.value = voicePreferences.volume;
+    }
+
+    if (voiceSelector) {
+      voiceSelector.value = voicePreferences.voiceURI;
+    }
+
+    updateVoicePreferenceLabels();
+  }
+
+  function populateVoiceSelector() {
+    if (!voiceSelector) return;
+
+    const voices = getAvailableVoices();
+    const selectedURI = voicePreferences.voiceURI;
+
+    voiceSelector.replaceChildren();
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Default browser voice";
+    voiceSelector.appendChild(defaultOption);
+
+    if (voices.length === 0) {
+      const waitingOption = document.createElement("option");
+      waitingOption.value = "";
+      waitingOption.textContent = "Loading available voices...";
+      voiceSelector.appendChild(waitingOption);
+    } else {
+      voices.forEach(voice => {
+        const option = document.createElement("option");
+        option.value = voice.voiceURI;
+        option.textContent = `${voice.name} (${voice.lang})`;
+
+        voiceSelector.appendChild(option);
+      });
+    }
+
+    const selectedVoiceExists = voices.some(
+      voice => voice.voiceURI === selectedURI
+    );
+
+    if (selectedURI && !selectedVoiceExists) {
+      voicePreferences.voiceURI = "";
+      saveVoicePreferences();
+    }
+
+    voiceSelector.value = voicePreferences.voiceURI;
+  }
+
+  function getSelectedVoice() {
+    const voices = getAvailableVoices();
+
+    return voices.find(
+      voice => voice.voiceURI === voicePreferences.voiceURI
+    ) || null;
   }
 
   function cleanTextForSpeech(text) {
@@ -821,7 +984,7 @@ import {
       .replace(/`([^`]+)`/g, "$1")
       .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/#{1,6}\s?/g, "")
+      .replace(/^#{1,6}\s+/gm, "")
       .replace(/[*_~]/g, "")
       .replace(/^\s*>\s?/gm, "")
       .replace(/^\s*[-+]\s+/gm, "")
@@ -830,31 +993,20 @@ import {
       .trim();
   }
 
-  function speakReply(text) {
-    if (!voiceReplyEnabled || !("speechSynthesis" in window)) return;
+  function stopSpeaking() {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
 
-    const spokenText = cleanTextForSpeech(text);
-    if (!spokenText) return;
-
-    stopSpeaking();
-
-    const utterance = new SpeechSynthesisUtterance(spokenText);
-
-    utterance.lang = "en-US";
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onerror = event => {
-      console.warn("FROSTGPT: Speech playback error.", event.error);
-    };
-
-    window.speechSynthesis.speak(utterance);
+    updateVoiceButtons();
   }
 
   function updateVoiceButtons() {
     if (voiceMicButton) {
-      voiceMicButton.textContent = voiceListening ? "⏹ Stop listening" : "🎙️ Voice input";
+      voiceMicButton.textContent = voiceListening
+        ? "⏹ Stop listening"
+        : "🎙️ Voice input";
+
       voiceMicButton.setAttribute(
         "aria-label",
         voiceListening ? "Stop voice input" : "Start voice input"
@@ -880,8 +1032,332 @@ import {
         !voiceListening &&
         !window.speechSynthesis?.speaking;
 
-      voiceStopButton.style.opacity = voiceStopButton.disabled ? ".5" : "1";
+      voiceStopButton.style.opacity =
+        voiceStopButton.disabled ? ".5" : "1";
     }
+  }
+
+  function createVoiceOptionsPanel() {
+    if (voiceOptionsPanel) return voiceOptionsPanel;
+
+    voiceOptionsPanel = document.createElement("section");
+    voiceOptionsPanel.id = "frostgptVoiceOptions";
+    voiceOptionsPanel.hidden = true;
+
+    voiceOptionsPanel.style.cssText = `
+      box-sizing: border-box;
+      display: none;
+      width: 100%;
+      max-width: 460px;
+      margin-top: 10px;
+      padding: 17px;
+      border: 1px solid var(--border-color, rgba(255,255,255,.16));
+      border-radius: 14px;
+      background: var(--panel-background, #20232b);
+      color: var(--text-color, inherit);
+      font: inherit;
+    `;
+
+    const heading = document.createElement("h3");
+    heading.textContent = "🎚️ FROSTGPT Voice Options";
+
+    heading.style.cssText = `
+      margin: 0 0 5px;
+      font-size: 16px;
+    `;
+
+    const description = document.createElement("p");
+    description.textContent =
+      "Customize how FROSTGPT sounds when reading replies aloud.";
+
+    description.style.cssText = `
+      margin: 0 0 14px;
+      font-size: 12px;
+      opacity: .7;
+    `;
+
+    voiceOptionsPanel.append(heading, description);
+
+    function createLabel(text) {
+      const label = document.createElement("label");
+
+      label.textContent = text;
+
+      label.style.cssText = `
+        display: block;
+        margin: 13px 0 7px;
+        font-size: 13px;
+        font-weight: 600;
+      `;
+
+      voiceOptionsPanel.appendChild(label);
+
+      return label;
+    }
+
+    createLabel("Voice");
+
+    voiceSelector = document.createElement("select");
+    voiceSelector.id = "frostgptVoiceSelector";
+
+    voiceSelector.style.cssText = `
+      box-sizing: border-box;
+      width: 100%;
+      padding: 10px;
+      border-radius: 9px;
+      border: 1px solid var(--border-color, #555);
+      background: var(--input-background, #171a21);
+      color: inherit;
+      font: inherit;
+    `;
+
+    voiceSelector.addEventListener("change", () => {
+      voicePreferences.voiceURI = voiceSelector.value;
+      saveVoicePreferences();
+    });
+
+    voiceOptionsPanel.appendChild(voiceSelector);
+
+    function createSlider(labelText, min, max, step, initialValue, onChange) {
+      createLabel(labelText);
+
+      const row = document.createElement("div");
+
+      row.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+      `;
+
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = String(min);
+      slider.max = String(max);
+      slider.step = String(step);
+      slider.value = String(initialValue);
+
+      slider.style.cssText = `
+        flex: 1;
+        min-width: 0;
+        accent-color: var(--accent, #3694ff);
+        cursor: pointer;
+      `;
+
+      const valueLabel = document.createElement("span");
+
+      valueLabel.style.cssText = `
+        min-width: 45px;
+        text-align: right;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      `;
+
+      slider.addEventListener("input", () => {
+        onChange(Number(slider.value));
+        updateVoicePreferenceLabels();
+        saveVoicePreferences();
+      });
+
+      row.append(slider, valueLabel);
+      voiceOptionsPanel.appendChild(row);
+
+      return {
+        slider,
+        valueLabel
+      };
+    }
+
+    const rate = createSlider(
+      "Speech speed",
+      0.7,
+      1.5,
+      0.1,
+      voicePreferences.rate,
+      value => {
+        voicePreferences.rate = value;
+      }
+    );
+
+    voiceRateSlider = rate.slider;
+    voiceRateLabel = rate.valueLabel;
+
+    const pitch = createSlider(
+      "Voice pitch",
+      0.5,
+      2,
+      0.1,
+      voicePreferences.pitch,
+      value => {
+        voicePreferences.pitch = value;
+      }
+    );
+
+    voicePitchSlider = pitch.slider;
+    voicePitchLabel = pitch.valueLabel;
+
+    const volume = createSlider(
+      "Volume",
+      0,
+      1,
+      0.05,
+      voicePreferences.volume,
+      value => {
+        voicePreferences.volume = value;
+      }
+    );
+
+    voiceVolumeSlider = volume.slider;
+    voiceVolumeLabel = volume.valueLabel;
+
+    const buttonRow = document.createElement("div");
+
+    buttonRow.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 17px;
+    `;
+
+    function createActionButton(text, callback) {
+      const button = document.createElement("button");
+
+      button.type = "button";
+      button.textContent = text;
+
+      button.style.cssText = `
+        padding: 10px 13px;
+        border-radius: 9px;
+        border: 1px solid var(--border-color, #555);
+        background: var(--accent, #3694ff);
+        color: white;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      `;
+
+      button.addEventListener("click", callback);
+
+      return button;
+    }
+
+    const previewButton = createActionButton(
+      "▶ Preview voice",
+      previewVoice
+    );
+
+    const resetButton = createActionButton(
+      "↺ Reset voice",
+      () => {
+        stopSpeaking();
+
+        voicePreferences = {
+          ...DEFAULT_VOICE_PREFERENCES
+        };
+
+        saveVoicePreferences();
+        updateVoiceSettingsUI();
+        populateVoiceSelector();
+      }
+    );
+
+    buttonRow.append(previewButton, resetButton);
+    voiceOptionsPanel.appendChild(buttonRow);
+
+    const availabilityNote = document.createElement("p");
+
+    availabilityNote.textContent =
+      "Available voices depend on your browser and device.";
+
+    availabilityNote.style.cssText = `
+      margin: 13px 0 0;
+      font-size: 11px;
+      opacity: .65;
+    `;
+
+    voiceOptionsPanel.appendChild(availabilityNote);
+
+    populateVoiceSelector();
+    updateVoiceSettingsUI();
+
+    return voiceOptionsPanel;
+  }
+
+  function previewVoice() {
+    if (!("speechSynthesis" in window)) {
+      alert("Your browser does not support voice playback.");
+      return;
+    }
+
+    stopSpeaking();
+
+    const utterance = new SpeechSynthesisUtterance(
+      "Hello! This is how FROSTGPT will sound with your selected voice."
+    );
+
+    const selectedVoice = getSelectedVoice();
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+    } else {
+      utterance.lang = "en-US";
+    }
+
+    utterance.rate = voicePreferences.rate;
+    utterance.pitch = voicePreferences.pitch;
+    utterance.volume = voicePreferences.volume;
+
+    utterance.onstart = updateVoiceButtons;
+    utterance.onend = updateVoiceButtons;
+    utterance.onerror = updateVoiceButtons;
+
+    window.speechSynthesis.speak(utterance);
+    updateVoiceButtons();
+  }
+
+  function speakReply(text) {
+    if (!voiceReplyEnabled) return;
+
+    if (!("speechSynthesis" in window)) {
+      console.warn("FROSTGPT: Speech synthesis is unavailable.");
+      return;
+    }
+
+    const spokenText = cleanTextForSpeech(text);
+
+    if (!spokenText) return;
+
+    stopSpeaking();
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    const selectedVoice = getSelectedVoice();
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+    } else {
+      utterance.lang = "en-US";
+    }
+
+    utterance.rate = voicePreferences.rate;
+    utterance.pitch = voicePreferences.pitch;
+    utterance.volume = voicePreferences.volume;
+
+    utterance.onstart = updateVoiceButtons;
+    utterance.onend = updateVoiceButtons;
+
+    utterance.onerror = event => {
+      console.warn(
+        "FROSTGPT: Speech playback error.",
+        event.error
+      );
+
+      updateVoiceButtons();
+    };
+
+    window.speechSynthesis.speak(utterance);
+    updateVoiceButtons();
   }
 
   function stopVoiceInput() {
@@ -897,6 +1373,126 @@ import {
     }
 
     updateVoiceButtons();
+  }
+
+  function startVoiceInput() {
+    if (!SpeechRecognition) {
+      alert(
+        "Voice input is not supported by this browser. Try a recent version of Chrome or Edge."
+      );
+
+      return;
+    }
+
+    if (isThinking) {
+      setStatus("Wait until FROSTGPT finishes responding.");
+      return;
+    }
+
+    if (voiceListening) return;
+
+    stopSpeaking();
+
+    voiceFinalTranscript = "";
+    voiceSessionActive = true;
+    voiceListening = true;
+
+    voiceRecognition = new SpeechRecognition();
+
+    voiceRecognition.lang = "en-US";
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = true;
+    voiceRecognition.maxAlternatives = 1;
+
+    voiceRecognition.onstart = () => {
+      voiceListening = true;
+      updateVoiceButtons();
+      setStatus("🎙️ Listening...");
+    };
+
+    voiceRecognition.onresult = event => {
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0]?.transcript || "";
+
+        if (result.isFinal) {
+          voiceFinalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const currentTranscript =
+        (voiceFinalTranscript + interimTranscript).trim();
+
+      if (currentTranscript) {
+        messageInput.value = currentTranscript;
+        messageInput.dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+      }
+    };
+
+    voiceRecognition.onerror = event => {
+      console.warn(
+        "FROSTGPT: Voice recognition error.",
+        event.error
+      );
+
+      voiceListening = false;
+      voiceSessionActive = false;
+
+      updateVoiceButtons();
+
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        setStatus("Microphone permission was denied.");
+      } else if (event.error === "no-speech") {
+        setStatus("No speech detected. Try again.");
+      } else if (event.error !== "aborted") {
+        setStatus("Voice input encountered an error.");
+      }
+    };
+
+    voiceRecognition.onend = () => {
+      voiceListening = false;
+      updateVoiceButtons();
+
+      if (!voiceSessionActive) return;
+
+      voiceSessionActive = false;
+
+      const transcript = voiceFinalTranscript.trim();
+
+      if (transcript) {
+        messageInput.value = transcript;
+        setStatus("Sending voice message...");
+        sendMessage();
+      } else {
+        setStatus(modeName());
+      }
+    };
+
+    updateVoiceButtons();
+
+    try {
+      voiceRecognition.start();
+    } catch (error) {
+      console.error(
+        "FROSTGPT: Could not start voice input.",
+        error
+      );
+
+      voiceListening = false;
+      voiceSessionActive = false;
+
+      updateVoiceButtons();
+      setStatus("Could not start microphone.");
+    }
   }
 
   function createVoiceControls() {
@@ -946,6 +1542,11 @@ import {
     voiceStopButton.textContent = "⏹ Stop audio";
     styleButton(voiceStopButton);
 
+    voiceOptionsButton = document.createElement("button");
+    voiceOptionsButton.id = "frostgptVoiceOptionsButton";
+    voiceOptionsButton.textContent = "🎚️ Voice options";
+    styleButton(voiceOptionsButton);
+
     voiceMicButton.addEventListener("click", () => {
       if (voiceListening) {
         stopVoiceInput();
@@ -970,128 +1571,53 @@ import {
       updateVoiceButtons();
     });
 
+    voiceOptionsButton.addEventListener("click", () => {
+      const panel = createVoiceOptionsPanel();
+
+      const willOpen = panel.hidden;
+
+      panel.hidden = !willOpen;
+      panel.style.display = willOpen ? "block" : "none";
+
+      voiceOptionsButton.setAttribute(
+        "aria-expanded",
+        String(willOpen)
+      );
+    });
+
     controls.append(
       voiceMicButton,
       voiceToggleButton,
-      voiceStopButton
+      voiceStopButton,
+      voiceOptionsButton
     );
 
     inputArea.appendChild(controls);
+    inputArea.appendChild(createVoiceOptionsPanel());
 
     updateVoiceButtons();
 
     console.log("FROSTGPT: Voice controls created.");
   }
 
-  function startVoiceInput() {
-    if (!SpeechRecognition) {
-      alert(
-        "Voice input is not supported by this browser. Try a recent version of Chrome or Edge."
-      );
-      return;
-    }
+  // Load guest preferences first.
+  loadVoicePreferences();
 
-    if (isThinking) {
-      setStatus("Wait until FROSTGPT finishes responding.");
-      return;
-    }
-
-    if (voiceListening) return;
-
-    stopSpeaking();
-
-    voiceFinalTranscript = "";
-    voiceSessionActive = true;
-    voiceListening = true;
-
-    voiceRecognition = new SpeechRecognition();
-
-    voiceRecognition.lang = "en-US";
-    voiceRecognition.continuous = false;
-    voiceRecognition.interimResults = true;
-    voiceRecognition.maxAlternatives = 1;
-
-    voiceRecognition.onstart = () => {
-      voiceListening = true;
-      updateVoiceButtons();
-      setStatus("🎙️ Listening...");
-    };
-
-    voiceRecognition.onresult = event => {
-      let interimTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        const transcript = result[0]?.transcript || "";
-
-        if (result.isFinal) {
-          voiceFinalTranscript += transcript + " ";
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-
-      const currentTranscript =
-        (voiceFinalTranscript + interimTranscript).trim();
-
-      if (currentTranscript) {
-        messageInput.value = currentTranscript;
-      }
-    };
-
-    voiceRecognition.onerror = event => {
-      console.warn("FROSTGPT: Voice recognition error.", event.error);
-
-      voiceListening = false;
-      voiceSessionActive = false;
-
-      updateVoiceButtons();
-
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setStatus("Microphone permission was denied.");
-      } else if (event.error === "no-speech") {
-        setStatus("No speech detected. Try again.");
-      } else if (event.error !== "aborted") {
-        setStatus("Voice input encountered an error.");
-      }
-    };
-
-    voiceRecognition.onend = () => {
-      voiceListening = false;
-      updateVoiceButtons();
-
-      if (!voiceSessionActive) return;
-
-      voiceSessionActive = false;
-
-      const transcript = voiceFinalTranscript.trim();
-
-      if (transcript) {
-        messageInput.value = transcript;
-        setStatus("Sending voice message...");
-        sendMessage();
-      } else {
-        setStatus(modeName());
-      }
-    };
-
-    updateVoiceButtons();
-
-    try {
-      voiceRecognition.start();
-    } catch (error) {
-      console.error("FROSTGPT: Could not start voice input.", error);
-
-      voiceListening = false;
-      voiceSessionActive = false;
-
-      updateVoiceButtons();
-      setStatus("Could not start microphone.");
-    }
-  }
-
-  // Create voice controls directly inside the message input area.
+  // Build the controls.
   createVoiceControls();
+
+  // Browsers may load voice lists asynchronously.
+  if ("speechSynthesis" in window) {
+    if ("onvoiceschanged" in window.speechSynthesis) {
+      window.speechSynthesis.addEventListener(
+        "voiceschanged",
+        populateVoiceSelector
+      );
+    }
+
+    // Try immediately as well.
+    populateVoiceSelector();
+  }
 
   // ==========================================
   // GENERAL HELPERS
@@ -2021,6 +2547,9 @@ import {
     currentUser = null;
     currentUserId = null;
 
+    // Restore guest voice preferences after signing out.
+    loadVoicePreferences();
+
     if (appElement) appElement.classList.remove("visible");
     if (authScreen) authScreen.style.display = "flex";
 
@@ -2044,6 +2573,9 @@ import {
   function showApp(user) {
     currentUser = user;
     currentUserId = user.uid;
+
+    // Load this account's saved voice preferences.
+    loadVoicePreferences();
 
     if (authScreen) authScreen.style.display = "none";
     if (appElement) appElement.classList.add("visible");
@@ -2384,7 +2916,7 @@ import {
 
       playSound(760);
 
-      // Speak the AI reply when voice replies are enabled.
+      // Use the currently selected voice and saved settings.
       speakReply(reply);
 
     } catch (error) {
@@ -2613,5 +3145,6 @@ import {
   console.log("Personalized greetings:", true);
   console.log("Voice input supported:", !!SpeechRecognition);
   console.log("Voice replies supported:", "speechSynthesis" in window);
+  console.log("Custom voice settings:", true);
 
 })();
