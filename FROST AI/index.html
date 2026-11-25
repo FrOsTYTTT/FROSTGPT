@@ -223,12 +223,12 @@
       <div class="setting-row">
         <div class="setting-copy">
           <strong>AI Model</strong>
-          <small>Choose automatic switching or manually prioritize a backup model. Image and GIF requests keep using the vision model.</small>
+          <small>Choose automatic switching or manually prioritize a backup model. Image and GIF requests use vision-capable models only.</small>
         </div>
         <select class="setting-control" id="settingBackupModel" aria-label="AI model preference">
           <option value="auto">Automatic (recommended)</option>
           <option value="@cf/zai-org/glm-4.7-flash">GLM 4.7 Flash (Backup)</option>
-          <option value="@cf/google/gemma-7b-it-lora">Gemma 7B (Backup)</option>
+          <option value="@cf/qwen/qwen3.8-27b">Qwen 3.8 27B (Backup)</option>
         </select>
       </div>
 
