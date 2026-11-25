@@ -2620,7 +2620,7 @@ import {
           const deleteButton = document.createElement("button");
           deleteButton.className = "delete-chat-button";
           deleteButton.type = "button";
-          deleteButton.textContent = deletingChats.has(item.id) ? "…" : "✕ 🗑️";
+          deleteButton.textContent = deletingChats.has(item.id) ? "…" : "✕";
 deleteButton.setAttribute("aria-label", "Delete conversation");
           deleteButton.title = "Delete conversation";
           deleteButton.disabled = deletingChats.has(item.id);
