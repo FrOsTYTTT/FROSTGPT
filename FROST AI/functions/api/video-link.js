@@ -79,7 +79,7 @@ async function fetchYouTubeTranscript(videoId) {
     const section = html.slice(marker, marker + 250_000);
     const tracksMatch = section.match(/"captionTracks"\s*:\s*\[([\s\S]{0,100000}?)\]/);
     if (!tracksMatch) return "";
-    const trackMatch = tracksMatch[1].match(/"baseUrl"\s*:\s*"((?:\\.|[^"\\])*)"/);
+    const trackMatch = tracksMatch[1].match(/"baseUrl"\s*:\s*"((?:\.|[^"\])*)"/);
     if (!trackMatch) return "";
 
     const baseUrl = decodeJsonString(trackMatch[1]);
