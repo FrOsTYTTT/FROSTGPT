@@ -23,7 +23,7 @@ test("plain harmless small talk bypasses Workers AI", async () => {
   assert.equal(await classifyLatestMessage({}, "no worries"), false);
 });
 
-test("ordinary text uses the documented system/user message structure", async () => {
+test("ordinary text uses the previously working single-user Llama Guard request", async () => {
   let captured;
   const env = {
     AI: {
@@ -36,8 +36,11 @@ test("ordinary text uses the documented system/user message structure", async ()
 
   assert.equal(await classifyLatestMessage(env, "Can you explain a website?"), false);
   assert.equal(captured.model, "@cf/meta/llama-guard-3-8b");
-  assert.equal(captured.options.messages[0].role, "system");
-  assert.equal(captured.options.messages[1].role, "user");
+  assert.equal(captured.options.messages.length, 1);
+  assert.equal(captured.options.messages[0].role, "user");
+  assert.match(captured.options.messages[0].content, /<BEGIN CONVERSATION>/);
+  assert.match(captured.options.messages[0].content, /Can you explain a website\?/);
+  assert.match(captured.options.messages[0].content, /Return only the verdict/);
 });
 
 test("unsafe verdicts are recognized without requiring a real unsafe test prompt", async () => {
