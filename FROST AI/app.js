@@ -2718,7 +2718,7 @@ import {
       modeSelect.disabled = false;
 
       if (attachButton) attachButton.disabled = false;
-      if (imageButton) imageButton.disabled = false;
+      updateImageGenerationLimitUI();
     }
 
     updateVoiceButtons();
@@ -2790,7 +2790,9 @@ import {
       },
       signal,
       body: JSON.stringify({
-        messages: conversation.flash
+        // The API accepts at most 80 messages per request. Keep the newest
+        // context without deleting the full conversation from local history.
+        messages: conversation.flash.slice(-80)
       })
     });
 
