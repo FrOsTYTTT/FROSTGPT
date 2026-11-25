@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "frostgpt-v2";
+const CACHE_NAME = "frostgpt-v3";
 
 const APP_FILES = [
   "/",
