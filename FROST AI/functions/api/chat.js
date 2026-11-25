@@ -299,7 +299,19 @@ export async function onRequest({ request, env }) {
 
   // Only Gemma 4 in this fallback list is configured for vision.
   // Do not silently send image requests to text-only fallback models.
-  const modelsToTry = requestHasImages ? [MODELS[0]] : MODELS;
+  const allowedBackupModels = MODELS.slice(1);
+  const requestedBackupModel = body.preferredBackupModel;
+  const preferredBackupModel = allowedBackupModels.includes(requestedBackupModel)
+    ? requestedBackupModel
+    : null;
+
+  // A manually selected backup is tried first for text-only chats. If it
+  // fails, the remaining configured models are still attempted automatically.
+  // Image requests always stay on the vision-capable primary model.
+  const textModelsToTry = preferredBackupModel
+    ? [preferredBackupModel, ...MODELS.filter(model => model !== preferredBackupModel)]
+    : MODELS;
+  const modelsToTry = requestHasImages ? [MODELS[0]] : textModelsToTry;
 
   for (const model of modelsToTry) {
     try {
