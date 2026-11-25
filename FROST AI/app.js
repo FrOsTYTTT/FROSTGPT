@@ -1,9 +1,10 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
 import {
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
+  GithubAuthProvider,
   signInWithPopup,
   onAuthStateChanged,
   signOut,
@@ -31,7 +32,7 @@ import {
   // ==========================================
 
   const firebaseConfig = {
-    apiKey: "AIzaSyBfpeqUE8DauZ5VqNszWKoey1Cl4R5ZIQ",
+    apiKey: "AIzaSyBfpeqUE8Dau5ZV5qNszWKoey1Cl4R5zIQ",
     authDomain: "frostgpt-4e3fa.firebaseapp.com",
     projectId: "frostgpt-4e3fa",
     storageBucket: "frostgpt-4e3fa.firebasestorage.app",
@@ -45,6 +46,8 @@ import {
   const authScreen = $("authScreen");
   const authStatus = $("authStatus");
   const googleSignInButton = $("googleSignInButton");
+  const appleSignInButton = $("appleSignInButton");
+  const githubSignInButton = $("githubSignInButton");
   const appElement = $("app");
   const signOutButton = $("signOutButton");
   const accountName = $("accountName");
@@ -53,13 +56,16 @@ import {
   let auth;
   let db;
   let googleProvider;
+  let appleProvider;
+  let githubProvider;
   let firebaseReady = false;
   let currentUserId = null;
   let currentUser = null;
+
   let openSettingsAfterSignIn = false;
 
   // ==========================================
-  // PERSONALIZATION
+  // PERSONALIZATION / NICKNAME
   // ==========================================
 
   function nicknameStorageKey(userId = currentUserId) {
@@ -117,14 +123,16 @@ import {
       updateNicknameSettings();
       updateAccountDisplay();
 
-      if (getConversation()) renderConversation();
+      if (getConversation()) {
+        renderConversation();
+      }
 
       const status = $("nicknameSavedStatus");
 
       if (status) {
         status.textContent = nickname
           ? "✓ Nickname saved"
-          : "✓ Using your Google account name";
+          : "✓ Using your account name";
       }
     } catch (error) {
       console.error("FROSTGPT: Nickname could not be saved.", error);
@@ -134,6 +142,7 @@ import {
 
   function updateAccountDisplay() {
     if (!accountName || !currentUser) return;
+
     accountName.textContent = getAccountName(currentUser);
   }
 
@@ -161,9 +170,11 @@ import {
       const saved = localStorage.getItem(SETTINGS_KEY);
 
       if (saved) {
+        const parsed = JSON.parse(saved);
+
         settings = {
           ...DEFAULT_SETTINGS,
-          ...JSON.parse(saved)
+          ...parsed
         };
       }
     } catch (error) {
@@ -227,13 +238,11 @@ import {
     body.classList.toggle("no-animations", !settings.animations);
 
     const customColorRow = $("customColorRow");
-
     if (customColorRow) {
       customColorRow.hidden = settings.accent !== "custom";
     }
 
     const themeColor = document.querySelector('meta[name="theme-color"]');
-
     if (themeColor) {
       themeColor.content = lightTheme ? "#f4f6f9" : "#212121";
     }
@@ -263,7 +272,6 @@ import {
     }
 
     const customColorRow = $("customColorRow");
-
     if (customColorRow) {
       customColorRow.hidden = settings.accent !== "custom";
     }
@@ -326,15 +334,16 @@ import {
   function createNicknameSettings() {
     if (nicknameSettingsElement) return;
 
-    const panel = $("settingsPanel");
-    if (!panel) return;
+    const settingsPanel = $("settingsPanel");
+    if (!settingsPanel) return;
 
     const container =
-      panel.querySelector(
+      settingsPanel.querySelector(
         ".settings-content, .settings-card, [role='dialog']"
-      ) || panel;
+      ) || settingsPanel;
 
     const section = document.createElement("section");
+
     section.id = "frostgptNicknameSettings";
 
     section.style.cssText = `
@@ -397,7 +406,7 @@ import {
 
     const resetButton = document.createElement("button");
     resetButton.type = "button";
-    resetButton.textContent = "Use Google name";
+    resetButton.textContent = "Use account name";
 
     resetButton.style.cssText = `
       margin: 10px 0 0 8px;
@@ -415,7 +424,9 @@ import {
     status.style.cssText =
       "font-size: 12px; opacity: .75; margin: 10px 0 0;";
 
-    button.addEventListener("click", () => saveNickname(input.value));
+    button.addEventListener("click", () => {
+      saveNickname(input.value);
+    });
 
     input.addEventListener("keydown", event => {
       if (event.key === "Enter") {
@@ -424,7 +435,9 @@ import {
       }
     });
 
-    resetButton.addEventListener("click", () => saveNickname(""));
+    resetButton.addEventListener("click", () => {
+      saveNickname("");
+    });
 
     section.append(
       heading,
@@ -468,19 +481,13 @@ import {
     syncSettingsControls();
 
     settingsPanel.hidden = false;
-    settingsPanel.setAttribute("aria-hidden", "false");
-
     $("closeSettings")?.focus();
 
     console.log("FROSTGPT: Settings opened.");
   }
 
   function closeSettings() {
-    if (!settingsPanel) return;
-
-    settingsPanel.hidden = true;
-    settingsPanel.setAttribute("aria-hidden", "true");
-
+    if (settingsPanel) settingsPanel.hidden = true;
     $("openSettings")?.focus();
   }
 
@@ -497,6 +504,10 @@ import {
       closeSettings();
     }
   });
+
+  // ==========================================
+  // ACCOUNT PROFILE → SETTINGS
+  // ==========================================
 
   const accountArea = $("accountArea");
 
@@ -631,15 +642,9 @@ import {
         const registration =
           await navigator.serviceWorker.register("/sw.js");
 
-        console.log(
-          "FROSTGPT: Service worker registered.",
-          registration.scope
-        );
+        console.log("FROSTGPT: Service worker registered.", registration.scope);
       } catch (error) {
-        console.error(
-          "FROSTGPT: Service worker registration failed.",
-          error
-        );
+        console.error("FROSTGPT: Service worker registration failed.", error);
       }
     });
   }
@@ -715,6 +720,13 @@ import {
       prompt: "select_account"
     });
 
+    appleProvider = new OAuthProvider("apple.com");
+    appleProvider.addScope("email");
+    appleProvider.addScope("name");
+
+    githubProvider = new GithubAuthProvider();
+    githubProvider.addScope("user:email");
+
     firebaseReady = true;
 
     console.log("FROSTGPT: Firebase initialized.");
@@ -770,13 +782,7 @@ import {
     imageButton
   } = elements;
 
-  if (
-    !chatInner ||
-    !messageInput ||
-    !sendButton ||
-    !statusText ||
-    !modeSelect
-  ) {
+  if (!chatInner || !messageInput || !sendButton || !statusText || !modeSelect) {
     console.error("FROSTGPT: Required HTML elements are missing.");
     return;
   }
@@ -820,247 +826,24 @@ import {
   }
 
   // ==========================================
-  // SAFE MARKDOWN RENDERER
-  // ==========================================
-
-  function renderInlineMarkdown(container, source) {
-    const text = String(source ?? "");
-
-    const tokenPattern =
-      /(`[^`\n]+`|\*\*[\s\S]+?\*\*|__[\s\S]+?__|~~[\s\S]+?~~|\*[^*\n]+\*|_[^_\n]+_)/g;
-
-    let lastIndex = 0;
-    let match;
-
-    while ((match = tokenPattern.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        container.appendChild(
-          document.createTextNode(text.slice(lastIndex, match.index))
-        );
-      }
-
-      const token = match[0];
-      let element = null;
-      let innerText = "";
-
-      if (token.startsWith("`") && token.endsWith("`")) {
-        element = document.createElement("code");
-        innerText = token.slice(1, -1);
-      } else if (
-        (token.startsWith("**") && token.endsWith("**")) ||
-        (token.startsWith("__") && token.endsWith("__"))
-      ) {
-        element = document.createElement("strong");
-        innerText = token.slice(2, -2);
-      } else if (token.startsWith("~~") && token.endsWith("~~")) {
-        element = document.createElement("del");
-        innerText = token.slice(2, -2);
-      } else if (
-        (token.startsWith("*") && token.endsWith("*")) ||
-        (token.startsWith("_") && token.endsWith("_"))
-      ) {
-        element = document.createElement("em");
-        innerText = token.slice(1, -1);
-      }
-
-      if (element) {
-        element.textContent = innerText;
-        container.appendChild(element);
-      } else {
-        container.appendChild(document.createTextNode(token));
-      }
-
-      lastIndex = tokenPattern.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-      container.appendChild(
-        document.createTextNode(text.slice(lastIndex))
-      );
-    }
-  }
-
-  function renderMarkdown(container, source) {
-    container.replaceChildren();
-
-    const lines = String(source ?? "")
-      .replace(/\r\n?/g, "\n")
-      .split("\n");
-
-    let paragraphLines = [];
-    let listElement = null;
-    let listType = null;
-    let codeLines = [];
-    let insideCodeBlock = false;
-    let codeLanguage = "";
-
-    function flushParagraph() {
-      if (!paragraphLines.length) return;
-
-      const paragraph = document.createElement("p");
-      paragraph.className = "markdown-paragraph";
-
-      paragraphLines.forEach((line, index) => {
-        if (index > 0) {
-          paragraph.appendChild(document.createElement("br"));
-        }
-
-        renderInlineMarkdown(paragraph, line);
-      });
-
-      container.appendChild(paragraph);
-      paragraphLines = [];
-    }
-
-    function flushList() {
-      if (!listElement) return;
-
-      container.appendChild(listElement);
-      listElement = null;
-      listType = null;
-    }
-
-    function flushCodeBlock() {
-      const pre = document.createElement("pre");
-      pre.className = "markdown-code-block";
-
-      const code = document.createElement("code");
-
-      if (codeLanguage) {
-        const safeLanguage =
-          codeLanguage.replace(/[^a-zA-Z0-9_-]/g, "");
-
-        if (safeLanguage) {
-          code.className = `language-${safeLanguage}`;
-        }
-      }
-
-      code.textContent = codeLines.join("\n");
-      pre.appendChild(code);
-      container.appendChild(pre);
-
-      codeLines = [];
-      codeLanguage = "";
-    }
-
-    function flushAll() {
-      flushParagraph();
-      flushList();
-    }
-
-    for (const line of lines) {
-      const fence = line.match(/^```([\w+-]*)\s*$/);
-
-      if (fence) {
-        if (insideCodeBlock) {
-          flushCodeBlock();
-          insideCodeBlock = false;
-        } else {
-          flushAll();
-          insideCodeBlock = true;
-          codeLanguage = fence[1] || "";
-        }
-
-        continue;
-      }
-
-      if (insideCodeBlock) {
-        codeLines.push(line);
-        continue;
-      }
-
-      if (!line.trim()) {
-        flushAll();
-        continue;
-      }
-
-      const heading = line.match(/^(#{1,6})\s+(.+)$/);
-
-      if (heading) {
-        flushAll();
-
-        const level = heading[1].length;
-        const element = document.createElement(`h${level}`);
-
-        renderInlineMarkdown(element, heading[2]);
-        container.appendChild(element);
-        continue;
-      }
-
-      if (/^\s*([-*_]\s*){3,}$/.test(line)) {
-        flushAll();
-        container.appendChild(document.createElement("hr"));
-        continue;
-      }
-
-      const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
-      const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
-
-      if (unordered || ordered) {
-        flushParagraph();
-
-        const nextType = unordered ? "ul" : "ol";
-
-        if (!listElement || listType !== nextType) {
-          flushList();
-          listElement = document.createElement(nextType);
-          listType = nextType;
-        }
-
-        const item = document.createElement("li");
-
-        renderInlineMarkdown(item, (unordered || ordered)[1]);
-        listElement.appendChild(item);
-        continue;
-      }
-
-      const quote = line.match(/^\s*>\s?(.*)$/);
-
-      if (quote) {
-        flushAll();
-
-        const blockquote = document.createElement("blockquote");
-
-        renderInlineMarkdown(blockquote, quote[1]);
-        container.appendChild(blockquote);
-        continue;
-      }
-
-      flushList();
-      paragraphLines.push(line);
-    }
-
-    if (insideCodeBlock) {
-      flushCodeBlock();
-    }
-
-    flushAll();
-  }
-
-  // ==========================================
   // FIRESTORE REFERENCES
   // ==========================================
 
-  function userChatsCollection(userId = currentUserId) {
-    if (!userId) throw new Error("No signed-in user.");
-    if (!db) throw new Error("Firestore is not initialized.");
+  function userChatsCollection() {
+    if (!currentUserId) throw new Error("No signed-in user.");
 
-    return collection(db, "users", userId, "chats");
+    return collection(db, "users", currentUserId, "chats");
   }
 
-  function chatDocument(conversationId, userId = currentUserId) {
-    if (!userId) throw new Error("No signed-in user.");
-
-    return doc(db, "users", userId, "chats", conversationId);
+  function chatDocument(conversationId) {
+    return doc(db, "users", currentUserId, "chats", conversationId);
   }
 
-  function chatMessagesCollection(conversationId, userId = currentUserId) {
-    if (!userId) throw new Error("No signed-in user.");
-
+  function chatMessagesCollection(conversationId) {
     return collection(
       db,
       "users",
-      userId,
+      currentUserId,
       "chats",
       conversationId,
       "messages"
@@ -1099,99 +882,62 @@ import {
     }
 
     return {
-      role: message.role || "assistant",
+      role: message.role,
       text: storedText,
       mode: message.mode || "flash",
       contextContent: safeContextContent(message.contextContent),
-      createdAt: Number(message.createdAt) || Date.now()
+      createdAt: message.createdAt || Date.now()
     };
   }
 
-  function checkStorageReady(userId) {
-    if (!firebaseReady || !db) {
-      throw new Error("Firebase or Firestore is not initialized.");
-    }
-
-    if (!auth?.currentUser) {
-      throw new Error("You are not signed in.");
-    }
-
-    if (auth.currentUser.uid !== userId || currentUserId !== userId) {
-      throw new Error("Your account is still loading. Please try again.");
-    }
-
-    if (!settings.chatHistory) {
-      throw new Error("Chat history is turned off in Settings.");
-    }
-  }
-
   async function saveConversationMetadata(conversation) {
-    const userId = currentUserId;
+    if (!currentUserId || !firebaseReady || !settings.chatHistory) return;
 
     try {
-      checkStorageReady(userId);
-
       const now = Date.now();
       conversation.updatedAt = now;
 
-      const batch = writeBatch(db);
-
-      batch.set(
-        chatDocument(conversation.id, userId),
+      await setDoc(
+        chatDocument(conversation.id),
         {
-          title: conversation.title || "New chat",
-          createdAt: Number(conversation.createdAt) || now,
+          title: conversation.title,
+          createdAt: conversation.createdAt || now,
           updatedAt: now
         },
         { merge: true }
       );
-
-      await batch.commit();
-
-      console.log("FROSTGPT: Chat metadata saved:", conversation.id);
-      return true;
     } catch (error) {
       console.error("FROSTGPT: Metadata save failed.", error);
-      setStatus("Chat save failed: " + error.message);
-      return false;
+      setStatus("Chat saving failed");
     }
   }
 
   async function saveConversationMessage(conversation, message) {
-    const userId = currentUserId;
+    if (!currentUserId || !firebaseReady || !settings.chatHistory) return;
 
     try {
-      checkStorageReady(userId);
-
       const now = Date.now();
       conversation.updatedAt = now;
 
-      const batch = writeBatch(db);
-
-      batch.set(
-        chatDocument(conversation.id, userId),
+      await setDoc(
+        chatDocument(conversation.id),
         {
-          title: conversation.title || "New chat",
-          createdAt: Number(conversation.createdAt) || now,
+          title: conversation.title,
+          createdAt: conversation.createdAt || now,
           updatedAt: now
         },
         { merge: true }
       );
 
-      batch.set(
-        doc(chatMessagesCollection(conversation.id, userId), message.id),
-        prepareMessageForStorage(message)
+      const messageRef = doc(
+        chatMessagesCollection(conversation.id),
+        message.id
       );
 
-      await batch.commit();
-
-      console.log("FROSTGPT: Message saved:", message.id);
-      setStatus("Chat saved");
-      return true;
+      await setDoc(messageRef, prepareMessageForStorage(message));
     } catch (error) {
       console.error("FROSTGPT: Message save failed.", error);
-      setStatus("Message save failed: " + error.message);
-      return false;
+      setStatus("Message saving failed");
     }
   }
 
@@ -1200,21 +946,10 @@ import {
   // ==========================================
 
   async function deleteConversation(conversationId) {
+    if (!currentUserId || !firebaseReady || !settings.chatHistory) return;
     if (deletingChats.has(conversationId)) return;
 
-    const userId = currentUserId;
-
-    try {
-      checkStorageReady(userId);
-    } catch (error) {
-      setStatus("Cannot delete chat: " + error.message);
-      return;
-    }
-
-    const conversation = conversations.find(
-      item => item.id === conversationId
-    );
-
+    const conversation = conversations.find(item => item.id === conversationId);
     if (!conversation) return;
 
     const confirmed = confirm(
@@ -1232,15 +967,25 @@ import {
     renderHistory();
     setStatus("Deleting conversation...");
 
+    const userId = currentUserId;
+
     try {
-      const messagesRef = chatMessagesCollection(conversationId, userId);
+      const messagesRef = collection(
+        db,
+        "users",
+        userId,
+        "chats",
+        conversationId,
+        "messages"
+      );
+
       const snapshot = await getDocs(messagesRef);
 
-      if (currentUserId !== userId || auth.currentUser?.uid !== userId) {
-        throw new Error("Your account changed during deletion.");
-      }
-
       for (let i = 0; i < snapshot.docs.length; i += 450) {
+        if (currentUserId !== userId) {
+          throw new Error("Account changed during deletion.");
+        }
+
         const batch = writeBatch(db);
 
         snapshot.docs.slice(i, i + 450).forEach(message => {
@@ -1250,47 +995,36 @@ import {
         await batch.commit();
       }
 
-      if (currentUserId !== userId || auth.currentUser?.uid !== userId) {
-        throw new Error("Your account changed during deletion.");
+      if (currentUserId !== userId) {
+        throw new Error("Account changed during deletion.");
       }
 
-      await deleteDoc(chatDocument(conversationId, userId));
+      await deleteDoc(doc(db, "users", userId, "chats", conversationId));
 
       if (currentUserId !== userId) return;
 
-      conversations = conversations.filter(
-        item => item.id !== conversationId
-      );
+      conversations = conversations.filter(item => item.id !== conversationId);
 
       if (activeConversationId === conversationId) {
         activeConversationId = conversations[0]?.id || null;
         attachments = [];
-
         updateAttachmentPreview();
         renderConversation();
       }
 
       renderHistory();
       setStatus("Conversation deleted");
-
-      console.log("FROSTGPT: Conversation deleted:", conversationId);
     } catch (error) {
       console.error("FROSTGPT: Chat deletion failed.", error);
 
       if (currentUserId === userId) {
-        setStatus("Delete failed: " + error.message);
-
-        alert(
-          "FROSTGPT couldn't delete this conversation.\n\n" +
-          error.message
-        );
+        setStatus("Could not delete conversation");
+        alert("The conversation could not be deleted. Please try again.");
       }
     } finally {
       deletingChats.delete(conversationId);
 
-      if (currentUserId === userId) {
-        renderHistory();
-      }
+      if (currentUserId === userId) renderHistory();
     }
   }
 
@@ -1306,12 +1040,13 @@ import {
 
     const heading = document.createElement("h1");
 
-    heading.textContent = currentUser
-      ? `Hey ${getAccountName()}! 👋`
-      : "Welcome to FROSTGPT™";
+    if (currentUser) {
+      heading.textContent = `Hey ${getAccountName()}! 👋`;
+    } else {
+      heading.textContent = "Welcome to FROSTGPT™";
+    }
 
     const paragraph = document.createElement("p");
-
     paragraph.textContent = currentUser
       ? "Welcome back to FROSTGPT. What can I help you with today?"
       : "What would you like to work on today?";
@@ -1328,13 +1063,9 @@ import {
 
     try {
       const response = await fetch(imageData);
-
-      if (!response.ok) {
-        throw new Error("Could not retrieve the image.");
-      }
+      if (!response.ok) throw new Error("Could not retrieve the image.");
 
       const blob = await response.blob();
-
       const extension = blob.type.split("/")[1]
         ?.split(";")[0]
         ?.replace("jpeg", "jpg") || "png";
@@ -1350,7 +1081,6 @@ import {
       link.remove();
 
       setTimeout(() => URL.revokeObjectURL(objectURL), 2000);
-
       button.textContent = "✓ Downloaded";
     } catch (error) {
       console.error("FROSTGPT: Image download failed.", error);
@@ -1359,11 +1089,207 @@ import {
       button.disabled = false;
 
       setTimeout(() => {
-        if (button.isConnected) {
-          button.textContent = originalText;
-        }
+        if (button.isConnected) button.textContent = originalText;
       }, 2500);
     }
+  }
+
+  // ==========================================
+  // SAFE MARKDOWN RENDERING
+  // ==========================================
+
+  function renderMarkdown(value, container) {
+    const source = String(value ?? "");
+    const fragment = document.createDocumentFragment();
+
+    const lines = source.split("\n");
+    let index = 0;
+
+    function appendInline(text, parent) {
+      const pattern =
+        /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
+
+      let lastIndex = 0;
+      let match;
+
+      while ((match = pattern.exec(text)) !== null) {
+        parent.appendChild(
+          document.createTextNode(text.slice(lastIndex, match.index))
+        );
+
+        if (match[2] || match[3]) {
+          const strong = document.createElement("strong");
+          strong.textContent = match[2] || match[3];
+          parent.appendChild(strong);
+        } else if (match[4] || match[5]) {
+          const italic = document.createElement("em");
+          italic.textContent = match[4] || match[5];
+          parent.appendChild(italic);
+        } else if (match[6]) {
+          const code = document.createElement("code");
+          code.textContent = match[6];
+          parent.appendChild(code);
+        }
+
+        lastIndex = pattern.lastIndex;
+      }
+
+      parent.appendChild(
+        document.createTextNode(text.slice(lastIndex))
+      );
+    }
+
+    function addParagraph(text) {
+      const paragraph = document.createElement("p");
+      appendInline(text, paragraph);
+      fragment.appendChild(paragraph);
+    }
+
+    while (index < lines.length) {
+      const line = lines[index];
+
+      if (!line.trim()) {
+        index++;
+        continue;
+      }
+
+      // Code blocks
+      if (line.trim().startsWith("```")) {
+        index++;
+
+        const codeLines = [];
+
+        while (
+          index < lines.length &&
+          !lines[index].trim().startsWith("```")
+        ) {
+          codeLines.push(lines[index]);
+          index++;
+        }
+
+        if (index < lines.length) index++;
+
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+
+        code.textContent = codeLines.join("\n");
+
+        pre.appendChild(code);
+        fragment.appendChild(pre);
+        continue;
+      }
+
+      // Headings
+      const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+
+      if (headingMatch) {
+        const heading = document.createElement(
+          `h${headingMatch[1].length}`
+        );
+
+        appendInline(headingMatch[2], heading);
+        fragment.appendChild(heading);
+
+        index++;
+        continue;
+      }
+
+      // Horizontal rules
+      if (/^(\*\s*){3,}$|^(-\s*){3,}$|^(_\s*){3,}$/.test(line.trim())) {
+        fragment.appendChild(document.createElement("hr"));
+        index++;
+        continue;
+      }
+
+      // Blockquotes
+      if (line.trim().startsWith(">")) {
+        const quote = document.createElement("blockquote");
+
+        while (
+          index < lines.length &&
+          lines[index].trim().startsWith(">")
+        ) {
+          const quoteLine = lines[index]
+            .trim()
+            .replace(/^>\s?/, "");
+
+          const paragraph = document.createElement("p");
+          appendInline(quoteLine, paragraph);
+          quote.appendChild(paragraph);
+
+          index++;
+        }
+
+        fragment.appendChild(quote);
+        continue;
+      }
+
+      // Unordered lists
+      if (/^\s*[-*+]\s+/.test(line)) {
+        const list = document.createElement("ul");
+
+        while (
+          index < lines.length &&
+          /^\s*[-*+]\s+/.test(lines[index])
+        ) {
+          const item = document.createElement("li");
+          appendInline(
+            lines[index].replace(/^\s*[-*+]\s+/, ""),
+            item
+          );
+
+          list.appendChild(item);
+          index++;
+        }
+
+        fragment.appendChild(list);
+        continue;
+      }
+
+      // Ordered lists
+      if (/^\s*\d+\.\s+/.test(line)) {
+        const list = document.createElement("ol");
+
+        while (
+          index < lines.length &&
+          /^\s*\d+\.\s+/.test(lines[index])
+        ) {
+          const item = document.createElement("li");
+
+          appendInline(
+            lines[index].replace(/^\s*\d+\.\s+/, ""),
+            item
+          );
+
+          list.appendChild(item);
+          index++;
+        }
+
+        fragment.appendChild(list);
+        continue;
+      }
+
+      // Normal paragraphs
+      const paragraphLines = [line];
+      index++;
+
+      while (
+        index < lines.length &&
+        lines[index].trim() &&
+        !/^#{1,6}\s+/.test(lines[index]) &&
+        !lines[index].trim().startsWith("```") &&
+        !lines[index].trim().startsWith(">") &&
+        !/^\s*[-*+]\s+/.test(lines[index]) &&
+        !/^\s*\d+\.\s+/.test(lines[index])
+      ) {
+        paragraphLines.push(lines[index]);
+        index++;
+      }
+
+      addParagraph(paragraphLines.join("\n"));
+    }
+
+    container.appendChild(fragment);
   }
 
   function renderMessage(message, shouldScroll = true) {
@@ -1388,7 +1314,7 @@ import {
         text.className = "message-text";
 
         if (message.role === "assistant") {
-          renderMarkdown(text, message.text);
+          renderMarkdown(message.text, text);
         } else {
           text.textContent = message.text;
         }
@@ -1424,10 +1350,7 @@ import {
         downloadButton.textContent = "↓ Download image";
 
         downloadButton.addEventListener("click", () => {
-          downloadGeneratedImage(
-            message.generatedImage,
-            downloadButton
-          );
+          downloadGeneratedImage(message.generatedImage, downloadButton);
         });
 
         content.appendChild(downloadButton);
@@ -1452,10 +1375,7 @@ import {
       return;
     }
 
-    conversation.display.forEach(message => {
-      renderMessage(message, false);
-    });
-
+    conversation.display.forEach(message => renderMessage(message, false));
     scrollBottom();
   }
 
@@ -1509,8 +1429,7 @@ import {
           const deleteButton = document.createElement("button");
           deleteButton.className = "delete-chat-button";
           deleteButton.type = "button";
-          deleteButton.textContent =
-            deletingChats.has(item.id) ? "…" : "🗑";
+          deleteButton.textContent = deletingChats.has(item.id) ? "…" : "🗑";
           deleteButton.title = "Delete conversation";
           deleteButton.disabled = deletingChats.has(item.id);
 
@@ -1587,9 +1506,7 @@ import {
     conversation.display.push(message);
     renderMessage(message);
 
-    if (role === "user") {
-      updateTitle(conversation, text);
-    }
+    if (role === "user") updateTitle(conversation, text);
 
     saveConversationMessage(conversation, message);
 
@@ -1624,7 +1541,7 @@ import {
   // ==========================================
 
   async function loadUserConversations(userId) {
-    if (!userId || !firebaseReady || !db) return;
+    if (!userId || !firebaseReady) return;
 
     currentUserId = userId;
     conversations = [];
@@ -1642,36 +1559,31 @@ import {
     setStatus("Loading your chat history...");
 
     try {
-      const chatsSnapshot = await getDocs(
-        userChatsCollection(userId)
-      );
+      const chatsSnapshot = await getDocs(userChatsCollection());
 
       if (currentUserId !== userId) return;
 
       const loadedConversations = [];
 
       for (const chatSnapshot of chatsSnapshot.docs) {
-        if (currentUserId !== userId) return;
-
         const chatData = chatSnapshot.data();
 
         const conversation = {
           id: chatSnapshot.id,
           title: chatData.title || "New chat",
           createdAt: chatData.createdAt || Date.now(),
-          updatedAt:
-            chatData.updatedAt || chatData.createdAt || Date.now(),
+          updatedAt: chatData.updatedAt || chatData.createdAt || Date.now(),
           display: [],
           flash: [],
           classic: []
         };
 
-        const messagesSnapshot = await getDocs(
-          query(
-            chatMessagesCollection(conversation.id, userId),
-            orderBy("createdAt", "asc")
-          )
+        const messagesQuery = query(
+          chatMessagesCollection(conversation.id),
+          orderBy("createdAt", "asc")
         );
+
+        const messagesSnapshot = await getDocs(messagesQuery);
 
         if (currentUserId !== userId) return;
 
@@ -1711,16 +1623,13 @@ import {
       if (currentUserId !== userId) return;
 
       loadedConversations.sort(
-        (a, b) =>
-          (b.updatedAt || b.createdAt) -
-          (a.updatedAt || a.createdAt)
+        (a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)
       );
 
       conversations = loadedConversations;
 
       if (conversations.length > 0) {
         activeConversationId = conversations[0].id;
-
         renderHistory();
         renderConversation();
       } else {
@@ -1728,45 +1637,37 @@ import {
       }
 
       setStatus(modeName());
-
-      console.log(
-        "FROSTGPT: Loaded conversations:",
-        conversations.length
-      );
     } catch (error) {
       console.error("FROSTGPT: History loading failed.", error);
 
       if (currentUserId !== userId) return;
 
-      setStatus("History loading failed: " + error.message);
+      setStatus("Could not load chat history");
 
-      if (conversations.length === 0) {
-        showWelcome();
-      }
+      if (conversations.length === 0) showWelcome();
     }
   }
 
   // ==========================================
-  // GOOGLE SIGN-IN
+  // GOOGLE / APPLE / GITHUB SIGN-IN
   // ==========================================
 
-  async function googleSignIn() {
+  async function signInWithProvider(provider, button, providerName) {
     if (!firebaseReady) {
       if (authStatus) {
         authStatus.textContent =
           "Firebase could not initialize. Check your configuration.";
       }
-
       return;
     }
 
-    if (!googleSignInButton) return;
+    if (!button || button.disabled) return;
 
-    googleSignInButton.disabled = true;
-    googleSignInButton.style.opacity = ".6";
+    button.disabled = true;
+    button.style.opacity = ".6";
 
     if (authStatus) {
-      authStatus.textContent = "Opening Google sign-in...";
+      authStatus.textContent = `Opening ${providerName} sign-in...`;
     }
 
     try {
@@ -1774,15 +1675,12 @@ import {
 
       openSettingsAfterSignIn = true;
 
-      await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, provider);
 
-      if (authStatus) {
-        authStatus.textContent = "";
-      }
+      if (authStatus) authStatus.textContent = "";
     } catch (error) {
       openSettingsAfterSignIn = false;
-
-      console.error("FROSTGPT: Google sign-in error.", error);
+      console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
 
       if (authStatus) {
         if (error.code === "auth/popup-closed-by-user") {
@@ -1790,18 +1688,34 @@ import {
         } else if (error.code === "auth/unauthorized-domain") {
           authStatus.textContent =
             "This website domain is not authorized in Firebase.";
+        } else if (error.code === "auth/operation-not-allowed") {
+          authStatus.textContent =
+            `${providerName} sign-in is not enabled in Firebase Authentication yet.`;
+        } else if (error.code === "auth/account-exists-with-different-credential") {
+          authStatus.textContent =
+            "An account already exists with this email using another sign-in method.";
         } else {
           authStatus.textContent =
-            error.message || "Google sign-in failed.";
+            error.message || `${providerName} sign-in failed.`;
         }
       }
     } finally {
-      googleSignInButton.disabled = false;
-      googleSignInButton.style.opacity = "1";
+      button.disabled = false;
+      button.style.opacity = "1";
     }
   }
 
-  googleSignInButton?.addEventListener("click", googleSignIn);
+  googleSignInButton?.addEventListener("click", () => {
+    signInWithProvider(googleProvider, googleSignInButton, "Google");
+  });
+
+  appleSignInButton?.addEventListener("click", () => {
+    signInWithProvider(appleProvider, appleSignInButton, "Apple");
+  });
+
+  githubSignInButton?.addEventListener("click", () => {
+    signInWithProvider(githubProvider, githubSignInButton, "GitHub");
+  });
 
   // ==========================================
   // AUTHENTICATION DISPLAY
@@ -1934,9 +1848,7 @@ import {
 
     if (!response.ok) {
       throw new Error(
-        data.error ||
-        data.details ||
-        `Request failed (HTTP ${response.status}).`
+        data.error || data.details || `Request failed (HTTP ${response.status}).`
       );
     }
 
@@ -2024,8 +1936,7 @@ import {
       const reader = new FileReader();
 
       reader.onload = () => resolve(reader.result);
-      reader.onerror = () =>
-        reject(new Error(`Could not read ${file.name}.`));
+      reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
 
       reader.readAsDataURL(file);
     });
@@ -2099,10 +2010,9 @@ import {
         });
       });
 
-      apiContent =
-        parts.length === 1 && parts[0].type === "text"
-          ? message
-          : parts;
+      apiContent = parts.length === 1 && parts[0].type === "text"
+        ? message
+        : parts;
 
       conversation.flash.push({
         role: "user",
@@ -2378,6 +2288,7 @@ import {
         }
 
         await loadUserConversations(user.uid);
+
       } else {
         openSettingsAfterSignIn = false;
         showLogin();
@@ -2391,6 +2302,5 @@ import {
   console.log("Classic loaded:", !!window.FROSTGPTClassic);
   console.log("Settings loaded:", true);
   console.log("Personalized greetings:", true);
-  console.log("Markdown renderer loaded:", true);
 
 })();
