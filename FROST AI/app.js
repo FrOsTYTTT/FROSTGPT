@@ -376,6 +376,7 @@ import {
   let conversations = [];
   let activeConversationId = null;
   let attachments = [];
+  let pendingVideoAudioContext = "";
   let isThinking = false;
   let activeController = null;
   let requestId = 0;
@@ -3299,7 +3300,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       customPersonality: getSavedPersonality(),
       userNickname: getSavedNickname().trim().slice(0, 30),
       profilePhotoData: currentProfilePhotoData,
-      historyMemory: buildSavedHistoryMemory(conversation.id)
+      historyMemory: buildSavedHistoryMemory(conversation.id),
+      videoAudioTranscript: pendingVideoAudioContext
     }, signal);
     const data = await parseResponse(response);
     if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Cloudflare returned no AI reply.");
@@ -3715,6 +3717,11 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     );
     const hasGif = imageAttachments.some(item => item.isGif);
     const videoAttachments = imageAttachments.filter(item => item.kind === "video");
+    pendingVideoAudioContext = videoAttachments
+      .map(video => video.audioTranscript ? `Video: ${video.name}\\n${video.audioTranscript}` : "")
+      .filter(Boolean)
+      .join("\\n\\n")
+      .slice(0, 16000);
 
     let apiContent = message;
 
@@ -3731,10 +3738,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       if (videoAttachments.length) {
         const videoNotes = videoAttachments.map(video => {
           const timestamps = (video.frameTimes || []).map(time => time.toFixed(1) + "s").join(", ");
-          const audioEvidence = video.audioTranscript
-            ? `Audio transcript (speech recognition; may contain errors):\\n${video.audioTranscript}`
-            : `Audio analysis status: ${video.audioStatus || "No transcript available."}`;
-          return `Video attachment: ${video.name}. Duration: ${video.duration.toFixed(1)} seconds. The following still images are sampled from this video in chronological order at approximately: ${timestamps}. Analyze the sequence of frames, describe visible actions and scene changes, and be clear that these are sampled frames rather than continuous playback. ${audioEvidence} The transcript is evidence of recognized speech only; it does not describe music or other sounds.`;
+          return `Video attachment: ${video.name}. Duration: ${video.duration.toFixed(1)} seconds. The following still images are sampled from this video in chronological order at approximately: ${timestamps}. Analyze the sequence of frames, describe visible actions and scene changes, and be clear that these are sampled frames rather than continuous playback. Audio transcript availability: ${video.audioStatus || "No transcript available."} The transcript, if supplied separately by the server, is evidence of recognized speech only; it does not describe music or other sounds.`;
         }).join("\n");
         parts.push({ type: "text", text: videoNotes });
       }
@@ -3823,6 +3827,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         }
       } else {
         const result = await callFlashAI(conversation, controller.signal);
+        pendingVideoAudioContext = "";
         reply = result.reply;
         if (result.action === "delete_conversation") {
           removeTyping();
@@ -3874,6 +3879,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       );
     } finally {
       if (currentRequest === requestId) {
+        pendingVideoAudioContext = "";
         activeController = null;
         setThinking(false);
       }
