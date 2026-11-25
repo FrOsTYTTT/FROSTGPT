@@ -161,6 +161,48 @@ import {
   // ==========================================
 
   const SETTINGS_KEY = "frostgpt_settings_v1";
+  const PERSONALITY_MAX_LENGTH = 1200;
+
+  function personalityStorageKey(userId = currentUserId) {
+    return userId ? `frostgpt_personality_${userId}` : null;
+  }
+  function getSavedPersonality(userId = currentUserId) {
+    const key = personalityStorageKey(userId);
+    if (!key) return "";
+    try { return (localStorage.getItem(key) || "").slice(0, PERSONALITY_MAX_LENGTH); }
+    catch { return ""; }
+  }
+  function savePersonality(value) {
+    const key = personalityStorageKey();
+    if (!key) { alert("Please sign in before saving your personality preferences."); return false; }
+    const personality = String(value || "").trim();
+    if (personality.length > PERSONALITY_MAX_LENGTH) { alert(`Personality preferences must be ${PERSONALITY_MAX_LENGTH} characters or fewer.`); return false; }
+    try {
+      if (personality) localStorage.setItem(key, personality);
+      else localStorage.removeItem(key);
+      const status = $("personalitySavedStatus");
+      if (status) status.textContent = personality ? "✓ Personality preferences saved" : "✓ Default personality restored";
+      return true;
+    } catch (error) {
+      console.error("FROSTGPT: Could not save personality preferences.", error);
+      const status = $("personalitySavedStatus");
+      if (status) status.textContent = "Could not save preferences in this browser.";
+      return false;
+    }
+  }
+  function openPersonalityEditor() {
+    const panel = $("personalityPanel"), input = $("personalityInput");
+    if (!panel || !input) return;
+    input.value = getSavedPersonality(); updatePersonalityCounter(); panel.hidden = false; input.focus();
+  }
+  function closePersonalityEditor() {
+    const panel = $("personalityPanel"); if (panel) panel.hidden = true;
+    $("openPersonality")?.focus();
+  }
+  function updatePersonalityCounter() {
+    const input = $("personalityInput"), counter = $("personalityCharacterCount");
+    if (input && counter) counter.textContent = `${input.value.length}/${PERSONALITY_MAX_LENGTH}`;
+  }
 
   const DEFAULT_SETTINGS = {
     theme: "dark",
@@ -510,11 +552,28 @@ import {
   $("closeSettings")?.addEventListener("click", closeSettings);
   $("resetSettings")?.addEventListener("click", resetSettings);
 
+  $("openPersonality")?.addEventListener("click", openPersonalityEditor);
+  $("closePersonality")?.addEventListener("click", closePersonalityEditor);
+  $("savePersonality")?.addEventListener("click", () => {
+    if (savePersonality($("personalityInput")?.value || "")) closePersonalityEditor();
+  });
+  $("resetPersonality")?.addEventListener("click", () => {
+    const input = $("personalityInput"); if (input) input.value = "";
+    updatePersonalityCounter(); savePersonality("");
+  });
+  $("personalityInput")?.addEventListener("input", updatePersonalityCounter);
+  $("personalityPanel")?.addEventListener("click", event => {
+    if (event.target === $("personalityPanel")) closePersonalityEditor();
+  });
+
   settingsPanel?.addEventListener("click", event => {
     if (event.target === settingsPanel) closeSettings();
   });
 
   document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && $("personalityPanel") && !$("personalityPanel").hidden) {
+      closePersonalityEditor(); return;
+    }
     if (event.key === "Escape" && settingsPanel && !settingsPanel.hidden) {
       closeSettings();
     }
@@ -2804,7 +2863,8 @@ import {
       body: JSON.stringify({
         messages: conversation.flash.slice(-80),
         conversationId: conversation.id,
-        preferredBackupModel: settings.preferredBackupModel
+        preferredBackupModel: settings.preferredBackupModel,
+        customPersonality: getSavedPersonality()
       })
     });
     const data = await parseResponse(response);
