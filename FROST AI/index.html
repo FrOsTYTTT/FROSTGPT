@@ -1,0 +1,1122 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="google-site-verification" content="C0cntRV5oc0j7ln7XXMmRZvoiqaXNwfUio4XceUecxs" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#212121">
+  <meta name="description" content="FROSTGPT™ - Your AI workspace, created by FrOsTAI.">
+  <meta name="application-name" content="FROSTGPT™">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FROSTGPT™">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>FROSTGPT™</title>
+  <link rel="manifest" href="/manifest.json">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23171717'/%3E%3Cg stroke='%233694ff' stroke-width='7' stroke-linecap='round'%3E%3Cpath d='M50 15V85M20 32L80 68M20 68L80 32'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='8' fill='white'/%3E%3C/svg%3E">
+
+  <style>
+    :root {
+      --background: #212121;
+      --sidebar: #171717;
+      --surface: #303030;
+      --surface-hover: #3a3a3a;
+      --text: #f4f4f4;
+      --muted: #a0a0a0;
+      --accent: #3694ff;
+      --border: #3b3b3b;
+      --chat-font-size: 17px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--background);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      transition: background .2s, color .2s;
+    }
+
+    body.light-theme {
+      --background: #f4f6f9;
+      --sidebar: #e9edf3;
+      --surface: #ffffff;
+      --surface-hover: #e5eaf1;
+      --text: #20242b;
+      --muted: #667080;
+      --border: #d5dce5;
+    }
+
+    body.no-animations *,
+    body.no-animations *::before,
+    body.no-animations *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; color: inherit; }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    #authScreen {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background:
+        radial-gradient(ellipse at top, #183452 0%, transparent 55%),
+        #171717;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 38px 30px;
+      border: 1px solid #3b3b3b;
+      border-radius: 22px;
+      background: #212121;
+      text-align: center;
+      box-shadow: 0 20px 70px rgba(0,0,0,.35);
+    }
+
+    .auth-logo { font-size: 38px; margin-bottom: 12px; }
+    .auth-card h1 { margin: 0 0 10px; font-size: 29px; }
+
+    .auth-card p {
+      color: #a0a0a0;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+
+    #googleSignInButton {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 50px;
+      border: 1px solid #dadce0;
+      border-radius: 9px;
+      background: white;
+      color: #3c4043;
+      font-weight: 600;
+    }
+
+    #googleSignInButton:hover { background: #eeeeee; }
+    #googleSignInButton:disabled { cursor: wait; opacity: .6; }
+    .google-logo { width: 20px; height: 20px; }
+
+    #authStatus {
+      min-height: 22px;
+      margin-top: 18px;
+      color: #ff8585;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .auth-small { margin-top: 20px; color: #777; font-size: 11px; }
+
+    .app {
+      display: none;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    .app.visible { display: flex; }
+
+    #sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: var(--sidebar);
+      transition: width .2s, margin .2s, transform .2s;
+      overflow: hidden;
+    }
+
+    #sidebar.collapsed {
+      width: 0;
+      padding: 0;
+      margin-left: -1px;
+    }
+
+    .sidebar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand { font-size: 19px; font-weight: 700; white-space: nowrap; }
+
+    .icon-button {
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      padding: 10px;
+      color: var(--text);
+      font-size: 19px;
+    }
+
+    .icon-button:hover { background: var(--surface-hover); }
+
+    .new-chat {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: transparent;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .new-chat:hover { background: var(--surface); }
+
+    #searchChats {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+
+    .history-heading {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 10px 0 0;
+    }
+
+    #historyList {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      overflow-y: auto;
+    }
+
+    .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+
+    .history-item {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      border: 0;
+      border-radius: 9px;
+      padding: 11px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: left;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .history-item:hover,
+    .history-item.active { background: var(--surface); }
+
+    .delete-chat-button {
+      flex: 0 0 36px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .delete-chat-button:hover {
+      background: rgba(255,80,80,.14);
+      color: #ff7777;
+    }
+
+    .delete-chat-button:disabled { opacity: .5; cursor: wait; }
+
+    .main {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .header {
+      min-height: 64px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 5;
+      flex-wrap: nowrap;
+    }
+
+    #modeSelect {
+      max-width: 230px;
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+
+    #statusText {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* SETTINGS BUTTON */
+
+    #openSettings {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-shrink: 0;
+      min-height: 42px;
+      border: 2px solid var(--accent);
+      border-radius: 11px;
+      background: rgba(54,148,255,.18);
+      color: var(--accent);
+      padding: 9px 15px;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative;
+      z-index: 20;
+      transition: background .2s, transform .2s;
+    }
+
+    #openSettings:hover {
+      background: rgba(54,148,255,.30);
+      transform: translateY(-1px);
+    }
+
+    #openSettings:active { transform: scale(.97); }
+
+    #accountArea {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      padding: 6px 9px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      cursor: default;
+      flex-shrink: 1;
+    }
+
+    #accountName {
+      color: var(--text);
+      font-size: 12px;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #accountPhoto {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: none;
+    }
+
+    #signOutButton,
+    #installButton {
+      border: 1px solid var(--border);
+      background: transparent;
+      border-radius: 9px;
+      padding: 8px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #signOutButton:hover,
+    #installButton:hover { background: var(--surface); }
+
+    #installButton {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    #installButton[hidden] { display: none; }
+
+    #installHelp {
+      position: absolute;
+      z-index: 30;
+      top: 58px;
+      right: 16px;
+      width: min(310px, calc(100vw - 32px));
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 12px 35px rgba(0,0,0,.25);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    #installHelp[hidden] { display: none; }
+    #installHelp strong { display: block; margin-bottom: 7px; }
+    #installHelp p { margin: 0 0 10px; color: var(--muted); white-space: pre-line; }
+
+    #closeInstallHelp {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--surface-hover);
+      border-radius: 8px;
+      padding: 8px;
+      color: var(--text);
+    }
+
+    #chat { flex: 1; overflow-y: auto; padding: 28px 22px 180px; }
+    #chatInner { max-width: 900px; width: 100%; margin: 0 auto; }
+
+    .welcome-screen {
+      min-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .welcome-screen h1 {
+      font-size: clamp(28px, 4vw, 38px);
+      margin-bottom: 8px;
+    }
+
+    .welcome-screen p { color: var(--muted); }
+
+    .message-row {
+      display: flex;
+      gap: 18px;
+      margin: 0 auto 30px;
+      align-items: flex-start;
+      max-width: 100%;
+    }
+
+    .message-row.user { justify-content: flex-end; }
+
+    .message-avatar {
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--surface);
+      font-size: 18px;
+    }
+
+    .message-content {
+      min-width: 0;
+      max-width: 85%;
+      line-height: 1.65;
+      font-size: var(--chat-font-size);
+      overflow-wrap: anywhere;
+    }
+
+    .message-row.user .message-content {
+      background: var(--surface);
+      padding: 12px 18px;
+      border-radius: 24px;
+      max-width: 75%;
+    }
+
+    /* MARKDOWN FORMATTING */
+
+    .message-text {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.7;
+    }
+
+    .message-text p {
+      margin: 0 0 14px;
+    }
+
+    .message-text p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-text strong,
+    .message-text b {
+      font-weight: 750;
+      color: var(--text);
+    }
+
+    .message-text em,
+    .message-text i {
+      font-style: italic;
+    }
+
+    .message-text h1,
+    .message-text h2,
+    .message-text h3,
+    .message-text h4,
+    .message-text h5,
+    .message-text h6 {
+      color: var(--text);
+      font-weight: 750;
+      line-height: 1.3;
+      margin: 22px 0 12px;
+    }
+
+    .message-text h1 { font-size: 1.8em; }
+    .message-text h2 { font-size: 1.5em; }
+    .message-text h3 { font-size: 1.25em; }
+    .message-text h4 { font-size: 1.1em; }
+
+    .message-text ul,
+    .message-text ol {
+      padding-left: 28px;
+      margin: 10px 0 16px;
+    }
+
+    .message-text li {
+      padding-left: 4px;
+      margin: 5px 0;
+    }
+
+    .message-text li::marker {
+      color: var(--accent);
+    }
+
+    .message-text blockquote {
+      margin: 14px 0;
+      padding: 10px 16px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: var(--surface);
+      color: var(--muted);
+    }
+
+    .message-text code {
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--surface);
+      color: #8fc5ff;
+      font-family: Consolas, Monaco, monospace;
+      font-size: .88em;
+      overflow-wrap: anywhere;
+    }
+
+    .message-text pre {
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 14px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #111820;
+      color: #e6edf3;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .message-text pre code {
+      display: block;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 13px;
+      white-space: pre;
+      overflow-wrap: normal;
+    }
+
+    .message-text a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .message-text a:hover {
+      opacity: .8;
+    }
+
+    .message-text hr {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    .message-text table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: .9em;
+    }
+
+    .message-text th,
+    .message-text td {
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      text-align: left;
+    }
+
+    .message-text th {
+      background: var(--surface);
+      font-weight: 700;
+    }
+
+    .message-text img {
+      max-width: 100%;
+      border-radius: 10px;
+    }
+
+    .message-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .message-image,
+    .generated-image {
+      max-width: min(100%, 420px);
+      max-height: 350px;
+      object-fit: contain;
+      border-radius: 12px;
+      display: block;
+    }
+
+    .download-image-button {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 13px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .typing-indicator { color: var(--muted); }
+
+    .composer-area {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px 20px 18px;
+      background: linear-gradient(transparent, var(--background) 24%);
+    }
+
+    .composer {
+      max-width: 850px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12);
+    }
+
+    #attachmentPreview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px;
+    }
+
+    .attachment-item { position: relative; }
+
+    .attachment-item img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 9px;
+    }
+
+    .remove-attachment {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      border: 0;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      background: #555;
+      color: white;
+    }
+
+    #messageInput {
+      width: 100%;
+      min-height: 45px;
+      max-height: 180px;
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      padding: 12px 8px;
+      color: var(--text);
+      background: transparent;
+      font-size: 16px;
+    }
+
+    #messageInput::placeholder { color: var(--muted); }
+    #messageInput:disabled { opacity: .65; cursor: not-allowed; }
+
+    .composer-actions { display: flex; align-items: center; gap: 8px; }
+
+    .composer-button {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--surface-hover);
+      color: var(--text);
+      font-size: 19px;
+    }
+
+    .composer-button:hover { filter: brightness(1.1); }
+    .composer-button:disabled { opacity: .5; cursor: not-allowed; }
+
+    #sendButton {
+      margin-left: auto;
+      background: var(--accent);
+      color: white;
+      font-weight: bold;
+    }
+
+    #sendButton.stop { background: #ff5757; color: white; }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 10px;
+    }
+
+    /* SETTINGS PANEL */
+
+    #settingsPanel {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(5px);
+    }
+
+    #settingsPanel[hidden] { display: none !important; }
+
+    .settings-card {
+      width: min(520px, 100%);
+      max-height: min(88vh, 760px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--background);
+      color: var(--text);
+      box-shadow: 0 24px 80px rgba(0,0,0,.4);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .settings-header h2 { margin: 0; font-size: 22px; }
+
+    .settings-close {
+      border: 0;
+      border-radius: 9px;
+      padding: 8px 11px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting-copy { min-width: 0; }
+    .setting-copy strong { display: block; font-size: 14px; }
+
+    .setting-copy small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .setting-control {
+      width: 150px;
+      max-width: 45%;
+      padding: 9px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .setting-control[type="color"] { height: 38px; padding: 4px; }
+
+    .setting-toggle {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    #customColorRow[hidden] { display: none; }
+
+    .settings-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 18px;
+    }
+
+    #resetSettings {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 13px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    #settingsSaved { color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 900px) {
+      #statusText { display: none; }
+      .header { gap: 8px; padding: 8px; }
+      #modeSelect { max-width: 160px; }
+      #accountName { max-width: 95px; }
+    }
+
+    @media (max-width: 700px) {
+      #sidebar {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+        width: 260px;
+      }
+
+      #sidebar.open { transform: translateX(0); }
+
+      #sidebar.collapsed {
+        width: 260px;
+        padding: 16px;
+        margin: 0;
+        transform: translateX(-100%);
+      }
+
+      #chat { padding: 20px 12px 170px; }
+      .message-row { gap: 10px; }
+      .message-content { font-size: var(--chat-font-size); }
+      .composer-area { padding: 15px 10px; }
+
+      #accountName { display: block; }
+      #installButton { padding: 8px; font-size: 11px; }
+      #signOutButton { padding: 8px; font-size: 11px; }
+
+      #openSettings {
+        display: inline-flex !important;
+        padding: 9px 10px;
+        font-size: 12px;
+      }
+
+      .settings-card { padding: 17px; }
+      .setting-row { gap: 10px; }
+      .setting-control { width: 135px; }
+    }
+
+    @media (max-width: 520px) {
+      .header {
+        gap: 5px;
+        padding: 7px 5px;
+      }
+
+      #modeSelect { max-width: 105px; padding: 8px 5px; font-size: 11px; }
+
+      #openSettings {
+        padding: 9px 8px;
+        font-size: 12px;
+        gap: 4px;
+      }
+
+      #accountName,
+      #accountArea > span:last-child {
+        display: none;
+      }
+
+      #accountArea { padding: 3px; }
+      #accountPhoto { width: 29px; height: 29px; }
+
+      #signOutButton {
+        font-size: 10px;
+        padding: 8px 5px;
+      }
+
+      #installButton { font-size: 10px; padding: 8px 5px; }
+      .icon-button { padding: 7px; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- GOOGLE SIGN-IN -->
+
+  <section id="authScreen">
+    <div class="auth-card">
+      <div class="auth-logo">❄️</div>
+      <h1>Welcome to FROSTGPT™</h1>
+      <p>Sign in with your Google account to continue to your AI workspace.</p>
+
+      <button id="googleSignInButton" type="button">
+        <svg class="google-logo" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.25 5.48-4.72 7.18l7.62 5.91c4.45-4.1 7.14-10.15 7.14-17.56z"/>
+          <path fill="#FBBC05" d="M10.53 28.59a14.4 14.4 0 0 1 0-9.18l-7.98-6.19a23.98 23.98 0 0 0 0 21.56l7.98-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.9-5.89l-7.62-5.91c-2.12 1.42-4.84 2.26-8.28 2.26-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div id="authStatus" role="status"></div>
+      <div class="auth-small">Created by FrOsTAI · Your Google account is used for sign-in.</div>
+    </div>
+  </section>
+
+  <!-- MAIN APP -->
+
+  <div class="app" id="app">
+    <aside id="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">❄ FROSTGPT™</div>
+        <button class="icon-button" id="collapseSidebar" type="button" aria-label="Collapse sidebar">☰</button>
+      </div>
+
+      <button class="new-chat" id="newChat" type="button">＋ New chat</button>
+      <input id="searchChats" type="search" placeholder="Search chats...">
+
+      <div class="history-heading">YOUR CHATS</div>
+      <div id="historyList"></div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <button class="icon-button" id="openSidebar" type="button" aria-label="Open sidebar">☰</button>
+
+        <select id="modeSelect" aria-label="Choose AI model">
+          <option value="flash">FROSTGPT™ Flash 3.0</option>
+          <option value="classic">FROSTGPT™ Classic</option>
+        </select>
+
+        <span id="statusText">Ready</span>
+
+        <button id="openSettings" type="button" aria-label="Open Settings" title="Open Settings">
+          ⚙ Settings
+        </button>
+
+        <button id="installButton" type="button" hidden>↓ Install app</button>
+
+        <div id="accountArea" title="Google account">
+          <img id="accountPhoto" alt="Google account photo">
+          <span id="accountName"></span>
+          <span aria-hidden="true">▾</span>
+        </div>
+
+        <button id="signOutButton" type="button">Sign out</button>
+      </header>
+
+      <div id="installHelp" hidden>
+        <strong>Install FROSTGPT™</strong>
+        <p id="installHelpText"></p>
+        <button id="closeInstallHelp" type="button">Got it</button>
+      </div>
+
+      <section id="chat">
+        <div id="chatInner"></div>
+      </section>
+
+      <div class="composer-area">
+        <div class="composer">
+          <div id="attachmentPreview"></div>
+
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="Message FROSTGPT™..."
+            aria-label="Message"
+          ></textarea>
+
+          <div class="composer-actions">
+            <button class="composer-button" id="attachButton" type="button" title="Attach image" aria-label="Attach image">＋</button>
+
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              hidden
+            >
+
+            <button class="composer-button" id="imageButton" type="button" title="Generate image" aria-label="Generate image">🎨</button>
+            <button class="composer-button" id="sendButton" type="button" title="Send message" aria-label="Send message">↑</button>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          FROSTGPT™ can make mistakes. Check important information. · Powered by FrOsTAI
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+
+  <section
+    id="settingsPanel"
+    hidden
+    aria-label="FROSTGPT settings"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settingsTitle"
+  >
+    <div class="settings-card">
+      <div class="settings-header">
+        <h2 id="settingsTitle">⚙ Settings</h2>
+        <button id="closeSettings" class="settings-close" type="button" aria-label="Close settings">✕</button>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Theme</strong>
+          <small>Choose dark, light, or match your device.</small>
+        </div>
+        <select class="setting-control" id="settingTheme">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="system">System</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Accent color</strong>
+          <small>Change the color used by buttons and highlights.</small>
+        </div>
+        <select class="setting-control" id="settingAccent">
+          <option value="blue">Blue</option>
+          <option value="purple">Purple</option>
+          <option value="green">Green</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="setting-row" id="customColorRow" hidden>
+        <div class="setting-copy">
+          <strong>Custom color</strong>
+          <small>Pick your own accent color.</small>
+        </div>
+        <input class="setting-control" id="settingCustomColor" type="color" value="#3694ff" aria-label="Custom accent color">
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Chat text size</strong>
+          <small>Adjust the size of conversation messages.</small>
+        </div>
+        <select class="setting-control" id="settingFontSize">
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Enter key behavior</strong>
+          <small>Choose whether Enter sends or creates a new line.</small>
+        </div>
+        <select class="setting-control" id="settingEnter">
+          <option value="send">Enter sends</option>
+          <option value="newline">Enter adds a line</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Save chat history</strong>
+          <small>Store conversations in your signed-in account.</small>
+        </div>
+        <input class="setting-toggle" id="settingHistory" type="checkbox">
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Sound effects</strong>
+          <small>Play small sounds when messages are sent or received.</small>
+        </div>
+        <input class="setting-toggle" id="settingSounds" type="checkbox">
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Animations</strong>
+          <small>Enable or reduce interface transitions.</small>
+        </div>
+        <input class="setting-toggle" id="settingAnimations" type="checkbox">
+      </div>
+
+      <div class="settings-footer">
+        <button id="resetSettings" type="button">Reset to defaults</button>
+        <span id="settingsSaved" role="status">Settings ready</span>
+      </div>
+    </div>
+  </section>
+
+  <script src="/classic.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

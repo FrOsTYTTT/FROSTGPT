@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FROSTGPT Icon Generator</title>
+<style>
+  body {
+    background: #171717;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 35px 15px;
+  }
+  button {
+    background: #258cff;
+    color: white;
+    border: 0;
+    border-radius: 10px;
+    padding: 14px 22px;
+    margin: 8px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  canvas {
+    display: block;
+    width: 180px;
+    height: 180px;
+    margin: 25px auto;
+    border-radius: 25px;
+  }
+</style>
+</head>
+<body>
+
+<h1>❄ FROSTGPT Icon Maker</h1>
+<p>Generate your official FROSTGPT app icons.</p>
+
+<canvas id="preview" width="512" height="512"></canvas>
+
+<button onclick="downloadIcon(192)">Download 192×192</button>
+<button onclick="downloadIcon(512)">Download 512×512</button>
+<button onclick="downloadAll()">Download Both Icons</button>
+
+<script>
+function drawIcon(size) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+
+  const ctx = canvas.getContext("2d");
+  const center = size / 2;
+
+  // Background
+  const gradient = ctx.createLinearGradient(0, 0, size, size);
+  gradient.addColorStop(0, "#102b4b");
+  gradient.addColorStop(1, "#090f1c");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  // Blue glow
+  const glow = ctx.createRadialGradient(
+    center, center, size * 0.05,
+    center, center, size * 0.48
+  );
+
+  glow.addColorStop(0, "rgba(40,150,255,0.35)");
+  glow.addColorStop(1, "rgba(40,150,255,0)");
+
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
+
+  // Snowflake
+  ctx.save();
+  ctx.translate(center, center - size * 0.035);
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = size * 0.035;
+  ctx.lineCap = "round";
+  ctx.shadowColor = "#36aaff";
+  ctx.shadowBlur = size * 0.07;
+
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(Math.PI / 3);
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -size * 0.29);
+    ctx.stroke();
+
+    // Snowflake branches
+    for (const direction of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.21);
+      ctx.lineTo(
+        direction * size * 0.075,
+        -size * 0.29
+      );
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+  // FROSTGPT lettering
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.font = `bold ${size * 0.085}px Arial`;
+  ctx.fillText("FROSTGPT", center, size * 0.86);
+
+  return canvas;
+}
+
+function downloadIcon(size) {
+  const canvas = drawIcon(size);
+  const link = document.createElement("a");
+
+  link.download = `icon-${size}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+function downloadAll() {
+  downloadIcon(192);
+  setTimeout(() => downloadIcon(512), 500);
+}
+
+const preview = document.getElementById("preview");
+const previewContext = preview.getContext("2d");
+previewContext.drawImage(drawIcon(512), 0, 0);
+</script>
+
+</body>
+</html>
