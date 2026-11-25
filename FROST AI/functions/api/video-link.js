@@ -114,7 +114,7 @@ function thumbnailHostAllowed(value, provider) {
     if (url.protocol !== "https:") return false;
     const host = url.hostname.toLowerCase();
     if (provider === "YouTube") return host === "i.ytimg.com";
-    if (provider === "TikTok") return host.endsWith("tiktokcdn.com") || host.endsWith("tiktokcdn-us.com");
+    if (provider === "TikTok") return host === "tiktokcdn.com" || host.endsWith(".tiktokcdn.com") || host === "tiktokcdn-us.com" || host.endsWith(".tiktokcdn-us.com");
     if (provider === "Vimeo") return host === "i.vimeocdn.com";
   } catch {
     return false;
@@ -126,7 +126,7 @@ async function getThumbnailData(thumbnailUrl, provider) {
   if (!thumbnailUrl || !thumbnailHostAllowed(thumbnailUrl, provider)) return null;
   try {
     const response = await fetch(thumbnailUrl, { redirect: "follow" });
-    if (!response.ok) return null;
+    if (!response.ok || !thumbnailHostAllowed(response.url || thumbnailUrl, provider)) return null;
     const type = (response.headers.get("content-type") || "").split(";")[0].toLowerCase();
     if (!["image/jpeg", "image/png", "image/webp"].includes(type)) return null;
     const length = Number(response.headers.get("content-length") || 0);
