@@ -1,5 +1,9 @@
 
-const MODEL = "@cf/google/gemma-4-26b-a4b-it";
+const MODELS = [
+  "@cf/google/gemma-4-26b-a4b-it",
+  "@cf/zai-org/glm-4.7-flash",
+  "@cf/google/gemma-7b-it-lora"
+];
 
 const MAX_BODY_SIZE = 24_000_000;
 const MAX_MESSAGES = 80;
@@ -110,7 +114,6 @@ function isCreatorQuestion(message) {
   return CREATOR_PATTERNS.some(pattern => pattern.test(text));
 }
 
-// Safely extracts text from supported response structures.
 function extractText(value) {
   if (typeof value === "string") {
     return value;
@@ -170,8 +173,8 @@ IDENTITY:
 - FrOsTAI is the team behind the FROSTGPT™ application.
 - FrOsT is the founder of the FROSTGPT™ project.
 - FrOsTAI LOVES creating websites, artificial intelligence, and technology.
-- You run using Google's Gemma model through Cloudflare Workers AI.
-- Do not claim that FrOsTAI independently trained or created the underlying Gemma model.
+- You run using AI models through Cloudflare Workers AI.
+- Do not claim that FrOsTAI independently trained or created the underlying AI models.
 - You are NOT ChatGPT, Gemini, or Google Assistant.
 - Never introduce yourself as "FROSTGPT Flash 3.0".
 - Never claim Google created the FROSTGPT application.
@@ -273,62 +276,80 @@ export async function onRequest({ request, env }) {
     }, 400);
   }
 
-  // Official creator response: does not rely on model generation.
+  // Official creator response: no model generation required.
   if (isCreatorQuestion(latestMessage)) {
     return json({
       reply: CREATOR_RESPONSE,
       model: "FROSTGPT™",
-      version: "3.4"
+      version: "3.5"
     });
   }
 
-  try {
-    const result = await env.AI.run(MODEL, {
-      messages: [
-        SYSTEM_MESSAGE,
-        ...messages.slice(-MAX_MESSAGES)
-      ],
+  // AUTOMATIC MODEL FALLBACK
+  const conversationMessages = [
+    SYSTEM_MESSAGE,
+    ...messages.slice(-MAX_MESSAGES)
+  ];
 
-      // Gemma 4: disable reasoning mode for normal chat replies.
-      chat_template_kwargs: {
-        enable_thinking: false
-      },
+  const failedModels = [];
 
-      max_tokens: 1800,
-      temperature: 0.7
-    });
+  for (const model of MODELS) {
+    try {
+      console.log(`FROSTGPT: Trying model ${model}`);
 
-    const reply = getModelReply(result);
+      const options = {
+        messages: conversationMessages,
+        max_tokens: 1800,
+        temperature: 0.7
+      };
 
-    if (!reply) {
-      // Log response structure without dumping user conversations.
-      console.error("FROSTGPT: Empty model response.", {
-        responseType: typeof result?.response,
-        responseKeys:
-          result && typeof result === "object"
-            ? Object.keys(result)
-            : [],
-        choiceCount: Array.isArray(result?.choices)
-          ? result.choices.length
-          : 0
-      });
+      // Gemma 4-specific setting.
+      // Other models receive the shared options above.
+      if (model === MODELS[0]) {
+        options.chat_template_kwargs = {
+          enable_thinking: false
+        };
+      }
+
+      const result = await env.AI.run(model, options);
+
+      const reply = getModelReply(result);
+
+      if (!reply) {
+        console.error(
+          `FROSTGPT: ${model} returned an empty response.`
+        );
+
+        failedModels.push(model);
+        continue;
+      }
+
+      console.log(`FROSTGPT: Successfully answered using ${model}`);
 
       return json({
-        error: "The AI model did not return any text. Please try again."
-      }, 502);
+        reply,
+        model: "FROSTGPT™",
+        modelUsed: model,
+        version: "3.5"
+      });
+
+    } catch (error) {
+      console.error(
+        `FROSTGPT: Model ${model} failed. Trying the next model.`,
+        error
+      );
+
+      failedModels.push(model);
     }
-
-    return json({
-      reply,
-      model: "FROSTGPT™",
-      version: "3.4"
-    });
-
-  } catch (error) {
-    console.error("FROSTGPT chat generation error:", error);
-
-    return json({
-      error: "FROSTGPT is temporarily unavailable. Please try again."
-    }, 502);
   }
+
+  // Every configured model failed.
+  console.error(
+    "FROSTGPT: All configured models failed.",
+    failedModels
+  );
+
+  return json({
+    error: "All FROSTGPT AI models are temporarily unavailable. Please try again."
+  }, 502);
 }
