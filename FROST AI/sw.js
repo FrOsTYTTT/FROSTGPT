@@ -1,10 +1,10 @@
 
-const CACHE_NAME = "frostgpt-v6";
+const CACHE_NAME = "frostgpt-v7";
 
 const APP_FILES = [
   "/",
   "/index.html",
-  "/app.js?v=20261125-4",
+  "/app.js?v=20261125-5",
   "/classic.js",
   "/manifest.json",
   "/styles.css?v=20261125-1",
