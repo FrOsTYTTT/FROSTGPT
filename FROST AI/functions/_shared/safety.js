@@ -32,7 +32,7 @@ function readSafetyVerdict(result) {
   return null;
 }
 
-export async function verifyFirebaseUser(request) {
+export async function verifyFirebaseIdentity(request) {
   const match = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
   if (!match) return null;
   try {
@@ -43,11 +43,24 @@ export async function verifyFirebaseUser(request) {
     });
     if (!response.ok) return null;
     const user = (await response.json())?.users?.[0];
-    return user?.localId && user.disabled !== true ? user.localId : null;
+    if (!user?.localId || user.disabled === true) return null;
+    return {
+      uid: user.localId,
+      email: typeof user.email === "string" ? user.email : "",
+      emailVerified: user.emailVerified === true,
+      providers: Array.isArray(user.providerUserInfo)
+        ? user.providerUserInfo.map(provider => provider?.providerId).filter(Boolean)
+        : []
+    };
   } catch (error) {
     console.error("FROSTGPT safety: Firebase token verification failed.", error);
     return null;
   }
+}
+
+export async function verifyFirebaseUser(request) {
+  const identity = await verifyFirebaseIdentity(request);
+  return identity?.uid || null;
 }
 
 export async function classifyLatestMessage(env, latestText) {
