@@ -530,3 +530,20 @@
 .personality-actions button,#openPersonality{border:1px solid var(--border);border-radius:9px;padding:10px 13px;background:var(--surface);color:var(--text);cursor:pointer}
 #savePersonality{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:650}
 @media(max-width:520px){.personality-card{padding:17px;max-height:88vh}.personality-actions{flex-wrap:wrap}}
+
+
+/* Manual refresh fallback; Firestore also syncs chats live across devices. */
+.refresh-chats {
+  width: 100%;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, rgba(255,255,255,.14));
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.refresh-chats:hover { background: rgba(100, 170, 255, .12); }
+.refresh-chats:disabled { opacity: .6; cursor: wait; }
