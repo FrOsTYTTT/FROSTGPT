@@ -2849,45 +2849,52 @@ import {
   // FLASH AI
   // ==========================================
 
-  async function callFlashAI(conversation, signal) {
+  // Send authenticated API requests with one forced token refresh if the
+  // server rejects the cached Firebase ID token. This prevents an expired or
+  // stale token from blocking Auto and manually selected backup models.
+  async function postWithFreshAuth(url, payload, signal) {
     if (!auth?.currentUser) throw new Error("Please sign in again before sending a message.");
-    const idToken = await auth.currentUser.getIdToken();
-    const response = await fetch(CHAT_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${idToken}`
-      },
-      signal,
-      body: JSON.stringify({
-        messages: conversation.flash.slice(-80),
-        conversationId: conversation.id,
-        preferredBackupModel: settings.preferredBackupModel,
-        customPersonality: getSavedPersonality()
-      })
-    });
+
+    const send = async forceRefresh => {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Your sign-in session ended. Please sign in again.");
+      const idToken = await user.getIdToken(forceRefresh);
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        signal,
+        body: JSON.stringify(payload)
+      });
+    };
+
+    let response = await send(false);
+    if (response.status === 401 && !signal?.aborted) {
+      response = await send(true);
+    }
+    return response;
+  }
+
+  async function callFlashAI(conversation, signal) {
+    const response = await postWithFreshAuth(CHAT_API, {
+      messages: conversation.flash.slice(-80),
+      conversationId: conversation.id,
+      preferredBackupModel: settings.preferredBackupModel,
+      customPersonality: getSavedPersonality()
+    }, signal);
     const data = await parseResponse(response);
     if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Cloudflare returned no AI reply.");
     return data;
   }
 
   async function checkClassicSafety(conversation, message, signal) {
-    if (!auth?.currentUser) throw new Error("Please sign in again before sending a message.");
-    const idToken = await auth.currentUser.getIdToken();
-    const response = await fetch("/api/safety", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${idToken}`
-      },
-      signal,
-      body: JSON.stringify({
-        conversationId: conversation.id,
-        message
-      })
-    });
+    const response = await postWithFreshAuth("/api/safety", {
+      conversationId: conversation.id,
+      message
+    }, signal);
     return await parseResponse(response);
   }
 
