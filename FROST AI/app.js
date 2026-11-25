@@ -44,6 +44,14 @@ import {
 
   const $ = id => document.getElementById(id);
 
+  const gifButton = $("gifButton");
+  const gifPicker = $("gifPicker");
+  const gifSearchInput = $("gifSearchInput");
+  const gifSearchButton = $("gifSearchButton");
+  const gifResults = $("gifResults");
+  const gifPickerStatus = $("gifPickerStatus");
+  const closeGifPicker = $("closeGifPicker");
+
   const authScreen = $("authScreen");
   const authStatus = $("authStatus");
   const googleSignInButton = $("googleSignInButton");
@@ -3102,6 +3110,107 @@ import {
       }
     }
   }
+
+  // ==========================================
+  // GIF PICKER
+  // ==========================================
+
+  const GIPHY_API_KEY = "dc6zaTOxFJmzC";
+
+  function openGifPicker() {
+    if (!gifPicker) return;
+    gifPicker.hidden = false;
+    gifSearchInput?.focus();
+    loadGifs("");
+  }
+
+  function closeGifPickerWindow() {
+    if (gifPicker) gifPicker.hidden = true;
+  }
+
+  async function loadGifs(searchTerm = "") {
+    if (!gifResults || !gifPickerStatus) return;
+    gifResults.replaceChildren();
+    gifPickerStatus.textContent = "Loading GIFs...";
+
+    const endpoint = searchTerm.trim()
+      ? "https://api.giphy.com/v1/gifs/search"
+      : "https://api.giphy.com/v1/gifs/trending";
+    const url = new URL(endpoint);
+    url.searchParams.set("api_key", GIPHY_API_KEY);
+    url.searchParams.set("limit", "24");
+    url.searchParams.set("rating", "g");
+    if (searchTerm.trim()) url.searchParams.set("q", searchTerm.trim());
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("GIF service is temporarily unavailable.");
+      const data = await response.json();
+      const items = Array.isArray(data.data) ? data.data : [];
+
+      if (!items.length) {
+        gifPickerStatus.textContent = "No GIFs found. Try another search.";
+        return;
+      }
+
+      items.forEach(item => {
+        const previewURL = item.images?.fixed_width?.url || item.images?.downsized?.url;
+        const originalURL = item.images?.original?.url || item.images?.downsized_large?.url;
+        if (!previewURL || !originalURL) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "gif-result";
+        button.title = item.title || "Select GIF";
+
+        const image = document.createElement("img");
+        image.src = previewURL;
+        image.alt = item.title || "GIF preview";
+        image.loading = "lazy";
+        button.appendChild(image);
+
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          gifPickerStatus.textContent = "Adding GIF to your message...";
+          try {
+            const gifResponse = await fetch(originalURL);
+            if (!gifResponse.ok) throw new Error("Could not download that GIF.");
+            const blob = await gifResponse.blob();
+            const file = new File([blob], "FROSTGPT-GIF.gif", { type: "image/gif" });
+            await handleFiles([file]);
+            if (attachments.some(item => item.isGif && item.name === file.name)) {
+              closeGifPickerWindow();
+            } else {
+              gifPickerStatus.textContent = "The GIF could not be attached. Check the upload limits and try another.";
+              button.disabled = false;
+            }
+          } catch (error) {
+            gifPickerStatus.textContent = error.message || "Could not add that GIF.";
+            button.disabled = false;
+          }
+        });
+
+        gifResults.appendChild(button);
+      });
+
+      gifPickerStatus.textContent = "Choose a GIF to attach it. FROSTGPT will analyze sampled frames when you send your message.";
+    } catch (error) {
+      gifPickerStatus.textContent = error.message || "Could not load GIFs.";
+    }
+  }
+
+  gifButton?.addEventListener("click", openGifPicker);
+  closeGifPicker?.addEventListener("click", closeGifPickerWindow);
+  gifPicker?.addEventListener("click", event => {
+    if (event.target === gifPicker) closeGifPickerWindow();
+  });
+  gifSearchButton?.addEventListener("click", () => loadGifs(gifSearchInput?.value || ""));
+  gifSearchInput?.addEventListener("keydown", event => {
+    if (event.key === "Enter") loadGifs(gifSearchInput.value);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && gifPicker && !gifPicker.hidden) closeGifPickerWindow();
+  });
 
   // ==========================================
   // IMAGE GENERATION
