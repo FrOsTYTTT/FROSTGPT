@@ -33,6 +33,7 @@ import {
   const firebaseConfig = {
     apiKey: "AIzaSyBfpeqUE8Dau5ZV5qNszWKoey1Cl4R5zIQ",
     authDomain: "frostgpt-4e3fa.firebaseapp.com",
+    databaseURL: "https://frostgpt-4e3fa-default-rtdb.firebaseio.com",
     projectId: "frostgpt-4e3fa",
     storageBucket: "frostgpt-4e3fa.firebasestorage.app",
     messagingSenderId: "650451428263",
@@ -2553,9 +2554,25 @@ import {
       // user activation and cause the Google popup to be blocked.
       openSettingsAfterSignIn = true;
 
-      await signInWithPopup(auth, provider);
+      const signInResult = await signInWithPopup(auth, provider);
 
-      if (authStatus) authStatus.textContent = "";
+      // Wait until Firebase has finished updating its local auth state.
+      // This prevents the UI from appearing stuck after the provider popup
+      // successfully returns the selected account.
+      await auth.authStateReady();
+
+      if (!signInResult?.user || !auth.currentUser) {
+        throw new Error(
+          `${providerName} returned an account, but Firebase did not establish a signed-in session. Please try again.`
+        );
+      }
+
+      console.log(`FROSTGPT: ${providerName} sign-in completed.`, {
+        uid: auth.currentUser.uid,
+        emailVerified: auth.currentUser.emailVerified
+      });
+
+      if (authStatus) authStatus.textContent = "Sign-in successful. Loading your account...";
     } catch (error) {
       openSettingsAfterSignIn = false;
       console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
