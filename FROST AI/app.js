@@ -1073,6 +1073,8 @@ import {
 
   const MAX_IMAGES = 4;
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+  const MAX_VIDEO_DURATION = 180;
   const MAX_FILES = 3;
   const MAX_FILE_SIZE = 100 * 1024;
   const MAX_GENERATED_IMAGES_PER_DAY = 5;
@@ -3349,8 +3351,14 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       } else {
         const image = document.createElement("img");
         image.src = attachment.data;
-        image.alt = attachment.name;
+        image.alt = attachment.kind === "video" ? `Video preview: ${attachment.name}` : attachment.name;
         wrapper.appendChild(image);
+        if (attachment.kind === "video") {
+          const videoLabel = document.createElement("span");
+          videoLabel.className = "attachment-file-label";
+          videoLabel.textContent = `🎬 ${attachment.name}`;
+          wrapper.appendChild(videoLabel);
+        }
       }
 
       const remove = document.createElement("button");
@@ -3420,8 +3428,94 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
   }
 
+  // Decode a local video in the browser and sample chronological still frames.
+  // The original video is never uploaded; only compressed frames are sent to the vision model.
+  async function extractVideoFrames(file, requestedFrames = 8) {
+    const objectURL = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "auto";
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;";
+    document.body.appendChild(video);
+    try {
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => reject(new Error("This video could not be opened. Try an MP4 or WebM file."));
+        video.src = objectURL;
+        video.load();
+      });
+      if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error("FROSTGPT could not read this video's duration.");
+      if (video.duration > MAX_VIDEO_DURATION) throw new Error(`Videos must be ${MAX_VIDEO_DURATION} seconds or shorter for analysis.`);
+      if (!video.videoWidth || !video.videoHeight) throw new Error("This video has no readable video frames.");
+      const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("Video frame processing is unavailable.");
+      const count = Math.max(1, Math.min(8, requestedFrames));
+      const frames = [];
+      for (let index = 0; index < count; index++) {
+        const time = Math.min(Math.max(0, video.duration - 0.04), count === 1 ? 0 : (index / (count - 1)) * video.duration);
+        if (Math.abs(video.currentTime - time) > 0.015) {
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error("Timed out while reading a video frame.")), 10000);
+            video.onseeked = () => { clearTimeout(timeout); resolve(); };
+            video.onerror = () => { clearTimeout(timeout); reject(new Error("A video frame could not be decoded.")); };
+            video.currentTime = time;
+          });
+        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frames.push({ time, data: canvas.toDataURL("image/jpeg", 0.68) });
+      }
+      return { frames, duration: video.duration };
+    } finally {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      video.remove();
+      URL.revokeObjectURL(objectURL);
+    }
+  }
+
   async function handleFiles(fileList) {
     for (const file of Array.from(fileList)) {
+      const extension = file.name.split(".").pop().toLowerCase();
+      const isVideo = ["video/mp4", "video/webm", "video/quicktime"].includes(file.type) || ["mp4", "webm", "mov"].includes(extension);
+      if (isVideo) {
+        if (attachments.some(item => item.kind === "video")) {
+          addMessage("assistant", "Attach one video per message so FROSTGPT can analyze it clearly.");
+          continue;
+        }
+        if (file.size > MAX_VIDEO_SIZE) {
+          addMessage("assistant", "This video is too large. The video upload limit is 50 MB.");
+          continue;
+        }
+        const usedVisionSlots = attachments.filter(item => item.kind !== "file")
+          .reduce((total, item) => total + (item.visionImages?.length || 1), 0);
+        const remainingVisionSlots = 8 - usedVisionSlots;
+        if (remainingVisionSlots < 2) {
+          addMessage("assistant", "Remove an image or GIF first to make room for video frames.");
+          continue;
+        }
+        try {
+          const sampled = await extractVideoFrames(file, Math.min(8, remainingVisionSlots));
+          const frames = sampled.frames.map(frame => frame.data);
+          attachments.push({
+            kind: "video",
+            name: file.name,
+            data: frames[0],
+            duration: sampled.duration,
+            frameTimes: sampled.frames.map(frame => frame.time),
+            visionImages: frames
+          });
+        } catch (error) {
+          addMessage("assistant", error.message || "FROSTGPT could not analyze this video.");
+        }
+        continue;
+      }
       const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
       const supportedImageTypes = ["image/png", "image/jpeg", "image/webp"];
       const extension = file.name.split(".").pop().toLowerCase();
@@ -3431,7 +3525,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         ["text/plain", "text/markdown", "text/csv", "application/json"].includes(file.type);
 
       if (!isImage && !isTextFile) {
-        addMessage("assistant", "Supported uploads: PNG, JPG, WEBP, GIF, TXT, MD, CSV, and JSON. PDF and other document formats aren't supported yet.");
+        addMessage("assistant", "Supported uploads: MP4, WebM, MOV, PNG, JPG, WEBP, GIF, TXT, MD, CSV, and JSON. Video uploads are limited to 50 MB and 3 minutes.");
         continue;
       }
 
@@ -3521,6 +3615,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       item.visionImages?.length ? item.visionImages : [item.data]
     );
     const hasGif = imageAttachments.some(item => item.isGif);
+    const videoAttachments = imageAttachments.filter(item => item.kind === "video");
 
     let apiContent = message;
 
@@ -3532,6 +3627,14 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           type: "text",
           text: "The user attached an animated GIF. The following image inputs are sampled frames in chronological order. Compare the frames to understand the motion and sequence."
         });
+      }
+
+      if (videoAttachments.length) {
+        const videoNotes = videoAttachments.map(video => {
+          const timestamps = (video.frameTimes || []).map(time => time.toFixed(1) + "s").join(", ");
+          return `Video attachment: ${video.name}. Duration: ${video.duration.toFixed(1)} seconds. The following still images are sampled from this video in chronological order at approximately: ${timestamps}. Analyze the sequence of frames, describe visible actions and scene changes, and be clear that these are sampled frames rather than continuous playback. Audio has not been analyzed.`;
+        }).join("\n");
+        parts.push({ type: "text", text: videoNotes });
       }
 
       if (message) {
@@ -3574,7 +3677,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
 
     const attachmentNames = fileAttachments.map(file => `📄 ${file.name}`);
-    const displayText = [message, ...attachmentNames].filter(Boolean).join("\n");
+    const videoNames = videoAttachments.map(video => `🎬 ${video.name} · ${video.duration.toFixed(1)}s video`);
+    const displayText = [message, ...attachmentNames, ...videoNames].filter(Boolean).join("\n");
 
     addMessage("user", displayText, {
       images: imageData,
