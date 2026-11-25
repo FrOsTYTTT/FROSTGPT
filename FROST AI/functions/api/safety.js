@@ -12,7 +12,7 @@ function json(data, status = 200) {
 
 export async function onRequest({ request, env }) {
   if (request.method !== "POST") return json({ error: "Only POST requests are supported." }, 405);
-  if (!env.SAFETY_DB || !env.AI) return json({ error: "Safety services are not configured." }, 503);
+  if (!env.SAFETY_DB) return json({ error: "Safety storage is not configured." }, 503);
 
   const userId = await verifyFirebaseUser(request);
   if (!userId) return json({ error: "Your sign-in session expired. Please sign in again." }, 401);
