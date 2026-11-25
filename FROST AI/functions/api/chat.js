@@ -92,6 +92,8 @@ function validateMessage(message) {
 }
 
 function getTextContent(content) {
+  const internalGifInstruction = "The user attached an animated GIF. The following image inputs are sampled frames in chronological order. Compare the frames to understand the motion and sequence.";
+
   if (typeof content === "string") {
     return content;
   }
@@ -100,8 +102,9 @@ function getTextContent(content) {
     return "";
   }
 
+  // Do not classify app-generated attachment instructions as user-authored text.
   return content
-    .filter(part => part?.type === "text")
+    .filter(part => part?.type === "text" && part.text !== internalGifInstruction)
     .map(part => part.text)
     .join(" ");
 }
