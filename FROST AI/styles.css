@@ -734,6 +734,15 @@ button, .model-picker-trigger, .model-picker-option,
   min-height: 42px;
 }
 
+.app {
+  height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+}
+
+#authScreen {
+  min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+  padding: 20px;
+}
+
 .app, .main, #sidebar, #chat, #chatInner,
 .composer-area, .composer {
   min-width: 0;
