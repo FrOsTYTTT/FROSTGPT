@@ -1939,7 +1939,8 @@ import {
       );
       if (!changed) return;
 
-      conversation.display = merged;
+      const typingIndicators = conversation.display.filter(message => message.typing);
+      conversation.display = [...merged, ...typingIndicators];
       conversation.flash = [];
       conversation.classic = [];
       merged.forEach(message => {
