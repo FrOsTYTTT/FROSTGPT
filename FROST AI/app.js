@@ -794,7 +794,7 @@ import {
   const MAX_IMAGES = 4;
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
   const MAX_FILES = 3;
-  const MAX_FILE_SIZE = 1 * 1024 * 1024;
+  const MAX_FILE_SIZE = 100 * 1024;
   const MAX_GENERATED_IMAGES_PER_DAY = 5;
 
   function getImageUsageKey() {
@@ -2923,14 +2923,14 @@ import {
         break;
       }
       if (file.size > MAX_FILE_SIZE) {
-        addMessage("assistant", `${file.name} is too large. The document limit is 1 MB each.`);
+        addMessage("assistant", `${file.name} is too large. The document limit is 100 KB each.`);
         continue;
       }
 
       try {
         const text = await file.text();
         if (text.length > MAX_FILE_SIZE) {
-          addMessage("assistant", `${file.name} contains too much text. The limit is 1 MB per document.`);
+          addMessage("assistant", `${file.name} contains too much text. The limit is 100 KB per document.`);
           continue;
         }
         attachments.push({ kind: "file", name: file.name, text });
@@ -3000,7 +3000,11 @@ import {
         content: apiContent
       });
     } else {
-      apiContent = message || "What is in this image?";
+      const fileText = fileAttachments.map(file =>
+        `Attached document: ${file.name}\n\n${file.text}`
+      ).join("\n\n");
+      apiContent = [message || "Please review the attached content.", fileText]
+        .filter(Boolean).join("\n\n");
 
       conversation.classic.push({
         role: "user",
