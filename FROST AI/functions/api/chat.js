@@ -1,5 +1,5 @@
 
-import { verifyFirebaseUser, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
+import { verifyFirebaseUser, verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
 
 const MODELS = [
   "@cf/google/gemma-4-26b-a4b-it",
@@ -286,8 +286,13 @@ export async function onRequest({ request, env }) {
   if (!env.SAFETY_DB) {
     return json({ error: "FROSTGPT safety storage is not connected." }, 503);
   }
-  const userId = await verifyFirebaseUser(request);
-  if (!userId) return json({ error: "Your sign-in session expired. Please sign in again." }, 401);
+  const identity = await verifyFirebaseIdentity(request);
+  if (!identity?.uid) return json({ error: "Your sign-in session expired. Please sign in again." }, 401);
+  const userId = identity.uid;
+  const isVerifiedFounderAccount =
+    identity.emailVerified === true &&
+    identity.email?.toLowerCase() === "2025ytsonic@gmail.com" &&
+    identity.providers.includes("google.com");
   if (typeof body.conversationId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(body.conversationId)) {
     return json({ error: "A valid conversation ID is required." }, 400);
   }
@@ -358,7 +363,7 @@ export async function onRequest({ request, env }) {
 
   // Nicknames are editable display labels, not secure proof of identity.
   if (isFounderClaim(latestMessage)) {
-    if (!hasFounderNickname) {
+    if (!isVerifiedFounderAccount) {
       return json({
         reply: "You're not! Your saved account nickname doesn't match one of the founder labels configured for FROSTGPT™. The FROSTGPT™ application was created by the FrOsTAI team, and FrOsT is its founder. FrOsTAI builds websites, AI experiences, and technology projects. FROSTGPT™ uses underlying AI models through Cloudflare Workers AI; the team built the application, not the underlying base models. ❄️",
         model: "FROSTGPT™",
@@ -366,7 +371,7 @@ export async function onRequest({ request, env }) {
       });
     }
     return json({
-      reply: `Your saved nickname "${userNickname}" matches a founder-associated label configured in FROSTGPT™. A nickname is editable and does not independently verify account ownership. The FrOsTAI team created the FROSTGPT™ application, and FrOsT is its founder. ❄️`,
+      reply: "Founder account verified. This signed-in account uses the verified Google address configured for the FROSTGPT™ founder. The FrOsTAI team created the FROSTGPT™ application, and FrOsT is its founder. ❄️",
       model: "FROSTGPT™",
       version: "3.5"
     });
