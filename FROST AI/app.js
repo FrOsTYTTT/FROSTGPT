@@ -1933,7 +1933,7 @@ import {
 
     function appendInline(text, parent) {
       const pattern =
-        /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
+        /(\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))|(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
 
       let lastIndex = 0;
       let match;
@@ -1943,17 +1943,33 @@ import {
           document.createTextNode(text.slice(lastIndex, match.index))
         );
 
-        if (match[2] || match[3]) {
+        if (match[2] && match[3]) {
+          try {
+            const url = new URL(match[3]);
+            if (url.protocol === "https:" || url.protocol === "http:") {
+              const link = document.createElement("a");
+              link.textContent = match[2];
+              link.href = url.href;
+              link.target = "_blank";
+              link.rel = "noopener noreferrer";
+              parent.appendChild(link);
+            } else {
+              parent.appendChild(document.createTextNode(match[0]));
+            }
+          } catch {
+            parent.appendChild(document.createTextNode(match[0]));
+          }
+        } else if (match[5] || match[6]) {
           const strong = document.createElement("strong");
-          strong.textContent = match[2] || match[3];
+          strong.textContent = match[5] || match[6];
           parent.appendChild(strong);
-        } else if (match[4] || match[5]) {
+        } else if (match[7] || match[8]) {
           const italic = document.createElement("em");
-          italic.textContent = match[4] || match[5];
+          italic.textContent = match[7] || match[8];
           parent.appendChild(italic);
-        } else if (match[6]) {
+        } else if (match[9]) {
           const code = document.createElement("code");
-          code.textContent = match[6];
+          code.textContent = match[9];
           parent.appendChild(code);
         }
 
@@ -2132,11 +2148,7 @@ import {
         const text = document.createElement("div");
         text.className = "message-text";
 
-        if (message.role === "assistant") {
-          renderMarkdown(message.text, text);
-        } else {
-          text.textContent = message.text;
-        }
+        renderMarkdown(message.text, text);
 
         content.appendChild(text);
       }
