@@ -2,7 +2,7 @@
 const MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
 const MAX_BODY_SIZE = 24_000_000;
-const MAX_MESSAGES = 20;
+const MAX_MESSAGES = 80;
 const MAX_TEXT_LENGTH = 12_000;
 const MAX_IMAGE_LENGTH = 5_700_000;
 
