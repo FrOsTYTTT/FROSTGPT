@@ -3626,7 +3626,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         ["text/plain", "text/markdown", "text/csv", "application/json"].includes(file.type);
 
       if (!isImage && !isTextFile) {
-        addMessage("assistant", "Supported uploads: MP4, WebM, MOV, PNG, JPG, WEBP, GIF, TXT, MD, CSV, and JSON. Video uploads are limited to 50 MB and 3 minutes.");
+        addMessage("assistant", "Supported uploads: MP4, WebM, MOV, PNG, JPG, WEBP, GIF, TXT, MD, CSV, and JSON. Video uploads are limited to 250 MB and 3 minutes.");
         continue;
       }
 
