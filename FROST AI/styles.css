@@ -611,3 +611,32 @@
   text-align: center;
 }
 .personality-move-notice[hidden] { display: none !important; }
+
+
+/* Generated-image download prompt */
+.download-image-prompt {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+.download-image-label,
+.download-image-button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:9px 15px;
+  border:1px solid #3694ff;
+  border-radius:999px;
+  background:#3694ff;
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  line-height:1;
+  white-space:nowrap;
+}
+.download-image-button { cursor:pointer; }
+.download-image-button:hover { background:#69b0ff; border-color:#69b0ff; }
+.download-image-button:disabled { opacity:.7; cursor:wait; }
