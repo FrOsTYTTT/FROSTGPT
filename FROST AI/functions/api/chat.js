@@ -292,8 +292,16 @@ export async function onRequest({ request, env }) {
   ];
 
   const failedModels = [];
+  const requestHasImages = messages.some(message =>
+    Array.isArray(message.content) &&
+    message.content.some(part => part?.type === "image_url")
+  );
 
-  for (const model of MODELS) {
+  // Only Gemma 4 in this fallback list is configured for vision.
+  // Do not silently send image requests to text-only fallback models.
+  const modelsToTry = requestHasImages ? [MODELS[0]] : MODELS;
+
+  for (const model of modelsToTry) {
     try {
       console.log(`FROSTGPT: Trying model ${model}`);
 
