@@ -73,12 +73,27 @@ export function isBlockedInsultMessage(value) {
 export async function classifyLatestMessage(env, latestText) {
   // GIF-only/image-only messages contain no user-authored text to classify.
   if (!String(latestText || "").trim()) return false;
+
+  // URLs are references, not user-authored instructions. Remove bare URLs and
+  // Markdown link destinations before classification so shared video links
+  // cannot trigger a violation merely because of their address or opaque ID.
+  // Keep visible Markdown link labels and surrounding user-authored text.
+  const classificationText = String(latestText)
+    .replace(/\\[([^\\]]*)\\]\\(https?:\\/\\/[^\\s)]+\\)/gi, "$1")
+    .replace(/https?:\\/\\/[^\\s<>()]+/gi, "")
+    .replace(/www\\.[^\\s<>()]+/gi, "")
+    .replace(/\\s+/g, " ")
+    .trim();
+
+  // A link by itself has no request to classify. Explicit unsafe instructions
+  // written alongside a link are still checked normally below.
+  if (!classificationText) return false;
   if (!env.AI) throw new Error("Safety classifier unavailable.");
 
   // Short, plainly positive compliments are not safety violations. This
   // narrow deterministic check prevents Llama Guard false positives on
   // friendly messages, including compliments sent alongside an image/GIF.
-  const normalizedText = String(latestText || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const normalizedText = classificationText.toLowerCase();
   const positiveOnly = normalizedText.length > 0 &&
     normalizedText.length <= 400 &&
     /^(?:(?:you(?:'re| are)|ur)\s+(?:a\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\s+(?:(?:so|really)\s+)?proud\s+of\s+you[.!? ]*|(?:so\s+|really\s+)?proud\s+of\s+you[.!? ]*|you\s+did\s+(?:a\s+)?(?:great|good|amazing|awesome|wonderful)\s+job[.!? ]*)+$/i.test(normalizedText);
@@ -89,14 +104,15 @@ export async function classifyLatestMessage(env, latestText) {
   // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
   // JSON mode is not listed as supported for this model by Cloudflare.
   const classifierPrompt = `You are FROSTGPT's safety screening classifier for a service used by teenagers.
-Classify ONLY whether the user's latest message is a clear request for the assistant to produce or participate in age-inappropriate content or facilitate unsafe conduct.
-Treat ordinary discussion, educational questions, reporting harm, asking for help, quoting or criticizing content, and harmless mentions of sensitive words as SAFE.
+Classify ONLY whether the user's actual written request is a clear request for the assistant to produce or participate in age-inappropriate content or facilitate unsafe conduct.
+Treat ordinary discussion, educational questions, reporting harm, asking for help, quoting or criticizing content, harmless mentions of sensitive words, and sharing or discussing ordinary video/web links as SAFE.
+A URL is only a reference. Do not infer the contents of a linked page or video from its address, title, ID, or domain. Do not classify a message as unsafe just because it contains a YouTube, TikTok, or other URL. Evaluate the surrounding user-authored words; a clearly unsafe request written alongside a URL must still be classified.
 Classify as UNSAFE only clear requests for explicit sexual content or sexual roleplay; asking the assistant to act as the user's romantic partner; detailed self-harm or suicide instructions or concealment; instructions to commit real-world violence or dangerous wrongdoing; or help obtaining/using dangerous substances or restricted weapons.
-Do not classify a user as unsafe merely for discussing relationships, asking what a term means, discussing safety, or asking for support.
+Do not classify a user as unsafe merely for discussing relationships, asking what a term means, discussing safety, asking for support, or sharing a project/video link.
 Return exactly one verdict word: safe or unsafe. The user's message follows:
 <user_message>
-${latestText.slice(0, 12000)}
-</user_message>`;
+${classificationText.slice(0, 12000)}
+</user_message>`
   const result = await env.AI.run(GUARD_MODEL, {
     messages: [
       { role: "user", content: classifierPrompt }
