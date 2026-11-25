@@ -27,7 +27,7 @@ const BLOCKED_REQUEST_PATTERNS = [
   /\b(?:help me|tell me how|give me instructions)\b.{0,80}\b(?:hide|conceal)\b.{0,40}\b(?:self[- ]harm|self[- ]inflicted injuries)\b/i,
 
   // Practical instructions for harming another person or making explosives.
-  /\b(?:how|steps|instructions|plan|best way)\b.{0,100}\bto (?:kill|poison|attack|ambush|seriously hurt)\b.{0,50}\b(?:someone|a person|him|her|them|my friend|my teacher)\b/i,
+  /\b(?:how(?:\s+do\s+i)?|steps|instructions|plan|best way)\b.{0,100}\b(?:to\s+)?(?:kill|poison|attack|ambush|seriously hurt|hurt)\b.{0,50}\b(?:someone|a person|him|her|them|my friend|my teacher)\b/i,
   /\b(?:how to|instructions for|steps to|help me)\b.{0,80}\b(?:make|build|assemble)\b.{0,40}\b(?:a bomb|an explosive|an improvised explosive)\b/i,
 
   // Dangerous weapon, toxin, or drug misuse instructions.
