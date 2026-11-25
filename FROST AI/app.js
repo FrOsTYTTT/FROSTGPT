@@ -718,7 +718,19 @@ import {
     installHelp.hidden = true;
   });
 
-  if ("serviceWorker" in navigator) {
+  const APP_UPDATE_DRAFT_KEY = "frostgpt_update_draft_v1";
+  let appUpdateReloadPending = false;
+  let appUpdateReloadStarted = false;
+  const pendingChatWrites = new Set();
+
+  function trackChatWrite(promise) {
+    if (!promise || typeof promise.then !== "function") return;
+    pendingChatWrites.add(promise);
+    promise.finally(() => pendingChatWrites.delete(promise));
+  }
+
+  function getAssetVersionFromHTML(html, assetName) {
+    const escapedName = assetName.replace(/[.*+?^${}()|[\]\\]/g, "\\  if ("serviceWorker" in navigator) {
     window.addEventListener("load", async () => {
       try {
         const registration =
@@ -728,6 +740,102 @@ import {
       } catch (error) {
         console.error("FROSTGPT: Service worker registration failed.", error);
       }
+    });
+  }");
+    const match = html.match(new RegExp(`(?:src|href)=["']([^"']*\\/${escapedName}\\?[^"']*)["']`));
+    return match ? match[1] : null;
+  }
+
+  async function performSafeAppReload() {
+    if (appUpdateReloadStarted) return;
+    if (isThinking) {
+      appUpdateReloadPending = true;
+      return;
+    }
+
+    appUpdateReloadStarted = true;
+    try {
+      await Promise.allSettled([...pendingChatWrites]);
+      if (messageInput && messageInput.value) {
+        sessionStorage.setItem(APP_UPDATE_DRAFT_KEY, messageInput.value);
+      }
+    } catch (error) {
+      console.warn("FROSTGPT: Could not preserve the current draft before updating.", error);
+    }
+    window.location.reload();
+  }
+
+  function requestAppUpdateReload() {
+    appUpdateReloadPending = true;
+    if (!isThinking) void performSafeAppReload();
+  }
+
+  try {
+    const savedUpdateDraft = sessionStorage.getItem(APP_UPDATE_DRAFT_KEY);
+    if (savedUpdateDraft !== null) {
+      messageInput.value = savedUpdateDraft;
+      sessionStorage.removeItem(APP_UPDATE_DRAFT_KEY);
+    }
+  } catch (error) {
+    console.warn("FROSTGPT: Could not restore the saved draft.", error);
+  }
+
+  async function checkDeployedAppVersion() {
+    try {
+      const response = await fetch(`/?frostgpt-version-check=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      if (!response.ok) return;
+
+      const latestHTML = await response.text();
+      const currentApp = document.querySelector('script[type="module"][src*="/app.js"]')?.getAttribute("src");
+      const currentStyles = document.querySelector('link[rel="stylesheet"][href*="/styles.css"]')?.getAttribute("href");
+      const latestApp = getAssetVersionFromHTML(latestHTML, "app.js");
+      const latestStyles = getAssetVersionFromHTML(latestHTML, "styles.css");
+
+      if ((latestApp && currentApp && latestApp !== currentApp) ||
+          (latestStyles && currentStyles && latestStyles !== currentStyles)) {
+        console.log("FROSTGPT: A newer app deployment was detected.");
+        requestAppUpdateReload();
+      }
+    } catch (error) {
+      console.warn("FROSTGPT: Deployment version check failed.", error);
+    }
+  }
+
+  if ("serviceWorker" in navigator) {
+    const hadControllerBeforeRegistration = Boolean(navigator.serviceWorker.controller);
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadControllerBeforeRegistration) requestAppUpdateReload();
+    });
+
+    window.addEventListener("load", async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        console.log("FROSTGPT: Service worker registered.", registration.scope);
+
+        await registration.update().catch(() => {});
+        window.setInterval(() => {
+          if (document.visibilityState === "visible") {
+            registration.update().catch(() => {});
+            checkDeployedAppVersion();
+          }
+        }, 60000);
+        window.addEventListener("focus", () => {
+          registration.update().catch(() => {});
+          checkDeployedAppVersion();
+        });
+        checkDeployedAppVersion();
+      } catch (error) {
+        console.error("FROSTGPT: Service worker registration failed.", error);
+      }
+    });
+  } else {
+    window.addEventListener("load", () => {
+      checkDeployedAppVersion();
+      window.setInterval(checkDeployedAppVersion, 60000);
     });
   }
 
@@ -2561,7 +2669,7 @@ import {
     renderHistory();
     renderConversation();
 
-    saveConversationMetadata(conversation);
+    trackChatWrite(saveConversationMetadata(conversation));
 
     return conversation;
   }
@@ -2602,7 +2710,7 @@ import {
 
     if (role === "user") updateTitle(conversation, text);
 
-    saveConversationMessage(conversation, message);
+    trackChatWrite(saveConversationMessage(conversation, message));
 
     return message;
   }
@@ -2942,6 +3050,10 @@ import {
 
     if (!voiceListening) {
       setStatus(value ? "Thinking..." : modeName());
+    }
+
+    if (!value && appUpdateReloadPending) {
+      void performSafeAppReload();
     }
   }
 
