@@ -687,3 +687,212 @@
 .download-image-button { cursor:pointer; }
 .download-image-button:hover { background:#69b0ff; border-color:#69b0ff; }
 .download-image-button:disabled { opacity:.7; cursor:wait; }
+
+
+/* ==========================================
+   FROSTGPT™ RESPONSIVE DEVICE SUPPORT
+   Phones, tablets, touchscreens and VR browser panels
+   ========================================== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --device-gutter: clamp(10px, 2.2vw, 28px);
+}
+
+html {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, select, input, textarea, a {
+  touch-action: manipulation;
+}
+
+button, .model-picker-trigger, .model-picker-option,
+.composer-button, .format-button, .settings-close,
+#resetSettings, .auth-provider-button {
+  min-height: 42px;
+}
+
+.app, .main, #sidebar, #chat, #chatInner,
+.composer-area, .composer {
+  min-width: 0;
+}
+
+#chat {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: 180px;
+}
+
+.composer-area {
+  padding-bottom: calc(18px + var(--safe-bottom));
+}
+
+#messageInput {
+  font-size: max(16px, 1rem);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#settingsPanel, #personalityPanel, #gifPicker {
+  padding-top: max(12px, var(--safe-top));
+  padding-right: max(12px, var(--safe-right));
+  padding-bottom: max(12px, var(--safe-bottom));
+  padding-left: max(12px, var(--safe-left));
+}
+
+.settings-card, .personality-card, .gif-picker-card {
+  max-height: min(88dvh, 760px);
+  overscroll-behavior: contain;
+}
+
+#authScreen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding:
+    max(16px, var(--safe-top))
+    max(16px, var(--safe-right))
+    max(16px, var(--safe-bottom))
+    max(16px, var(--safe-left));
+}
+
+/* Tablet portrait and narrow browser panels: use the slide-out chat sidebar. */
+@media (max-width: 820px) {
+  #sidebar {
+    position: fixed;
+    z-index: 50;
+    top: var(--safe-top);
+    bottom: var(--safe-bottom);
+    left: var(--safe-left);
+    height: auto;
+    max-height: none;
+    transform: translateX(-105%);
+    box-shadow: 18px 0 48px rgba(0,0,0,.35);
+    transition: transform .2s ease;
+  }
+  #sidebar.open { transform: translateX(0); }
+  #sidebar.collapsed {
+    width: 260px;
+    padding: 16px;
+    margin: 0;
+    transform: translateX(-105%);
+  }
+  .main { width: 100%; }
+  .header { flex-wrap: nowrap; min-width: 0; }
+  #chat { padding-left: var(--device-gutter); padding-right: var(--device-gutter); }
+  .composer-area {
+    padding-left: var(--device-gutter);
+    padding-right: var(--device-gutter);
+  }
+}
+
+/* Phones, including narrow portrait screens. */
+@media (max-width: 600px) {
+  .header {
+    min-height: 56px;
+    gap: 5px;
+    padding: 6px;
+  }
+  #openSidebar { flex: 0 0 40px; padding: 8px; }
+  .model-picker { flex: 1 1 95px; }
+  .model-picker-trigger {
+    width: 100%;
+    max-width: none;
+    min-height: 42px;
+    padding: 8px 9px;
+    font-size: 11px;
+  }
+  #openSettings { flex: 0 0 auto; min-height: 42px; }
+  #accountArea { flex: 0 0 auto; }
+  #signOutButton { flex: 0 0 auto; min-height: 42px; }
+  #chat {
+    padding: 18px 10px calc(150px + var(--safe-bottom));
+    scroll-padding-bottom: calc(160px + var(--safe-bottom));
+  }
+  .message-row { gap: 8px; margin-bottom: 22px; }
+  .message-avatar { width: 32px; height: 32px; }
+  .message-content { max-width: calc(100% - 40px); font-size: min(var(--chat-font-size), 16px); }
+  .message-row.user .message-content { max-width: 88%; }
+  .composer-area {
+    padding: 12px 8px calc(8px + var(--safe-bottom));
+  }
+  .composer { padding: 8px; border-radius: 19px; }
+  #messageInput { min-height: 42px; max-height: 132px; padding: 10px 7px; }
+  .composer-actions { gap: 6px; }
+  .composer-button { width: 42px; height: 42px; flex: 0 0 42px; }
+  .settings-card, .personality-card { width: 100%; padding: 16px; }
+  .setting-row { align-items: flex-start; }
+  .setting-control { width: 44%; }
+}
+
+/* Very narrow phones: let the header wrap instead of clipping controls. */
+@media (max-width: 380px) {
+  .header { flex-wrap: wrap; }
+  #openSidebar { order: 0; }
+  .model-picker { order: 1; flex: 1 1 130px; }
+  #openSettings { order: 2; }
+  #accountArea { order: 3; margin-left: auto; }
+  #signOutButton { order: 4; }
+  #chat { padding-bottom: calc(158px + var(--safe-bottom)); }
+  .composer-actions { gap: 4px; }
+  .composer-button { width: 38px; height: 38px; flex-basis: 38px; }
+}
+
+/* Landscape phones and compact headset/browser windows. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .header { min-height: 48px; padding-top: 4px; padding-bottom: 4px; }
+  #chat { padding-top: 12px; padding-bottom: 125px; }
+  .composer-area { padding-top: 8px; padding-bottom: calc(6px + var(--safe-bottom)); }
+  .composer { padding: 6px 9px; }
+  #messageInput { min-height: 36px; max-height: 88px; }
+  .settings-card, .personality-card, .gif-picker-card { max-height: 84dvh; }
+}
+
+/* Large tablet, desktop and VR headset browser panels. */
+@media (min-width: 1200px) {
+  #chat { padding-left: clamp(28px, 4vw, 72px); padding-right: clamp(28px, 4vw, 72px); }
+  #chatInner { max-width: 1040px; }
+  .composer { max-width: 960px; }
+}
+
+@media (hover: none), (pointer: coarse) {
+  button, .model-picker-option, .gif-result {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-button:hover, .format-button:hover, .gif-result:hover {
+    background-color: initial;
+  }
+  button:active, .model-picker-option:active, .gif-result:active {
+    filter: brightness(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
