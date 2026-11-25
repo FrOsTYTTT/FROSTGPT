@@ -3480,6 +3480,103 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
   }
 
+  // Capture only the audio track from a local video, without playing it through speakers.
+  // The resulting WebM audio is sent to the authenticated Whisper endpoint.
+  async function extractVideoAudio(file) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass || !window.MediaRecorder) {
+      return { transcript: "", status: "Audio transcription is not supported by this browser." };
+    }
+
+    const objectURL = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "auto";
+    video.playsInline = true;
+    video.muted = false;
+    video.src = objectURL;
+
+    let audioContext;
+    try {
+      audioContext = new AudioContextClass();
+      const source = audioContext.createMediaElementSource(video);
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(destination);
+      await audioContext.resume();
+
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => reject(new Error("The video audio track could not be opened."));
+      });
+
+      if (!Number.isFinite(video.duration) || video.duration <= 0 || video.duration > MAX_VIDEO_DURATION) {
+        throw new Error("Video audio must be from a video that is 3 minutes or shorter.");
+      }
+
+      const audioTracks = destination.stream.getAudioTracks();
+      if (!audioTracks.length) {
+        return { transcript: "", status: "No audio track was found in this video." };
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : (MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "");
+      if (!mimeType) {
+        return { transcript: "", status: "This browser cannot encode audio for transcription." };
+      }
+
+      const recorder = new MediaRecorder(destination.stream, { mimeType, audioBitsPerSecond: 96000 });
+      const chunks = [];
+      const recordingFinished = new Promise((resolve, reject) => {
+        recorder.ondataavailable = event => {
+          if (event.data?.size) chunks.push(event.data);
+        };
+        recorder.onerror = () => reject(new Error("The video's audio could not be recorded for transcription."));
+        recorder.onstop = () => resolve();
+      });
+
+      recorder.start(1000);
+      await video.play();
+      await new Promise((resolve, reject) => {
+        video.onended = resolve;
+        video.onerror = () => reject(new Error("The video stopped while extracting its audio."));
+      });
+      if (recorder.state !== "inactive") recorder.stop();
+      await recordingFinished;
+
+      const audioBlob = new Blob(chunks, { type: mimeType });
+      if (!audioBlob.size) return { transcript: "", status: "No usable audio was detected in this video." };
+      if (audioBlob.size > 10 * 1024 * 1024) {
+        return { transcript: "", status: "The video's audio track is too large to transcribe (10 MB maximum)." };
+      }
+
+      const form = new FormData();
+      form.append("audio", audioBlob, "video-audio.webm");
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return { transcript: "", status: "Sign in again to transcribe video audio." };
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Video audio transcription failed.");
+      return {
+        transcript: typeof data.text === "string" ? data.text.slice(0, 16000) : "",
+        status: typeof data.text === "string" && data.text.trim()
+          ? "Audio transcript available."
+          : "No speech was detected in the video's audio."
+      };
+    } catch (error) {
+      console.warn("FROSTGPT: Video audio transcription was unavailable.", error);
+      return { transcript: "", status: error.message || "Video audio could not be transcribed." };
+    } finally {
+      try { video.pause(); } catch {}
+      try { audioContext?.close(); } catch {}
+      URL.revokeObjectURL(objectURL);
+    }
+  }
+
   async function handleFiles(fileList) {
     for (const file of Array.from(fileList)) {
       const extension = file.name.split(".").pop().toLowerCase();
@@ -3502,6 +3599,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         }
         try {
           const sampled = await extractVideoFrames(file, Math.min(8, remainingVisionSlots));
+          const audioResult = await extractVideoAudio(file);
           const frames = sampled.frames.map(frame => frame.data);
           attachments.push({
             kind: "video",
@@ -3509,7 +3607,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
             data: frames[0],
             duration: sampled.duration,
             frameTimes: sampled.frames.map(frame => frame.time),
-            visionImages: frames
+            visionImages: frames,
+            audioTranscript: audioResult.transcript,
+            audioStatus: audioResult.status
           });
         } catch (error) {
           addMessage("assistant", error.message || "FROSTGPT could not analyze this video.");
@@ -3631,7 +3731,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       if (videoAttachments.length) {
         const videoNotes = videoAttachments.map(video => {
           const timestamps = (video.frameTimes || []).map(time => time.toFixed(1) + "s").join(", ");
-          return `Video attachment: ${video.name}. Duration: ${video.duration.toFixed(1)} seconds. The following still images are sampled from this video in chronological order at approximately: ${timestamps}. Analyze the sequence of frames, describe visible actions and scene changes, and be clear that these are sampled frames rather than continuous playback. Audio has not been analyzed.`;
+          const audioEvidence = video.audioTranscript
+            ? `Audio transcript (speech recognition; may contain errors):\\n${video.audioTranscript}`
+            : `Audio analysis status: ${video.audioStatus || "No transcript available."}`;
+          return `Video attachment: ${video.name}. Duration: ${video.duration.toFixed(1)} seconds. The following still images are sampled from this video in chronological order at approximately: ${timestamps}. Analyze the sequence of frames, describe visible actions and scene changes, and be clear that these are sampled frames rather than continuous playback. ${audioEvidence} The transcript is evidence of recognized speech only; it does not describe music or other sounds.`;
         }).join("\n");
         parts.push({ type: "text", text: videoNotes });
       }
