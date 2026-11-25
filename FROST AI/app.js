@@ -2006,9 +2006,17 @@ import {
 
   async function refreshChatsNow() {
     if (!currentUserId || !firebaseReady) return setStatus("Sign in to refresh chats");
+    if (isThinking) return setStatus("Wait for the current reply to finish before refreshing");
+    const selectedConversationId = activeConversationId;
     if (refreshChatsButton) { refreshChatsButton.disabled = true; refreshChatsButton.textContent = "…"; }
     try {
       await loadUserConversations(currentUserId);
+      if (selectedConversationId && conversations.some(item => item.id === selectedConversationId)) {
+        activeConversationId = selectedConversationId;
+        renderHistory();
+        renderConversation();
+        watchActiveConversationMessages();
+      }
       startLiveChatSync(currentUserId);
       setStatus("Chats refreshed · live sync on");
     } finally {
