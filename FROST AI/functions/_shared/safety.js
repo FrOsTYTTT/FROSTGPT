@@ -1,12 +1,35 @@
 const FIREBASE_API_KEY = "AIzaSyBfpeqUE8Dau5ZV5qNszWKoey1Cl4R5zIQ";
 const GUARD_MODEL = "@cf/meta/llama-guard-3-8b";
 
-function extractModelText(result) {
+function readSafetyVerdict(result) {
   const value = result?.response ?? result?.result ?? result?.output_text ??
     result?.choices?.[0]?.message?.content ?? result?.content ?? "";
-  if (typeof value === "string") return value.trim();
-  if (Array.isArray(value)) return value.map(item => typeof item === "string" ? item : item?.text || "").join("\n").trim();
-  return "";
+
+  // Workers AI may return structured JSON or generated text.
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    if (typeof value.safe === "boolean") return !value.safe;
+    if (typeof value.response === "string") return readSafetyVerdict({ response: value.response });
+    if (typeof value.text === "string") return readSafetyVerdict({ response: value.text });
+  }
+
+  const output = typeof value === "string"
+    ? value.trim()
+    : Array.isArray(value)
+      ? value.map(item => typeof item === "string" ? item : item?.text || "").join("\n").trim()
+      : "";
+  if (!output) return null;
+
+  try {
+    const parsed = JSON.parse(output);
+    if (typeof parsed?.safe === "boolean") return !parsed.safe;
+  } catch {
+    // Accept the model's plain-text verdict as a compatibility fallback.
+  }
+
+  const normalized = output.toLowerCase();
+  if (/^unsafe\b/.test(normalized)) return true;
+  if (/^safe\b/.test(normalized)) return false;
+  return null;
 }
 
 export async function verifyFirebaseUser(request) {
@@ -36,15 +59,16 @@ Classify ONLY whether the user's latest message is a clear request for the assis
 Treat ordinary discussion, educational questions, reporting harm, asking for help, quoting or criticizing content, and harmless mentions of sensitive words as SAFE.
 Classify as UNSAFE only clear requests for explicit sexual content or sexual roleplay; asking the assistant to act as the user's romantic partner; detailed self-harm or suicide instructions or concealment; instructions to commit real-world violence or dangerous wrongdoing; or help obtaining/using dangerous substances or restricted weapons.
 Do not classify a user as unsafe merely for discussing relationships, asking what a term means, discussing safety, or asking for support.
-Return exactly one word: safe or unsafe.` },
+Return a JSON object with a boolean property named "safe". Use true for safe content and false for unsafe content.` },
       { role: "user", content: latestText.slice(0, 12000) }
     ],
-    max_tokens: 8,
-    temperature: 0
+    max_tokens: 32,
+    temperature: 0,
+    response_format: { type: "json_object" }
   });
-  const verdict = extractModelText(result).toLowerCase();
-  if (/^unsafe\b/.test(verdict)) return true;
-  if (/^safe\b/.test(verdict)) return false;
+  const verdict = readSafetyVerdict(result);
+  if (verdict === true || verdict === false) return verdict;
+  console.error("FROSTGPT safety: classifier returned an unrecognized result shape.", result);
   throw new Error("Safety classifier returned an unclear result.");
 }
 
