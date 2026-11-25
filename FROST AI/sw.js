@@ -7,10 +7,7 @@ const APP_FILES = [
   "/app.js",
   "/classic.js",
   "/manifest.json",
-  "/icon.svg",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/apple-touch-icon.png"
+  "/styles.css"
 ];
 
 self.addEventListener("install", (event) => {
