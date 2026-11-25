@@ -135,18 +135,30 @@
       height:42px;
       padding:0;
       border:0;
-      border-radius:0;
+      border-radius:50%;
       background:transparent;
-      color:#3694ff;
-      font-size:30px;
-      line-height:1;
-      font-weight:800;
+      color:transparent;
+      font-size:0;
       cursor:pointer;
       display:flex;
       align-items:center;
       justify-content:center;
+      position:relative;
     }
-    .delete-chat-button:hover { background:transparent; color:#69b0ff; }
+    .delete-chat-button::before,
+    .delete-chat-button::after {
+      content:"";
+      position:absolute;
+      width:21px;
+      height:3px;
+      border-radius:999px;
+      background:#3694ff;
+      transition:background .15s ease;
+    }
+    .delete-chat-button::before { transform:rotate(45deg); }
+    .delete-chat-button::after { transform:rotate(-45deg); }
+    .delete-chat-button:hover::before,
+    .delete-chat-button:hover::after { background:#69b0ff; }
     .delete-chat-button:disabled { opacity:.55; cursor:wait; }
 
     .main { min-width:0;flex:1;display:flex;flex-direction:column;position:relative; }
