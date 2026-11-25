@@ -59,7 +59,7 @@ export async function classifyLatestMessage(env, latestText) {
   const normalizedText = String(latestText || "").trim().toLowerCase();
   const positiveOnly = normalizedText.length > 0 &&
     normalizedText.length <= 400 &&
-    /^(?:(?:you(?:'re| are)|ur)\\s+(?:a\\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\\s+(?:(?:so|really)\\s+)?proud\\s+of\\s+you[.!? ]*|(?:so\\s+|really\\s+)?proud\\s+of\\s+you[.!? ]*|you\\s+did\\s+(?:a\\s+)?(?:great|good|amazing|awesome|wonderful)\\s+job[.!? ]*)+$/i.test(normalizedText);
+    /^(?:(?:you(?:'re| are)|ur)\s+(?:a\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\s+(?:(?:so|really)\s+)?proud\s+of\s+you[.!? ]*|(?:so\s+|really\s+)?proud\s+of\s+you[.!? ]*|you\s+did\s+(?:a\s+)?(?:great|good|amazing|awesome|wonderful)\s+job[.!? ]*)+$/i.test(normalizedText);
   if (positiveOnly) return false;
   // Llama Guard expects alternating user/assistant turns. It also emits
   // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
