@@ -121,9 +121,9 @@ export async function classifyLatestMessage(env, latestText) {
   if (positiveOnly || harmlessAffirmation) return false;
   // Deterministic safe cases do not need a Workers AI binding.
   if (!env.AI) throw new Error("Safety classifier unavailable.");
-  // Llama Guard expects alternating user/assistant turns. It also emits
-  // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
-  // JSON mode is not listed as supported for this model by Cloudflare.
+  // This is an input-only assessment, so the documented conversation contains
+  // the user's message and no assistant response. Read Llama Guard's native
+  // safe/unsafe verdict (or its structured safe boolean) below.
   // Use Meta's documented Llama Guard 3 prompt structure. The model expects
   // explicit unsafe categories and a delimited conversation, then assesses
   // only the final User message.
