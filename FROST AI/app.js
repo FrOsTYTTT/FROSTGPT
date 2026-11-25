@@ -3145,6 +3145,22 @@ import {
   // GIF PICKER
   // ==========================================
 
+  function openGifPicker() {
+    if (!gifPicker) return;
+
+    gifPicker.hidden = false;
+    gifPickerStatus && (gifPickerStatus.textContent = "Loading trending GIFs...");
+    loadGifs("");
+    gifSearchInput?.focus();
+  }
+
+  function closeGifPickerWindow() {
+    if (!gifPicker) return;
+
+    gifPicker.hidden = true;
+    gifButton?.focus();
+  }
+
   async function loadGifs(searchTerm = "") {
     if (!gifResults || !gifPickerStatus) return;
     gifResults.replaceChildren();
