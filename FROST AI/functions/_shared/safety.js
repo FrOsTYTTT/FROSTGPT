@@ -64,6 +64,8 @@ export async function verifyFirebaseUser(request) {
 }
 
 export async function classifyLatestMessage(env, latestText) {
+  // GIF-only/image-only messages contain no user-authored text to classify.
+  if (!String(latestText || "").trim()) return false;
   if (!env.AI) throw new Error("Safety classifier unavailable.");
 
   // Short, plainly positive compliments are not safety violations. This
