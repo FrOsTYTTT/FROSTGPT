@@ -94,6 +94,21 @@ export async function classifyLatestMessage(env, latestText) {
   // narrow deterministic check prevents Llama Guard false positives on
   // friendly messages, including compliments sent alongside an image/GIF.
   const normalizedText = classificationText.toLowerCase();
+
+  // A short, ordinary request to inspect a linked video must not be treated
+  // as unsafe merely because it is phrased emphatically or includes an emoji.
+  // This exact allowlist applies only when a supported public video URL is
+  // present and the remaining user-authored text contains no other request.
+  const includesSupportedVideoLink =
+    /https?:\\/\\/(?:www\\.)?(?:youtube\\.com|youtu\\.be|tiktok\\.com|vm\\.tiktok\\.com|vt\\.tiktok\\.com|vimeo\\.com)(?:[/:?#]|$)/i.test(String(latestText || ""));
+  const plainVideoRequest = normalizedText
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+  const harmlessVideoRequest = includesSupportedVideoLink &&
+    /^(?:please )?(?:try|test|check|analyze|analyse|watch|review)(?: (?:it|this|now|the video|this video|the link))?(?: please)?(?: (?:do not lie|dont lie|don't lie))?$/.test(plainVideoRequest);
+  if (harmlessVideoRequest) return false;
+
   const positiveOnly = normalizedText.length > 0 &&
     normalizedText.length <= 400 &&
     /^(?:(?:you(?:'re| are)|ur)\s+(?:a\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\s+(?:(?:so|really)\s+)?proud\s+of\s+you[.!? ]*|(?:so\s+|really\s+)?proud\s+of\s+you[.!? ]*|you\s+did\s+(?:a\s+)?(?:great|good|amazing|awesome|wonderful)\s+job[.!? ]*)+$/i.test(normalizedText);
