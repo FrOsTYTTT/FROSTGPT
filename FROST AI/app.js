@@ -3681,28 +3681,41 @@ import {
 
   searchChats?.addEventListener("input", renderHistory);
 
+  let personalityNoticeTimer = null;
+
+  function showPersonalityMoveNotice() {
+    const notice = $("personalityMoveNotice");
+    if (!notice) return;
+    notice.hidden = false;
+    clearTimeout(personalityNoticeTimer);
+    personalityNoticeTimer = setTimeout(() => {
+      notice.hidden = true;
+    }, 4500);
+  }
+
   function updatePersonalityEntryLocation() {
-    const appRoot = $("app");
-    if (!appRoot || !sidebar) return;
+    const settingRow = $("personalitySettingRow");
+    if (!sidebar || !settingRow) return false;
     const sidebarUnavailable = sidebar.classList.contains("collapsed") ||
       (window.innerWidth <= 700 && !sidebar.classList.contains("open"));
-    appRoot.classList.toggle("personality-in-settings", sidebarUnavailable);
+    settingRow.hidden = !sidebarUnavailable;
+    $("app")?.classList.toggle("personality-in-settings", sidebarUnavailable);
+    return sidebarUnavailable;
   }
 
   collapseSidebar?.addEventListener("click", () => {
     sidebar?.classList.toggle("collapsed");
-    updatePersonalityEntryLocation();
+    if (updatePersonalityEntryLocation()) showPersonalityMoveNotice();
   });
 
   openSidebar?.addEventListener("click", () => {
     if (!sidebar) return;
-
     if (window.innerWidth <= 700) {
       sidebar.classList.toggle("open");
     } else {
       sidebar.classList.toggle("collapsed");
     }
-    updatePersonalityEntryLocation();
+    if (updatePersonalityEntryLocation()) showPersonalityMoveNotice();
   });
 
   window.addEventListener("resize", updatePersonalityEntryLocation);
