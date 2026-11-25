@@ -9,8 +9,6 @@ import {
   signInWithPopup,
   onAuthStateChanged,
   signOut,
-  setPersistence,
-  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
@@ -2550,8 +2548,9 @@ import {
     }
 
     try {
-      await setPersistence(auth, browserLocalPersistence);
-
+      // Start the popup directly inside the user's click gesture.
+      // Awaiting setPersistence() here can consume the browser's transient
+      // user activation and cause the Google popup to be blocked.
       openSettingsAfterSignIn = true;
 
       await signInWithPopup(auth, provider);
@@ -2567,6 +2566,12 @@ import {
         } else if (error.code === "auth/unauthorized-domain") {
           authStatus.textContent =
             "This website domain is not authorized in Firebase.";
+        } else if (error.code === "auth/popup-blocked") {
+          authStatus.textContent =
+            "Your browser blocked the sign-in popup. Allow popups for this FROSTGPT website and try again.";
+        } else if (error.code === "auth/network-request-failed") {
+          authStatus.textContent =
+            "A network error interrupted sign-in. Check your connection and try again.";
         } else if (error.code === "auth/operation-not-allowed") {
           authStatus.textContent =
             `${providerName} sign-in is not enabled in Firebase Authentication yet.`;
