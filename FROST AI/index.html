@@ -394,6 +394,35 @@
 
     #sendButton { margin-left:auto;background:var(--accent);color:white;font-weight:bold; }
 
+
+    #gifButton { font-size:15px;font-weight:800;letter-spacing:-.5px;color:var(--accent); }
+    #gifPicker {
+      position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;
+      padding:18px;background:rgba(0,0,0,.68);
+    }
+    #gifPicker[hidden] { display:none !important; }
+    .gif-picker-card {
+      width:min(720px,100%);max-height:min(82vh,720px);display:flex;flex-direction:column;
+      overflow:hidden;border:1px solid var(--border);border-radius:18px;
+      background:var(--background);color:var(--text);box-shadow:0 22px 70px rgba(0,0,0,.35);
+    }
+    .gif-picker-header { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 18px;border-bottom:1px solid var(--border); }
+    .gif-picker-header h2 { margin:0;font-size:18px; }
+    .gif-picker-close { width:34px;height:34px;border:0;border-radius:9px;background:var(--surface-hover);color:var(--text);font-size:18px; }
+    .gif-search-row { display:flex;gap:8px;padding:13px 16px; }
+    #gifSearchInput { flex:1;min-width:0;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);outline:none; }
+    #gifSearchButton { padding:0 16px;border:0;border-radius:10px;background:var(--accent);color:white;font-weight:700; }
+    #gifResults { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:0 16px 16px;overflow:auto; }
+    .gif-result { position:relative;min-height:105px;max-height:170px;padding:0;overflow:hidden;border:2px solid transparent;border-radius:10px;background:var(--surface-hover);cursor:pointer; }
+    .gif-result:hover,.gif-result:focus-visible { border-color:var(--accent);outline:none; }
+    .gif-result img { display:block;width:100%;height:100%;min-height:105px;max-height:170px;object-fit:cover; }
+    #gifPickerStatus { padding:0 17px 14px;color:var(--muted);font-size:12px; }
+    @media(max-width:520px) {
+      #gifResults { grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:0 10px 12px; }
+      .gif-picker-card { max-height:88vh; }
+      .gif-result,.gif-result img { min-height:100px; }
+    }
+
     .footer-note { text-align:center;color:var(--muted);font-size:11px;margin-top:10px; }
 
     #settingsPanel {
@@ -611,6 +640,7 @@
             <button class="composer-button" id="attachButton" type="button" title="Attach image">＋</button>
             <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" multiple hidden>
             <button class="composer-button" id="imageButton" type="button" title="Generate image">🎨</button>
+            <button class="composer-button" id="gifButton" type="button" title="Choose a GIF">GIF</button>
             <button class="composer-button" id="sendButton" type="button" title="Send message">↑</button>
           </div>
         </div>
@@ -621,6 +651,21 @@
       </div>
     </main>
   </div>
+
+  <section id="gifPicker" hidden role="dialog" aria-modal="true" aria-labelledby="gifPickerTitle">
+    <div class="gif-picker-card">
+      <div class="gif-picker-header">
+        <h2 id="gifPickerTitle">Choose a GIF</h2>
+        <button class="gif-picker-close" id="closeGifPicker" type="button" aria-label="Close GIF picker">×</button>
+      </div>
+      <div class="gif-search-row">
+        <input id="gifSearchInput" type="search" placeholder="Search GIFs..." aria-label="Search GIFs">
+        <button id="gifSearchButton" type="button">Search</button>
+      </div>
+      <div id="gifResults" aria-live="polite"></div>
+      <div id="gifPickerStatus">Search for a GIF, then select one to attach it to your message.</div>
+    </div>
+  </section>
 
   <section id="settingsPanel" hidden aria-label="FROSTGPT settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="settings-card">
