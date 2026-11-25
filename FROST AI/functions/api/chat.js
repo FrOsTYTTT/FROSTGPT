@@ -1,5 +1,5 @@
 
-import { verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
+import { verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation, isBlockedInsultMessage } from "../_shared/safety.js";
 
 const MODELS = [
   "@cf/google/gemma-4-26b-a4b-it",
@@ -326,6 +326,10 @@ export async function onRequest({ request, env }) {
   }
 
   const latestText = getTextContent(latestMessage.content);
+  // Defense in depth: reject the exact blocked phrase even if a client bypasses its UI check.
+  if (isBlockedInsultMessage(latestText)) {
+    return json({ error: "That message wasn't sent. Please keep the chat respectful." }, 422);
+  }
   // Safety classification is unconditional for default and custom personalities.
   let isUnsafe;
   try {
