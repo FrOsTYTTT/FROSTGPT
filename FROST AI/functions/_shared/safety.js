@@ -95,6 +95,12 @@ export async function classifyLatestMessage(env, latestText) {
   // friendly messages, including compliments sent alongside an image/GIF.
   const normalizedText = classificationText.toLowerCase();
 
+  // Everyday reassurance and brief conversational acknowledgements are harmless
+  // by themselves. Keep this allowlist exact and narrow so added requests still
+  // go through the safety classifier.
+  const harmlessSmallTalk = /^(?:don'?t worry|dont worry|no worries|no problem|it'?s okay|its okay|all good|you'?re fine|you are fine|that'?s okay|thats okay)[.!?,\\s]*$/i.test(normalizedText);
+  if (harmlessSmallTalk) return false;
+
   // A short, ordinary request to inspect a linked video must not be treated
   // as unsafe merely because it is phrased emphatically or includes an emoji.
   // This exact allowlist applies only when a supported public video URL is
