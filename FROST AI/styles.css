@@ -417,6 +417,10 @@
     #gifSearchInput { flex:1;min-width:0;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);outline:none; }
     #gifSearchButton { padding:0 16px;border:0;border-radius:10px;background:var(--accent);color:white;font-weight:700; }
     #gifResults { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:0 16px 16px;overflow:auto; }
+    #gifResults { scrollbar-width:none; -ms-overflow-style:none; scrollbar-color:transparent transparent; }
+    #gifResults::-webkit-scrollbar { width:0; height:0; opacity:0; background:transparent; }
+    #gifResults::-webkit-scrollbar-thumb { opacity:0; background:transparent; }
+    #gifResults::-webkit-scrollbar-track { opacity:0; background:transparent; }
     .gif-result { position:relative;min-height:105px;max-height:170px;padding:0;overflow:hidden;border:2px solid transparent;border-radius:10px;background:var(--surface-hover);cursor:pointer; }
     .gif-result:hover,.gif-result:focus-visible { border-color:var(--accent);outline:none; }
     .gif-result img { display:block;width:100%;height:100%;min-height:105px;max-height:170px;object-fit:cover; }
