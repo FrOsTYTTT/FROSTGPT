@@ -170,7 +170,8 @@ import {
     enterKey: "send",
     chatHistory: true,
     sounds: false,
-    animations: true
+    animations: true,
+    preferredBackupModel: "auto"
   };
 
   let settings = { ...DEFAULT_SETTINGS };
@@ -184,7 +185,10 @@ import {
 
         settings = {
           ...DEFAULT_SETTINGS,
-          ...parsed
+          ...parsed,
+          preferredBackupModel: ["auto", "@cf/zai-org/glm-4.7-flash", "@cf/google/gemma-7b-it-lora"].includes(parsed.preferredBackupModel)
+            ? parsed.preferredBackupModel
+            : "auto"
         };
       }
     } catch (error) {
@@ -267,7 +271,8 @@ import {
       settingEnter: settings.enterKey,
       settingHistory: settings.chatHistory,
       settingSounds: settings.sounds,
-      settingAnimations: settings.animations
+      settingAnimations: settings.animations,
+      settingBackupModel: settings.preferredBackupModel
     };
 
     for (const [id, value] of Object.entries(controls)) {
@@ -534,7 +539,8 @@ import {
     settingTheme: "theme",
     settingAccent: "accent",
     settingFontSize: "fontSize",
-    settingEnter: "enterKey"
+    settingEnter: "enterKey",
+    settingBackupModel: "preferredBackupModel"
   };
 
   for (const [id, key] of Object.entries(settingBindings)) {
@@ -2792,7 +2798,8 @@ import {
       body: JSON.stringify({
         // The API accepts at most 80 messages per request. Keep the newest
         // context without deleting the full conversation from local history.
-        messages: conversation.flash.slice(-80)
+        messages: conversation.flash.slice(-80),
+        preferredBackupModel: settings.preferredBackupModel
       })
     });
 
