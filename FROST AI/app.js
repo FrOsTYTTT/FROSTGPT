@@ -71,6 +71,41 @@ import {
   let firebaseReady = false;
   let currentUserId = null;
   let currentUser = null;
+  let currentProfilePhotoData = null;
+
+  async function loadProfilePhotoForAI(user) {
+    currentProfilePhotoData = null;
+    if (!user?.photoURL) return;
+
+    try {
+      const response = await fetch(user.photoURL, {
+        mode: "cors",
+        credentials: "omit",
+        cache: "force-cache"
+      });
+      if (!response.ok) throw new Error("Profile photo request failed.");
+      const blob = await response.blob();
+      if (!blob.type.startsWith("image/") || blob.size > 5_000_000) {
+        throw new Error("Profile photo is not a supported image.");
+      }
+
+      const bitmap = await createImageBitmap(blob);
+      const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Profile photo canvas is unavailable.");
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      currentProfilePhotoData = canvas.toDataURL("image/jpeg", 0.78);
+    } catch (error) {
+      // Some identity providers do not allow cross-origin image conversion.
+      // The account photo still displays in the header; only AI vision is skipped.
+      console.warn("FROSTGPT: Profile photo could not be prepared for AI vision.", error);
+    }
+  }
+
   // Declared with the other auth state to avoid temporal-dead-zone errors.
   let handledAuthUid = null;
 
@@ -3056,6 +3091,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     conversations = [];
     activeConversationId = null;
     attachments = [];
+    currentProfilePhotoData = null;
 
     renderHistory();
     updateAttachmentPreview();
@@ -3260,6 +3296,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       preferredBackupModel: settings.preferredBackupModel,
       customPersonality: getSavedPersonality(),
       userNickname: getSavedNickname().trim().slice(0, 30),
+      profilePhotoData: currentProfilePhotoData,
       historyMemory: buildSavedHistoryMemory(conversation.id)
     }, signal);
     const data = await parseResponse(response);
@@ -3965,6 +4002,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     handledAuthUid = user.uid;
 
     try {
+      await loadProfilePhotoForAI(user);
       showApp(user);
 
       await loadUserConversations(user.uid);
