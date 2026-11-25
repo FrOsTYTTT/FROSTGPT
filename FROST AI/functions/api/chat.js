@@ -115,14 +115,14 @@ function isCreatorQuestion(message) {
 function isNicknameQuestion(message) {
   const text = getTextContent(message.content).trim();
   return text.length <= 300 &&
-    /\\b(can\\s+you\\s+see|do\\s+you\\s+know|what\\s+is|what's|whats)\\b.{0,80}\\b(my|the)\\s+(account\\s+)?nickname\\b/i.test(text);
+    /\b(can\s+you\s+see|do\s+you\s+know|what\s+is|what's|whats)\b.{0,80}\b(my|the)\s+(account\s+)?nickname\b/i.test(text);
 }
 
 function isFounderClaim(message) {
   const text = getTextContent(message.content).trim();
   if (!text || text.length > 500) return false;
-  const claimsRole = /\\b(i am|i'm|im)\\b.{0,100}\\b(owner|founder|creator|developer|part of the team|on the team|in the team)\\b/i.test(text);
-  const namesProject = /\\b(frosta[iy]|frostgpt)\\b/i.test(text);
+  const claimsRole = /\b(i am|i'm|im)\b.{0,100}\b(owner|founder|creator|developer|part of the team|on the team|in the team)\b/i.test(text);
+  const namesProject = /\b(frosta[iy]|frostgpt)\b/i.test(text);
   return claimsRole && namesProject;
 }
 
