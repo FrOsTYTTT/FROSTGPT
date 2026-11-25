@@ -110,7 +110,7 @@
     .new-chat { text-align:left;background:transparent; }
     .history-heading { color:var(--muted);font-size:12px;margin:10px 0 0; }
 
-    #historyList { display:flex;flex-direction:column;gap:5px;overflow-y:auto; }
+    #historyList { display:flex;flex-direction:column;gap:5px;overflow:visible; }
     .history-row { display:flex;align-items:center;gap:4px;min-width:0; }
 
     .history-item {
@@ -130,20 +130,23 @@
     .history-item:hover,.history-item.active { background:var(--surface); }
 
     .delete-chat-button {
-      flex:0 0 auto;
-      min-width:52px;
-      height:36px;
-      padding:0 7px;
+      flex:0 0 42px;
+      width:42px;
+      height:42px;
+      padding:0;
       border:0;
-      border-radius:8px;
+      border-radius:0;
       background:transparent;
-      color:var(--accent, #3694ff);
-      font-size:15px;
-      font-weight:700;
-      white-space:nowrap;
+      color:#3694ff;
+      font-size:30px;
+      line-height:1;
+      font-weight:800;
       cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
-    .delete-chat-button:hover { background:rgba(54,148,255,.12); }
+    .delete-chat-button:hover { background:transparent; color:#69b0ff; }
     .delete-chat-button:disabled { opacity:.55; cursor:wait; }
 
     .main { min-width:0;flex:1;display:flex;flex-direction:column;position:relative; }
