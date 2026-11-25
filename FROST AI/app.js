@@ -794,6 +794,306 @@ import {
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
   // ==========================================
+  // FROSTGPT VOICE SYSTEM
+  // ==========================================
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  let voiceRecognition = null;
+  let voiceListening = false;
+  let voiceReplyEnabled = false;
+  let voiceSessionActive = false;
+  let voiceFinalTranscript = "";
+  let voiceMicButton = null;
+  let voiceToggleButton = null;
+  let voiceStopButton = null;
+
+  function stopSpeaking() {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  function cleanTextForSpeech(text) {
+    return String(text || "")
+      .replace(/```[\s\S]*?```/g, " Code block omitted. ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/#{1,6}\s?/g, "")
+      .replace(/[*_~]/g, "")
+      .replace(/^\s*>\s?/gm, "")
+      .replace(/^\s*[-+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function speakReply(text) {
+    if (!voiceReplyEnabled || !("speechSynthesis" in window)) return;
+
+    const spokenText = cleanTextForSpeech(text);
+    if (!spokenText) return;
+
+    stopSpeaking();
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onerror = event => {
+      console.warn("FROSTGPT: Speech playback error.", event.error);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function updateVoiceButtons() {
+    if (voiceMicButton) {
+      voiceMicButton.textContent = voiceListening ? "⏹ Stop listening" : "🎙️ Voice input";
+      voiceMicButton.setAttribute(
+        "aria-label",
+        voiceListening ? "Stop voice input" : "Start voice input"
+      );
+
+      voiceMicButton.disabled = isThinking;
+      voiceMicButton.style.opacity = isThinking ? ".5" : "1";
+    }
+
+    if (voiceToggleButton) {
+      voiceToggleButton.textContent = voiceReplyEnabled
+        ? "🔊 Voice replies ON"
+        : "🔇 Voice replies OFF";
+
+      voiceToggleButton.setAttribute(
+        "aria-pressed",
+        String(voiceReplyEnabled)
+      );
+    }
+
+    if (voiceStopButton) {
+      voiceStopButton.disabled =
+        !voiceListening &&
+        !window.speechSynthesis?.speaking;
+
+      voiceStopButton.style.opacity = voiceStopButton.disabled ? ".5" : "1";
+    }
+  }
+
+  function stopVoiceInput() {
+    voiceSessionActive = false;
+    voiceListening = false;
+
+    if (voiceRecognition) {
+      try {
+        voiceRecognition.stop();
+      } catch {
+        // Recognition may already have stopped.
+      }
+    }
+
+    updateVoiceButtons();
+  }
+
+  function createVoiceControls() {
+    if ($("frostgptVoiceControls")) return;
+
+    const inputArea = messageInput.parentElement;
+    if (!inputArea) return;
+
+    const controls = document.createElement("div");
+    controls.id = "frostgptVoiceControls";
+
+    controls.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 9px;
+      width: 100%;
+    `;
+
+    function styleButton(button) {
+      button.type = "button";
+
+      button.style.cssText = `
+        padding: 9px 13px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color, rgba(255,255,255,.16));
+        background: var(--input-background, rgba(128,128,128,.12));
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: opacity .2s, background .2s;
+      `;
+    }
+
+    voiceMicButton = document.createElement("button");
+    voiceMicButton.id = "frostgptMicButton";
+    styleButton(voiceMicButton);
+
+    voiceToggleButton = document.createElement("button");
+    voiceToggleButton.id = "frostgptVoiceToggle";
+    styleButton(voiceToggleButton);
+
+    voiceStopButton = document.createElement("button");
+    voiceStopButton.id = "frostgptVoiceStop";
+    voiceStopButton.textContent = "⏹ Stop audio";
+    styleButton(voiceStopButton);
+
+    voiceMicButton.addEventListener("click", () => {
+      if (voiceListening) {
+        stopVoiceInput();
+      } else {
+        startVoiceInput();
+      }
+    });
+
+    voiceToggleButton.addEventListener("click", () => {
+      voiceReplyEnabled = !voiceReplyEnabled;
+
+      if (!voiceReplyEnabled) {
+        stopSpeaking();
+      }
+
+      updateVoiceButtons();
+    });
+
+    voiceStopButton.addEventListener("click", () => {
+      stopVoiceInput();
+      stopSpeaking();
+      updateVoiceButtons();
+    });
+
+    controls.append(
+      voiceMicButton,
+      voiceToggleButton,
+      voiceStopButton
+    );
+
+    inputArea.appendChild(controls);
+
+    updateVoiceButtons();
+
+    console.log("FROSTGPT: Voice controls created.");
+  }
+
+  function startVoiceInput() {
+    if (!SpeechRecognition) {
+      alert(
+        "Voice input is not supported by this browser. Try a recent version of Chrome or Edge."
+      );
+      return;
+    }
+
+    if (isThinking) {
+      setStatus("Wait until FROSTGPT finishes responding.");
+      return;
+    }
+
+    if (voiceListening) return;
+
+    stopSpeaking();
+
+    voiceFinalTranscript = "";
+    voiceSessionActive = true;
+    voiceListening = true;
+
+    voiceRecognition = new SpeechRecognition();
+
+    voiceRecognition.lang = "en-US";
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = true;
+    voiceRecognition.maxAlternatives = 1;
+
+    voiceRecognition.onstart = () => {
+      voiceListening = true;
+      updateVoiceButtons();
+      setStatus("🎙️ Listening...");
+    };
+
+    voiceRecognition.onresult = event => {
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0]?.transcript || "";
+
+        if (result.isFinal) {
+          voiceFinalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const currentTranscript =
+        (voiceFinalTranscript + interimTranscript).trim();
+
+      if (currentTranscript) {
+        messageInput.value = currentTranscript;
+      }
+    };
+
+    voiceRecognition.onerror = event => {
+      console.warn("FROSTGPT: Voice recognition error.", event.error);
+
+      voiceListening = false;
+      voiceSessionActive = false;
+
+      updateVoiceButtons();
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setStatus("Microphone permission was denied.");
+      } else if (event.error === "no-speech") {
+        setStatus("No speech detected. Try again.");
+      } else if (event.error !== "aborted") {
+        setStatus("Voice input encountered an error.");
+      }
+    };
+
+    voiceRecognition.onend = () => {
+      voiceListening = false;
+      updateVoiceButtons();
+
+      if (!voiceSessionActive) return;
+
+      voiceSessionActive = false;
+
+      const transcript = voiceFinalTranscript.trim();
+
+      if (transcript) {
+        messageInput.value = transcript;
+        setStatus("Sending voice message...");
+        sendMessage();
+      } else {
+        setStatus(modeName());
+      }
+    };
+
+    updateVoiceButtons();
+
+    try {
+      voiceRecognition.start();
+    } catch (error) {
+      console.error("FROSTGPT: Could not start voice input.", error);
+
+      voiceListening = false;
+      voiceSessionActive = false;
+
+      updateVoiceButtons();
+      setStatus("Could not start microphone.");
+    }
+  }
+
+  // Create voice controls directly inside the message input area.
+  createVoiceControls();
+
+  // ==========================================
   // GENERAL HELPERS
   // ==========================================
 
@@ -1153,7 +1453,6 @@ import {
         continue;
       }
 
-      // Code blocks
       if (line.trim().startsWith("```")) {
         index++;
 
@@ -1179,7 +1478,6 @@ import {
         continue;
       }
 
-      // Headings
       const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
 
       if (headingMatch) {
@@ -1194,14 +1492,12 @@ import {
         continue;
       }
 
-      // Horizontal rules
       if (/^(\*\s*){3,}$|^(-\s*){3,}$|^(_\s*){3,}$/.test(line.trim())) {
         fragment.appendChild(document.createElement("hr"));
         index++;
         continue;
       }
 
-      // Blockquotes
       if (line.trim().startsWith(">")) {
         const quote = document.createElement("blockquote");
 
@@ -1224,7 +1520,6 @@ import {
         continue;
       }
 
-      // Unordered lists
       if (/^\s*[-*+]\s+/.test(line)) {
         const list = document.createElement("ul");
 
@@ -1246,7 +1541,6 @@ import {
         continue;
       }
 
-      // Ordered lists
       if (/^\s*\d+\.\s+/.test(line)) {
         const list = document.createElement("ol");
 
@@ -1269,7 +1563,6 @@ import {
         continue;
       }
 
-      // Normal paragraphs
       const paragraphLines = [line];
       index++;
 
@@ -1722,6 +2015,9 @@ import {
   // ==========================================
 
   function showLogin() {
+    stopVoiceInput();
+    stopSpeaking();
+
     currentUser = null;
     currentUserId = null;
 
@@ -1788,8 +2084,6 @@ import {
 
       if (attachButton) attachButton.disabled = true;
       if (imageButton) imageButton.disabled = true;
-
-      setStatus("Thinking...");
     } else {
       sendButton.textContent = "↑";
       sendButton.title = "Send message";
@@ -1802,8 +2096,12 @@ import {
 
       if (attachButton) attachButton.disabled = false;
       if (imageButton) imageButton.disabled = false;
+    }
 
-      setStatus(modeName());
+    updateVoiceButtons();
+
+    if (!voiceListening) {
+      setStatus(value ? "Thinking..." : modeName());
     }
   }
 
@@ -1817,6 +2115,7 @@ import {
       activeController = null;
     }
 
+    stopSpeaking();
     setThinking(false);
     setStatus("Generation stopped");
   }
@@ -2084,6 +2383,10 @@ import {
       });
 
       playSound(760);
+
+      // Speak the AI reply when voice replies are enabled.
+      speakReply(reply);
+
     } catch (error) {
       if (error.name === "AbortError") {
         removeTyping();
@@ -2203,6 +2506,9 @@ import {
   signOutButton?.addEventListener("click", async () => {
     if (isThinking) stopGenerating();
 
+    stopVoiceInput();
+    stopSpeaking();
+
     try {
       await signOut(auth);
     } catch (error) {
@@ -2229,6 +2535,9 @@ import {
 
   newChat?.addEventListener("click", () => {
     if (isThinking) stopGenerating();
+
+    stopSpeaking();
+    stopVoiceInput();
 
     newConversation();
 
@@ -2302,5 +2611,7 @@ import {
   console.log("Classic loaded:", !!window.FROSTGPTClassic);
   console.log("Settings loaded:", true);
   console.log("Personalized greetings:", true);
+  console.log("Voice input supported:", !!SpeechRecognition);
+  console.log("Voice replies supported:", "speechSynthesis" in window);
 
 })();
