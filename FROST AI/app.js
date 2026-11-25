@@ -3115,39 +3115,32 @@ import {
   // GIF PICKER
   // ==========================================
 
-  const GIPHY_API_KEY = "dc6zaTOxFJmzC";
-
-  function openGifPicker() {
-    if (!gifPicker) return;
-    gifPicker.hidden = false;
-    gifSearchInput?.focus();
-    loadGifs("");
-  }
-
-  function closeGifPickerWindow() {
-    if (gifPicker) gifPicker.hidden = true;
-  }
-
   async function loadGifs(searchTerm = "") {
     if (!gifResults || !gifPickerStatus) return;
     gifResults.replaceChildren();
     gifPickerStatus.textContent = "Loading GIFs...";
 
-    const endpoint = searchTerm.trim()
-      ? "https://api.giphy.com/v1/gifs/search"
-      : "https://api.giphy.com/v1/gifs/trending";
-    const url = new URL(endpoint);
-    url.searchParams.set("api_key", GIPHY_API_KEY);
-    url.searchParams.set("limit", "24");
-    url.searchParams.set("rating", "g");
-    if (searchTerm.trim()) url.searchParams.set("q", searchTerm.trim());
-
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("GIF service is temporarily unavailable.");
-      const data = await response.json();
-      const items = Array.isArray(data.data) ? data.data : [];
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) params.set("search", searchTerm.trim().slice(0, 50));
 
+      const response = await fetch(`/api/gifs?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 503) {
+          throw new Error("GIF search isn't configured yet. The site owner needs to add the GIPHY_API_KEY secret in Cloudflare.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("GIPHY rejected the API key. Check the GIPHY_API_KEY secret in Cloudflare.");
+        }
+        if (response.status === 429) {
+          throw new Error("GIPHY is temporarily rate-limiting searches. Please try again shortly.");
+        }
+        throw new Error(data.error || "GIF service is temporarily unavailable.");
+      }
+
+      const items = Array.isArray(data.data) ? data.data : [];
       if (!items.length) {
         gifPickerStatus.textContent = "No GIFs found. Try another search.";
         return;
@@ -3176,12 +3169,13 @@ import {
             const gifResponse = await fetch(originalURL);
             if (!gifResponse.ok) throw new Error("Could not download that GIF.");
             const blob = await gifResponse.blob();
-            const file = new File([blob], "FROSTGPT-GIF.gif", { type: "image/gif" });
+            const file = new File([blob], `FROSTGPT-GIF-${item.id || Date.now()}.gif`, { type: "image/gif" });
+            const previousCount = attachments.length;
             await handleFiles([file]);
-            if (attachments.some(item => item.isGif && item.name === file.name)) {
+            if (attachments.length > previousCount) {
               closeGifPickerWindow();
             } else {
-              gifPickerStatus.textContent = "The GIF could not be attached. Check the upload limits and try another.";
+              gifPickerStatus.textContent = "That GIF couldn't be attached. Check the existing image attachment limit and try another.";
               button.disabled = false;
             }
           } catch (error) {
@@ -3193,7 +3187,7 @@ import {
         gifResults.appendChild(button);
       });
 
-      gifPickerStatus.textContent = "Choose a GIF to attach it. FROSTGPT will analyze sampled frames when you send your message.";
+      gifPickerStatus.textContent = "Choose a GIF to attach it. No separate GIF-generation or GIF-use quota is applied. Powered by GIPHY.";
     } catch (error) {
       gifPickerStatus.textContent = error.message || "Could not load GIFs.";
     }
