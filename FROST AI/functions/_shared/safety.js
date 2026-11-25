@@ -18,7 +18,7 @@ function normalizeSafetyText(value) {
 // are not safety violations by themselves.
 const BLOCKED_REQUEST_PATTERNS = [
   // Explicit sexual-content requests.
-  /\b(?:write|create|generate|show|send|describe)\b.{0,80}\b(?:explicit sexual content|pornographic content|porn|nudes?|erotic scene|sex scene)\b/i,
+  /\b(?:write|create|generate|show|send|describe)\b.{0,80}\b(?:explicit sexual(?: content| scene)?|pornographic content|porn|nudes?|erotic scene|sex scene)\b/i,
   /\b(?:write|create|generate|describe)\b.{0,80}\b(?:graphic sexual|sexually explicit)\b/i,
 
   // Requests for self-harm instructions or concealment (not disclosures or
