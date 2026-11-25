@@ -2777,40 +2777,91 @@ import {
   function readImage(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-
       reader.readAsDataURL(file);
     });
+  }
+
+  // Sample an animated GIF into chronological still frames for the vision model.
+  // Keep the original GIF separately so it remains animated in the chat UI.
+  async function extractGifFrames(file, requestedFrames = 6) {
+    const objectURL = URL.createObjectURL(file);
+    const image = document.createElement("img");
+    image.alt = "";
+    image.style.cssText =
+      "position:fixed;left:-10000px;top:0;width:auto;height:auto;opacity:0;pointer-events:none;";
+    document.body.appendChild(image);
+
+    try {
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error("This GIF could not be decoded."));
+        image.src = objectURL;
+      });
+
+      const sourceWidth = image.naturalWidth;
+      const sourceHeight = image.naturalHeight;
+      if (!sourceWidth || !sourceHeight) {
+        throw new Error("This GIF has invalid dimensions.");
+      }
+
+      const scale = Math.min(1, 768 / Math.max(sourceWidth, sourceHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("GIF frame processing is unavailable.");
+
+      const frames = [];
+      for (let index = 0; index < requestedFrames; index++) {
+        if (index > 0) await new Promise(resolve => setTimeout(resolve, 180));
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        frames.push(canvas.toDataURL("image/jpeg", 0.72));
+      }
+      return frames;
+    } finally {
+      image.remove();
+      URL.revokeObjectURL(objectURL);
+    }
   }
 
   async function handleFiles(fileList) {
     for (const file of Array.from(fileList)) {
       if (attachments.length >= MAX_IMAGES) {
-        addMessage(
-          "assistant",
-          `You can attach up to ${MAX_IMAGES} images at a time.`
-        );
+        addMessage("assistant", `You can attach up to ${MAX_IMAGES} images at a time.`);
         break;
       }
 
-      if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-        addMessage("assistant", "Use a PNG, JPG, or WEBP image.");
+      const isGif = file.type === "image/gif" ||
+        file.name.toLowerCase().endsWith(".gif");
+      const supportedTypes = ["image/png", "image/jpeg", "image/webp"];
+
+      if (!isGif && !supportedTypes.includes(file.type)) {
+        addMessage("assistant", "Use a PNG, JPG, WEBP, or animated GIF image.");
         continue;
       }
 
       if (file.size > MAX_IMAGE_SIZE) {
-        addMessage(
-          "assistant",
-          `${file.name} is too large. The maximum is 4 MB per image.`
-        );
+        addMessage("assistant", `${file.name} is too large. The maximum is 4 MB per image.`);
         continue;
+      }
+
+      const usedVisionSlots = attachments.reduce(
+        (total, item) => total + (item.visionImages?.length || 1), 0
+      );
+      const remainingVisionSlots = 8 - usedVisionSlots;
+      if (remainingVisionSlots < 1) {
+        addMessage("assistant", "This message can contain up to 8 images or GIF frames for AI analysis.");
+        break;
       }
 
       try {
         const data = await readImage(file);
-        attachments.push({ name: file.name, data });
+        const visionImages = isGif
+          ? await extractGifFrames(file, Math.min(6, remainingVisionSlots))
+          : [data];
+        attachments.push({ name: file.name, data, isGif, visionImages });
       } catch (error) {
         addMessage("assistant", error.message);
       }
@@ -2818,10 +2869,6 @@ import {
 
     updateAttachmentPreview();
   }
-
-  // ==========================================
-  // SEND MESSAGE
-  // ==========================================
 
   async function sendMessage() {
     if (isThinking) {
@@ -2836,17 +2883,28 @@ import {
     const conversation = ensureConversation();
     const mode = currentMode();
     const imageData = attachments.map(item => item.data);
+    const visionImageData = attachments.flatMap(item =>
+      item.visionImages?.length ? item.visionImages : [item.data]
+    );
+    const hasGif = attachments.some(item => item.isGif);
 
     let apiContent = message;
 
     if (mode === "flash") {
       const parts = [];
 
+      if (hasGif) {
+        parts.push({
+          type: "text",
+          text: "The user attached an animated GIF. The following image inputs are sampled frames in chronological order. Compare the frames to understand the motion and sequence."
+        });
+      }
+
       if (message) {
         parts.push({ type: "text", text: message });
       }
 
-      imageData.forEach(url => {
+      visionImageData.forEach(url => {
         parts.push({
           type: "image_url",
           image_url: { url }
