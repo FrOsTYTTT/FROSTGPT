@@ -79,10 +79,10 @@ export async function classifyLatestMessage(env, latestText) {
   // cannot trigger a violation merely because of their address or opaque ID.
   // Keep visible Markdown link labels and surrounding user-authored text.
   const classificationText = String(latestText)
-    .replace(/\\[([^\\]]*)\\]\\(https?:\\/\\/[^\\s)]+\\)/gi, "$1")
-    .replace(/https?:\\/\\/[^\\s<>()]+/gi, "")
-    .replace(/www\\.[^\\s<>()]+/gi, "")
-    .replace(/\\s+/g, " ")
+    .replace(/\[([^\]]*)\]\(https?:\/\/[^\s)]+\)/gi, "$1")
+    .replace(/https?:\/\/[^\s<>()]+/gi, "")
+    .replace(/www\.[^\s<>()]+/gi, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   // A link by itself has no request to classify. Explicit unsafe instructions
