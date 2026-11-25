@@ -52,6 +52,15 @@ export async function verifyFirebaseUser(request) {
 
 export async function classifyLatestMessage(env, latestText) {
   if (!env.AI) throw new Error("Safety classifier unavailable.");
+
+  // Short, plainly positive compliments are not safety violations. This
+  // narrow deterministic check prevents Llama Guard false positives on
+  // friendly messages, including compliments sent alongside an image/GIF.
+  const normalizedText = String(latestText || "").trim().toLowerCase();
+  const positiveOnly = normalizedText.length > 0 &&
+    normalizedText.length <= 400 &&
+    /^(?:(?:you(?:'re| are)|ur)\s+(?:a\s+)?(?:wonderful|great|awesome|amazing|helpful|fantastic|excellent|cool|kind|smart|good)\s+(?:ai|assistant|bot|computer|tool)?[.!? ]*|i(?:'m| am)\s+so\s+proud\s+of\s+you[.!? ]*|you\s+did\s+(?:a\s+)?(?:great|good|amazing|awesome|wonderful)\s+job[.!? ]*)+$/i.test(normalizedText);
+  if (positiveOnly) return false;
   // Llama Guard expects alternating user/assistant turns. It also emits
   // its native "safe" / "unsafe" verdict text; do not request JSON mode here.
   // JSON mode is not listed as supported for this model by Cloudflare.
