@@ -171,6 +171,11 @@
         <button id="closeSettings" class="settings-close" type="button">✕</button>
       </div>
 
+      <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+        <button id="settingsGeneralTab" class="settings-tab active" type="button" role="tab" aria-selected="true">General</button>
+        <button id="settingsDeveloperTab" class="settings-tab" type="button" role="tab" aria-selected="false">Developer</button>
+      </div>
+      <div id="settingsGeneralPage" class="settings-page">
       <div class="setting-row">
         <div class="setting-copy"><strong>Theme</strong><small>Choose dark, light, or match your device.</small></div>
         <select class="setting-control" id="settingTheme">
@@ -248,6 +253,37 @@
         <button id="resetSettings" type="button">Reset to defaults</button>
         <span id="settingsSaved" role="status">Settings ready</span>
       </div>
+      </div>
+      <section id="settingsDeveloperPage" class="settings-page" hidden aria-label="Developer settings">
+        <div id="developerHome">
+          <h3 class="developer-page-title">Developer</h3>
+          <p class="developer-page-description">Build with the FROSTGPT™ API. Manage your developer tools from here.</p>
+          <div class="developer-action-list">
+            <button id="openDeveloperKeys" class="developer-action-button" type="button">
+              <span class="developer-action-icon" aria-hidden="true">🔑</span>
+              <span class="developer-action-copy"><strong>API Keys</strong><small>Create and manage your FROSTGPT™ developer keys.</small></span>
+              <span class="developer-action-arrow" aria-hidden="true">›</span>
+            </button>
+            <button id="openDeveloperDocs" class="developer-action-button" type="button">
+              <span class="developer-action-icon" aria-hidden="true">📘</span>
+              <span class="developer-action-copy"><strong>API Documentation</strong><small>Learn how to connect your apps to FROSTGPT™.</small></span>
+              <span class="developer-action-arrow" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+        <div id="developerKeysPage" hidden>
+          <button class="developer-back-button" id="backFromDeveloperKeys" type="button">← Back to Developer</button>
+          <h3 class="developer-page-title">API Keys</h3>
+          <p class="developer-page-description">Your individual FROSTGPT™ API keys will be managed here.</p>
+          <div class="developer-notice">The secure key manager will become available after the FROSTGPT™ backend is connected. No API keys are being generated or stored by this page yet.</div>
+        </div>
+        <div id="developerDocsPage" hidden>
+          <button class="developer-back-button" id="backFromDeveloperDocs" type="button">← Back to Developer</button>
+          <h3 class="developer-page-title">API Documentation</h3>
+          <p class="developer-page-description">Guides, endpoints, authentication examples, and API reference will appear here when the public API is ready.</p>
+          <div class="developer-notice">FROSTGPT™ API documentation is being prepared.</div>
+        </div>
+      </section>
     </div>
   </section>
 
@@ -262,6 +298,43 @@
       <div class="personality-actions"><button id="resetPersonality" type="button">Restore default</button><button id="savePersonality" type="button">Save personality</button></div>
     </div>
   </section>
+
+
+  <script>
+  (() => {
+    "use strict";
+    const byId = id => document.getElementById(id);
+    const generalTab = byId("settingsGeneralTab");
+    const developerTab = byId("settingsDeveloperTab");
+    const generalPage = byId("settingsGeneralPage");
+    const developerPage = byId("settingsDeveloperPage");
+    const developerHome = byId("developerHome");
+    const keysPage = byId("developerKeysPage");
+    const docsPage = byId("developerDocsPage");
+
+    function showSettingsView(view) {
+      const isGeneral = view === "general";
+      generalPage.hidden = !isGeneral;
+      developerPage.hidden = isGeneral;
+      developerHome.hidden = view !== "developer";
+      keysPage.hidden = view !== "keys";
+      docsPage.hidden = view !== "docs";
+      generalTab.classList.toggle("active", isGeneral);
+      developerTab.classList.toggle("active", !isGeneral);
+      generalTab.setAttribute("aria-selected", String(isGeneral));
+      developerTab.setAttribute("aria-selected", String(!isGeneral));
+    }
+
+    generalTab.addEventListener("click", () => showSettingsView("general"));
+    developerTab.addEventListener("click", () => showSettingsView("developer"));
+    byId("openDeveloperKeys").addEventListener("click", () => showSettingsView("keys"));
+    byId("openDeveloperDocs").addEventListener("click", () => showSettingsView("docs"));
+    byId("backFromDeveloperKeys").addEventListener("click", () => showSettingsView("developer"));
+    byId("backFromDeveloperDocs").addEventListener("click", () => showSettingsView("developer"));
+    byId("openSettings")?.addEventListener("click", () => showSettingsView("general"));
+    byId("accountArea")?.addEventListener("click", () => showSettingsView("general"));
+  })();
+  </script>
 
   <!-- Formatting logic, kept separate from the main application -->
   <script>
