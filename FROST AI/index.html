@@ -171,10 +171,6 @@
         <button id="closeSettings" class="settings-close" type="button">✕</button>
       </div>
 
-      <div class="settings-tabs" role="tablist" aria-label="Settings sections">
-        <button id="settingsGeneralTab" class="settings-tab active" type="button" role="tab" aria-selected="true">General</button>
-        <button id="settingsDeveloperTab" class="settings-tab" type="button" role="tab" aria-selected="false">Developer</button>
-      </div>
       <div id="settingsGeneralPage" class="settings-page">
       <div class="setting-row">
         <div class="setting-copy"><strong>Theme</strong><small>Choose dark, light, or match your device.</small></div>
@@ -249,12 +245,29 @@
         <button id="openPersonality" type="button">Customize</button>
       </div>
 
+
+      <div class="setting-row developer-entry-row">
+        <div class="setting-copy"><strong>Developer</strong><small>Manage your FROSTGPT™ API keys and developer documentation.</small></div>
+        <button id="openDeveloperPortal" class="developer-entry-button" type="button">Open Developer</button>
+      </div>
+
       <div class="settings-footer">
         <button id="resetSettings" type="button">Reset to defaults</button>
         <span id="settingsSaved" role="status">Settings ready</span>
       </div>
       </div>
-      <section id="settingsDeveloperPage" class="settings-page" hidden aria-label="Developer settings">
+
+    </div>
+  </section>
+
+
+  <section id="developerPanel" hidden aria-label="FROSTGPT Developer Portal">
+    <div class="developer-shell">
+      <header class="developer-header">
+        <button id="closeDeveloperPortal" class="developer-back-button" type="button">← Back to FROSTGPT</button>
+        <div class="developer-brand"><span aria-hidden="true">❄</span> FROSTGPT™ <span class="developer-brand-divider">/</span> Developer</div>
+      </header>
+      <main class="developer-content">
         <div id="developerHome">
           <h3 class="developer-page-title">Developer</h3>
           <p class="developer-page-description">Build with the FROSTGPT™ API. Manage your developer tools from here.</p>
@@ -283,7 +296,7 @@
           <p class="developer-page-description">Guides, endpoints, authentication examples, and API reference will appear here when the public API is ready.</p>
           <div class="developer-notice">FROSTGPT™ API documentation is being prepared.</div>
         </div>
-      </section>
+      </main>
     </div>
   </section>
 
@@ -304,35 +317,42 @@
   (() => {
     "use strict";
     const byId = id => document.getElementById(id);
-    const generalTab = byId("settingsGeneralTab");
-    const developerTab = byId("settingsDeveloperTab");
-    const generalPage = byId("settingsGeneralPage");
-    const developerPage = byId("settingsDeveloperPage");
+    const settingsPanel = byId("settingsPanel");
+    const developerPanel = byId("developerPanel");
     const developerHome = byId("developerHome");
     const keysPage = byId("developerKeysPage");
     const docsPage = byId("developerDocsPage");
 
-    function showSettingsView(view) {
-      const isGeneral = view === "general";
-      generalPage.hidden = !isGeneral;
-      developerPage.hidden = isGeneral;
-      developerHome.hidden = view !== "developer";
+    function showDeveloperView(view) {
+      developerHome.hidden = view !== "home";
       keysPage.hidden = view !== "keys";
       docsPage.hidden = view !== "docs";
-      generalTab.classList.toggle("active", isGeneral);
-      developerTab.classList.toggle("active", !isGeneral);
-      generalTab.setAttribute("aria-selected", String(isGeneral));
-      developerTab.setAttribute("aria-selected", String(!isGeneral));
+      developerPanel.scrollTop = 0;
     }
 
-    generalTab.addEventListener("click", () => showSettingsView("general"));
-    developerTab.addEventListener("click", () => showSettingsView("developer"));
-    byId("openDeveloperKeys").addEventListener("click", () => showSettingsView("keys"));
-    byId("openDeveloperDocs").addEventListener("click", () => showSettingsView("docs"));
-    byId("backFromDeveloperKeys").addEventListener("click", () => showSettingsView("developer"));
-    byId("backFromDeveloperDocs").addEventListener("click", () => showSettingsView("developer"));
-    byId("openSettings")?.addEventListener("click", () => showSettingsView("general"));
-    byId("accountArea")?.addEventListener("click", () => showSettingsView("general"));
+    function openDeveloperPortal() {
+      if (settingsPanel) settingsPanel.hidden = true;
+      developerPanel.hidden = false;
+      showDeveloperView("home");
+    }
+
+    function closeDeveloperPortal() {
+      developerPanel.hidden = true;
+      byId("openSettings")?.focus();
+    }
+
+    byId("openDeveloperPortal")?.addEventListener("click", openDeveloperPortal);
+    byId("closeDeveloperPortal")?.addEventListener("click", closeDeveloperPortal);
+    byId("openDeveloperKeys")?.addEventListener("click", () => showDeveloperView("keys"));
+    byId("openDeveloperDocs")?.addEventListener("click", () => showDeveloperView("docs"));
+    byId("backFromDeveloperKeys")?.addEventListener("click", () => showDeveloperView("home"));
+    byId("backFromDeveloperDocs")?.addEventListener("click", () => showDeveloperView("home"));
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && developerPanel && !developerPanel.hidden) {
+        closeDeveloperPortal();
+      }
+    });
   })();
   </script>
 
