@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261125-16">
+  <link rel="stylesheet" href="/styles.css?v=20261125-17">
 </head>
 
 <body>
@@ -287,8 +287,16 @@
         <div id="developerKeysPage" hidden>
           <button class="developer-back-button" id="backFromDeveloperKeys" type="button">← Back to Developer</button>
           <h3 class="developer-page-title">API Keys</h3>
-          <p class="developer-page-description">Your individual FROSTGPT™ API keys will be managed here.</p>
-          <div class="developer-notice">The secure key manager will become available after the FROSTGPT™ backend is connected. No API keys are being generated or stored by this page yet.</div>
+          <p class="developer-page-description">Create and manage your individual FROSTGPT™ developer API keys.</p>
+          <div class="developer-key-card">
+            <div class="developer-key-card-copy">
+              <strong>Your API key</strong>
+              <small>Generated keys are shown only once. Copy and store yours somewhere safe.</small>
+            </div>
+            <code id="developerGeneratedKey" class="developer-generated-key" hidden></code>
+            <button id="copyDeveloperKey" class="developer-copy-key-button" type="button" hidden>Copy API Key</button>
+            <p id="developerKeyStatus" class="developer-key-status" role="status" aria-live="polite">The secure key generator will activate when the FROSTGPT™ backend is connected.</p>
+          </div>
         </div>
         <div id="developerDocsPage" hidden>
           <button class="developer-back-button" id="backFromDeveloperDocs" type="button">← Back to Developer</button>
@@ -297,6 +305,10 @@
           <div class="developer-notice">FROSTGPT™ API documentation is being prepared.</div>
         </div>
       </main>
+      <footer class="developer-security-warning" role="note">
+        <strong>DO NOT SHARE THESE API KEYS</strong>
+        <span>Keep your API keys private. Anyone who has a key may be able to use the API access it grants.</span>
+      </footer>
     </div>
   </section>
 
@@ -347,6 +359,22 @@
     byId("openDeveloperDocs")?.addEventListener("click", () => showDeveloperView("docs"));
     byId("backFromDeveloperKeys")?.addEventListener("click", () => showDeveloperView("home"));
     byId("backFromDeveloperDocs")?.addEventListener("click", () => showDeveloperView("home"));
+
+    byId("copyDeveloperKey")?.addEventListener("click", async () => {
+      const keyElement = byId("developerGeneratedKey");
+      const status = byId("developerKeyStatus");
+      const key = keyElement?.textContent?.trim();
+      if (!key || !key.startsWith("frost_sk_")) {
+        if (status) status.textContent = "There is no generated API key to copy yet.";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(key);
+        if (status) status.textContent = "Copied to clipboard!";
+      } catch {
+        if (status) status.textContent = "Clipboard access was blocked. Select and copy the key manually.";
+      }
+    });
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && developerPanel && !developerPanel.hidden) {
