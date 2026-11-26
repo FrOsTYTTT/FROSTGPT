@@ -1024,3 +1024,21 @@ button, .model-picker-trigger, .model-picker-option,
   font-size: 13px;
   line-height: 1.55;
 }
+
+
+/* Global scrollbar visibility: keep scrolling functional, but make every scrollbar invisible. */
+*,
+*::before,
+*::after {
+  scrollbar-color: transparent transparent !important;
+}
+
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner,
+*::-webkit-resizer {
+  opacity: 0 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
