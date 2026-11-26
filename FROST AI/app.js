@@ -437,6 +437,7 @@ import {
     if (!settingsPanel) return;
 
     const container =
+      settingsPanel.querySelector("#settingsGeneralPage") ||
       settingsPanel.querySelector(
         ".settings-content, .settings-card, [role='dialog']"
       ) || settingsPanel;
