@@ -230,10 +230,21 @@
 
       <div class="setting-row">
         <div class="setting-copy">
-          <strong>AI Model</strong>
-          <small>Choose automatic switching or manually prioritize a backup model. Image and GIF requests use vision-capable models only.</small>
+          <strong>FROSTGPT Flash Provider</strong>
+          <small>Choose where Flash 3.0 runs. Your choice is saved. If that provider is unavailable, FROSTGPT shows an error instead of switching automatically.</small>
         </div>
-        <select class="setting-control" id="settingBackupModel" aria-label="AI model preference">
+        <select class="setting-control" id="settingFlashProvider" aria-label="FROSTGPT Flash provider">
+          <option value="online">Online (Cloudflare Workers AI)</option>
+          <option value="frostai">FrOsTAI's Servers</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Online AI Model</strong>
+          <small>Choose the Cloudflare model preference. Automatic model fallback applies only within Online, never to FrOsTAI's Servers.</small>
+        </div>
+        <select class="setting-control" id="settingBackupModel" aria-label="Online AI model preference">
           <option value="auto">Automatic (recommended)</option>
           <option value="@cf/zai-org/glm-4.7-flash">GLM 4.7 Flash (Backup)</option>
           <option value="@cf/qwen/qwen3.8-27b">Qwen 3.8 27B (Backup)</option>
