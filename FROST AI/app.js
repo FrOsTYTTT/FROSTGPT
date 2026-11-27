@@ -2040,7 +2040,7 @@ import {
           const transcript = typeof data.text === "string" ? data.text.trim() : "";
           if (!transcript) {
             setStatus("No speech was detected. Try speaking a little closer to the microphone.");
-            if (voiceCallActive) void startVoiceInput();
+            if (voiceCallActive) void startVoiceInput("call");
             return;
           }
 
@@ -2062,7 +2062,8 @@ import {
         } catch (error) {
           console.error("FROSTGPT: Microphone transcription failed.", error);
           setStatus(error.message || "Could not transcribe microphone audio.");
-          if (voiceCallActive) void startVoiceInput();
+          if (voiceCallActive) void startVoiceInput("call");
+          updateVoiceButtons();
         }
       };
 
@@ -2081,6 +2082,7 @@ import {
       console.error("FROSTGPT: Could not start microphone recording.", error);
       voiceSessionActive = false;
       voiceListening = false;
+      if (voiceCaptureMode === "dictate") dictateActive = false;
       if (voiceCallActive) {
         voiceCallActive = false;
         voiceReplyEnabled = false;
@@ -3759,6 +3761,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   }
 
   async function callFlashAI(conversation, signal) {
+    if (thinkModeEnabled && settings.flashProvider !== "online") {
+      throw new Error("Think mode requires the Online Gemma 4 model. Switch providers or turn Think off.");
+    }
     const history = conversation.flash.slice(-80);
 
     // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
@@ -4732,6 +4737,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   });
 
   $("thinkButton")?.addEventListener("click", () => {
+    if (currentMode() !== "flash") {
+      setStatus("Think mode is available with FROSTGPT Flash 3.0, not Classic.");
+      return;
+    }
     if (settings.flashProvider !== "online") {
       setStatus("Think mode currently requires the Online Gemma 4 model.");
       return;
