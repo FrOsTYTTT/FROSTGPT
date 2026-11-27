@@ -10,10 +10,10 @@
   // First-person phrases help avoid reacting to unrelated mentions of sadness.
   const SUPPORT_PATTERNS = [
     /\b(?:i['’]?m|i am|i feel|i['’]?ve been feeling|feeling)\s+(?:(?:really|so|pretty|a little|kinda|kind of)\s+)?(?:sad|down|upset|lonely|alone|overwhelmed|discouraged|stressed|hurt)\b/i,
-    /\b i(?:'m| am) having a hard time\b/i,
-    /\b i(?:'m| am) having a rough day\b/i,
-    /\b i(?:'m| am) struggling\b/i,
-    /\b i need (?:some )?(?:encouragement|support)\b/i
+    /\bi(?:'m| am) having a hard time\b/i,
+    /\bi(?:'m| am) having a rough day\b/i,
+    /\bi(?:'m| am) struggling\b/i,
+    /\bi need (?:some )?(?:encouragement|support)\b/i
   ];
 
   function needsEncouragement(message) {
