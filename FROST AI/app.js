@@ -1920,6 +1920,8 @@ import {
     };
 
     window.speechSynthesis.speak(utterance);
+    // Some browsers leave speechSynthesis paused after an interrupted utterance.
+    window.speechSynthesis.resume();
     updateVoiceButtons();
   }
 
@@ -1985,7 +1987,9 @@ import {
     }
     if (voiceListening) return;
 
-    stopSpeaking();
+    // Keep the speech engine's user-gesture unlock alive when a call
+    // starts. Cancelling it here can make some browsers block later replies.
+    if (mode !== "call" || !voiceCallActive) stopSpeaking();
     voiceSessionActive = true;
     voiceListening = true;
     micChunks = [];
@@ -2196,10 +2200,28 @@ import {
     }
   }
 
+  function unlockVoiceOutput() {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+      return;
+    }
+    try {
+      // Browsers may block speech started after an asynchronous AI request
+      // unless speech output was initialized directly from the call button.
+      const unlockUtterance = new SpeechSynthesisUtterance(" ");
+      unlockUtterance.volume = 0;
+      unlockUtterance.rate = 1;
+      window.speechSynthesis.speak(unlockUtterance);
+      window.speechSynthesis.resume();
+    } catch (error) {
+      console.warn("FROSTGPT: Could not initialize voice output.", error);
+    }
+  }
+
   async function startVoiceCall() {
     if (voiceCallActive || isThinking) return;
     voiceCallActive = true;
     voiceReplyEnabled = true;
+    unlockVoiceOutput();
     const callScreen = $("voiceCallScreen");
     if (callScreen) callScreen.hidden = false;
     updateVoiceCallVisualState("connecting");
