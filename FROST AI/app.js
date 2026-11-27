@@ -4508,8 +4508,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         throw new Error("The image endpoint returned an invalid image.");
       }
 
-      const generatedImageName = getGeneratedImageFilename(prompt);
-      const describeInstruction = "Please describe the generated image for the user. Describe only visible details you can actually identify. Be clear and helpful, then invite the user to continue chatting about the image. Do not claim details that are not visible.";
+      let generatedImageName = getGeneratedImageFilename(prompt);
+      const describeInstruction = "Please describe the generated image for the user. Describe only visible details you can actually identify. Be clear and helpful, then invite the user to continue chatting about the image. Do not claim details that are not visible. At the very end, add one final line exactly in this format: IMAGE_NAME: a short descriptive name of 3 to 6 words, based on what you can actually see.";
 
       let description = "";
       try {
@@ -4544,6 +4544,12 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       } catch (descriptionError) {
         if (descriptionError.name === "AbortError") throw descriptionError;
         console.warn("FROSTGPT: Image description was unavailable.", descriptionError);
+      }
+
+      const imageNameMatch = description.match(/^\\s*IMAGE_NAME:\\s*(.+)$/im);
+      if (imageNameMatch?.[1]) {
+        generatedImageName = getGeneratedImageFilename(imageNameMatch[1]);
+        description = description.replace(/^\\s*IMAGE_NAME:.*$/im, "").trim();
       }
 
       if (!description) {
