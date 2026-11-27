@@ -331,6 +331,7 @@ export async function onRequest({ request, env }) {
   const messages = body.messages;
   const customPersonality = typeof body.customPersonality === "string" ? body.customPersonality.trim().slice(0, 1200) : "";
   const userNickname = typeof body.userNickname === "string" ? body.userNickname.trim().slice(0, 30) : "";
+  const thinkModeEnabled = body.thinkMode === true;
 
   if (!messages.some(message => message.role === "user")) {
     return json({
@@ -510,7 +511,9 @@ export async function onRequest({ request, env }) {
     ? [preferredBackupModel, ...MODELS.filter(model => model !== preferredBackupModel)]
     : MODELS;
   const visionModelsToTry = [MODELS[0], MODELS[2]];
-  const modelsToTry = requestHasImages ? visionModelsToTry : textModelsToTry;
+  const modelsToTry = thinkModeEnabled
+    ? [MODELS[0]]
+    : (requestHasImages ? visionModelsToTry : textModelsToTry);
 
   for (const model of modelsToTry) {
     try {
@@ -528,11 +531,10 @@ export async function onRequest({ request, env }) {
         temperature: 0.7
       };
 
-      // Gemma 4-specific setting.
-      // Other models receive the shared options above.
+      // Gemma 4 is the only configured model with an exposed thinking toggle.
       if (model === MODELS[0]) {
         options.chat_template_kwargs = {
-          enable_thinking: false
+          enable_thinking: thinkModeEnabled
         };
       }
 
@@ -555,6 +557,7 @@ export async function onRequest({ request, env }) {
         reply,
         model: "FROSTGPT™",
         modelUsed: model,
+        thinkingEnabled: thinkModeEnabled && model === MODELS[0],
         version: "3.5"
       });
 
