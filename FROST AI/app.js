@@ -2099,9 +2099,13 @@ import {
           } else {
             messageInput.value = transcript;
             messageInput.dispatchEvent(new Event("input", { bubbles: true }));
-            setStatus("Sending your voice message...");
-            updateVoiceCallVisualState("thinking", `You: ${transcript}`);
-            sendMessage();
+            const selectedProvider = settings.flashProvider;
+            const providerLabel = selectedProvider === "online"
+              ? "Cloudflare AI Online"
+              : "FrOsTAI's Servers";
+            setStatus(`Sending your voice message to ${providerLabel}...`);
+            updateVoiceCallVisualState("thinking", `You: ${transcript}\nSending to ${providerLabel}...`);
+            void sendMessage({ provider: selectedProvider });
           }
           applyingVoiceTranscript = false;
           updateVoiceButtons();
@@ -3830,15 +3834,20 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       : "";
   }
 
-  async function callFlashAI(conversation, signal) {
-    if (thinkModeEnabled && settings.flashProvider !== "online") {
+  async function callFlashAI(conversation, signal, provider = settings.flashProvider) {
+    // Resolve the provider once per request so voice-call turns use the
+    // provider selected when that spoken message was submitted.
+    const selectedProvider = ["online", "frostai"].includes(provider)
+      ? provider
+      : settings.flashProvider;
+    if (thinkModeEnabled && selectedProvider !== "online") {
       throw new Error("Think mode requires the Online Gemma 4 model. Switch providers or turn Think off.");
     }
     const history = conversation.flash.slice(-80);
 
     // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
     // is explicit and persisted in Settings; failures never switch providers.
-    if (settings.flashProvider === "online") {
+    if (selectedProvider === "online") {
       const messages = history.map(item => ({
         role: item.role,
         content: item.content
@@ -4292,7 +4301,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     return /^you are so bad ai[.!?]*$/.test(normalized);
   }
 
-  async function sendMessage() {
+  async function sendMessage(options = {}) {
     if (isThinking) {
       stopGenerating();
       return;
@@ -4310,6 +4319,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     const conversation = ensureConversation();
     const mode = currentMode();
+    const providerForRequest = ["online", "frostai"].includes(options.provider)
+      ? options.provider
+      : settings.flashProvider;
     const imageAttachments = attachments.filter(item => item.kind !== "file");
     const fileAttachments = attachments.filter(item => item.kind === "file");
     const imageData = imageAttachments.map(item => item.data);
@@ -4427,7 +4439,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           reply = await callClassicAI(conversation, message);
         }
       } else {
-        const result = await callFlashAI(conversation, controller.signal);
+        const result = await callFlashAI(conversation, controller.signal, providerForRequest);
         pendingVideoAudioContext = "";
         reply = result.reply;
         if (result.action === "delete_conversation") {
