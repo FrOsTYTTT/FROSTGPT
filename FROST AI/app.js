@@ -1274,6 +1274,8 @@ import {
   let micStream = null;
   let micChunks = [];
   let micRecordingTimer = null;
+  let micSilenceCheckInterval = null;
+  let micAudioContext = null;
   let voiceListening = false;
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
@@ -1906,8 +1908,21 @@ import {
     updateVoiceButtons();
   }
 
+  function clearMicSilenceDetection() {
+    if (micSilenceCheckInterval) {
+      clearInterval(micSilenceCheckInterval);
+      micSilenceCheckInterval = null;
+    }
+    if (micAudioContext) {
+      const context = micAudioContext;
+      micAudioContext = null;
+      context.close().catch(() => {});
+    }
+  }
+
   function stopVoiceInput(shouldTranscribe = false) {
     voiceListening = false;
+    clearMicSilenceDetection();
     if (micRecordingTimer) {
       clearTimeout(micRecordingTimer);
       micRecordingTimer = null;
@@ -2010,6 +2025,7 @@ import {
       micRecorder.onstop = async () => {
         const shouldSend = voiceSessionActive;
         const completedMode = voiceCaptureMode;
+        clearMicSilenceDetection();
         voiceSessionActive = false;
         voiceListening = false;
         if (completedMode === "dictate") dictateActive = false;
@@ -2082,8 +2098,48 @@ import {
       };
 
       micRecorder.start(500);
-      setStatus(mode === "dictate" ? "Dictating... Press Dictate again to finish." : "Listening... Speak naturally; the current recording is transcribed at the end of the turn.");
+      setStatus(mode === "dictate"
+        ? "Dictating... Pause briefly or press Dictate again to finish."
+        : "Listening... Speak, then pause briefly and FROSTGPT will respond.");
       updateVoiceButtons();
+
+      // End each spoken turn after about 1.2 seconds of detected silence.
+      // This keeps Voice Call conversational and lets Dictate finish hands-free.
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        try {
+          micAudioContext = new AudioContextClass();
+          await micAudioContext.resume();
+          const analyser = micAudioContext.createAnalyser();
+          analyser.fftSize = 512;
+          const source = micAudioContext.createMediaStreamSource(micStream);
+          source.connect(analyser);
+          const samples = new Uint8Array(analyser.fftSize);
+          let speechDetected = false;
+          let lastSpeechAt = 0;
+
+          micSilenceCheckInterval = setInterval(() => {
+            if (!voiceListening || !micRecorder || micRecorder.state !== "recording") return;
+            analyser.getByteTimeDomainData(samples);
+            let energy = 0;
+            for (let i = 0; i < samples.length; i++) {
+              const sample = (samples[i] - 128) / 128;
+              energy += sample * sample;
+            }
+            const rms = Math.sqrt(energy / samples.length);
+            if (rms > 0.012) {
+              speechDetected = true;
+              lastSpeechAt = Date.now();
+            } else if (speechDetected && Date.now() - lastSpeechAt >= 1200) {
+              setStatus("Speech detected. Transcribing...");
+              stopVoiceInput(true);
+            }
+          }, 120);
+        } catch (silenceError) {
+          console.warn("FROSTGPT: Automatic silence detection is unavailable; use the Dictate button to finish.", silenceError);
+          clearMicSilenceDetection();
+        }
+      }
 
       // Limit a single microphone recording to 60 seconds.
       micRecordingTimer = setTimeout(() => {
@@ -2094,6 +2150,7 @@ import {
       }, 60000);
     } catch (error) {
       console.error("FROSTGPT: Could not start microphone recording.", error);
+      clearMicSilenceDetection();
       voiceSessionActive = false;
       voiceListening = false;
       if (voiceCaptureMode === "dictate") dictateActive = false;
