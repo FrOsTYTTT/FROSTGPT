@@ -1463,3 +1463,24 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   height: 18px;
   flex: 0 0 18px;
 }
+
+
+/* Keep live transcript, assistant reply, and errors visible during calls. */
+.voice-call-message {
+  width: min(86vw, 560px);
+  max-height: 24vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  margin: 14px auto 4px;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color, rgba(255,255,255,.16));
+  border-radius: 14px;
+  background: var(--panel-background, rgba(32,35,43,.72));
+  color: var(--text-color, inherit);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.voice-call-message[hidden] { display: none; }
