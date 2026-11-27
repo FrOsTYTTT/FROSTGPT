@@ -1934,11 +1934,15 @@ import {
   async function startVoiceInput(mode = "call") {
     voiceCaptureMode = mode;
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      dictateActive = false;
       if (voiceCallActive) {
         voiceCallActive = false;
         voiceReplyEnabled = false;
-        updateVoiceButtons();
+        const screen = $("voiceCallScreen");
+        if (screen) screen.hidden = true;
+        updateVoiceCallVisualState("ended");
       }
+      updateVoiceButtons();
       setStatus("Microphone recording is not supported here. Try the latest Chrome or Edge over HTTPS.");
       return;
     }
@@ -1989,6 +1993,14 @@ import {
         console.error("FROSTGPT: Microphone recording error.", event.error);
         voiceSessionActive = false;
         voiceListening = false;
+        dictateActive = false;
+        if (voiceCallActive) {
+          voiceCallActive = false;
+          voiceReplyEnabled = false;
+          const screen = $("voiceCallScreen");
+          if (screen) screen.hidden = true;
+          updateVoiceCallVisualState("ended");
+        }
         setStatus("Microphone recording failed.");
         updateVoiceButtons();
       };
@@ -2086,7 +2098,11 @@ import {
       if (voiceCallActive) {
         voiceCallActive = false;
         voiceReplyEnabled = false;
+        const screen = $("voiceCallScreen");
+        if (screen) screen.hidden = true;
+        updateVoiceCallVisualState("ended");
       }
+      dictateActive = false;
       micStream?.getTracks().forEach(track => track.stop());
       micStream = null;
       micRecorder = null;
