@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "FROSTGPT™",
-  "short_name": "FROSTGPT™",
-  "description": "Your AI assistant, created by FrOsTAI.",
+  "name": "FROSTGPT - Your AI Workspace",
+  "short_name": "FROSTGPT",
+  "description": "Change your settings, explore dashboard examples, open the Developer Dashboard, and create custom API keys, names, and personalities through Settings.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
