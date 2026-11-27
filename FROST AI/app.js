@@ -3088,8 +3088,6 @@ import {
           }
         });
 
-        row.appendChild(button);
-
         const pinButton = document.createElement("button");
         pinButton.className = `message-pin-button${isChatPinned(item.id) ? " pinned" : ""}`;
         pinButton.type = "button";
@@ -3102,7 +3100,7 @@ import {
           event.stopPropagation();
           togglePinnedChat(item.id);
         });
-        row.appendChild(pinButton);
+        row.append(pinButton, button);
 
         if (settings.chatHistory) {
           const deleteButton = document.createElement("button");
@@ -4658,6 +4656,55 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     settingRow.hidden = !sidebarUnavailable;
     $("app")?.classList.toggle("personality-in-settings", sidebarUnavailable);
     return sidebarUnavailable;
+  }
+
+  const sidebarResizeHandle = $("sidebarResizeHandle");
+  const SIDEBAR_WIDTH_KEY = () => `frostgpt_sidebar_width_${currentUserId || "guest"}`;
+  const SIDEBAR_MIN_WIDTH = 220;
+  const SIDEBAR_MAX_WIDTH = 480;
+
+  function applySidebarWidth(width, save = false) {
+    if (!sidebar || !Number.isFinite(width)) return;
+    const clamped = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width));
+    sidebar.style.width = `${clamped}px`;
+    sidebar.style.flexBasis = `${clamped}px`;
+    sidebar.style.setProperty("--sidebar-current-width", `${clamped}px`);
+    if (save) {
+      try { localStorage.setItem(SIDEBAR_WIDTH_KEY(), String(clamped)); } catch {}
+    }
+  }
+
+  try {
+    const savedSidebarWidth = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY()));
+    if (savedSidebarWidth) applySidebarWidth(savedSidebarWidth);
+  } catch {}
+
+  if (sidebarResizeHandle) {
+    sidebarResizeHandle.addEventListener("pointerdown", event => {
+      if (window.innerWidth <= 700 || sidebar?.classList.contains("collapsed")) return;
+      event.preventDefault();
+      sidebarResizeHandle.setPointerCapture?.(event.pointerId);
+      const startX = event.clientX;
+      const startWidth = sidebar.getBoundingClientRect().width;
+      const move = moveEvent => applySidebarWidth(startWidth + moveEvent.clientX - startX);
+      const finish = () => {
+        applySidebarWidth(sidebar.getBoundingClientRect().width, true);
+        sidebarResizeHandle.removeEventListener("pointermove", move);
+        sidebarResizeHandle.removeEventListener("pointerup", finish);
+        sidebarResizeHandle.removeEventListener("pointercancel", finish);
+        document.body.classList.remove("sidebar-resizing");
+      };
+      sidebarResizeHandle.addEventListener("pointermove", move);
+      sidebarResizeHandle.addEventListener("pointerup", finish);
+      sidebarResizeHandle.addEventListener("pointercancel", finish);
+      document.body.classList.add("sidebar-resizing");
+    });
+    sidebarResizeHandle.addEventListener("keydown", event => {
+      if (window.innerWidth <= 700) return;
+      const current = sidebar.getBoundingClientRect().width;
+      if (event.key === "ArrowLeft") { event.preventDefault(); applySidebarWidth(current - 16, true); }
+      if (event.key === "ArrowRight") { event.preventDefault(); applySidebarWidth(current + 16, true); }
+    });
   }
 
   collapseSidebar?.addEventListener("click", () => {
