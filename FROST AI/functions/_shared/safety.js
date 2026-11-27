@@ -107,3 +107,23 @@ export async function recordSafetyViolation(db, userId) {
 
   return row.violation_count;
 }
+
+
+/**
+ * Authenticate a developer API key. Only the SHA-256 digest is queried;
+ * the plaintext credential is never logged or persisted.
+ */
+export async function verifyDeveloperApiKey(request, db) {
+  const match = (request.headers.get("Authorization") || "").match(/^Bearer\\s+(frost_sk_[A-Za-z0-9_-]{40,})$/i);
+  if (!match || !db) return null;
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(match[1]));
+    const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+    const row = await db.prepare(
+      "UPDATE developer_api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_hash = ? AND revoked_at IS NULL RETURNING user_id"
+    ).bind(hash).first();
+    return typeof row?.user_id === "string" ? row.user_id : null;
+  } catch {
+    return null;
+  }
+}

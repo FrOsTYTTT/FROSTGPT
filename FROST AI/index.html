@@ -318,19 +318,31 @@
           <p class="developer-page-description">Create and manage your individual FROSTGPT™ developer API keys.</p>
           <div class="developer-key-card">
             <div class="developer-key-card-copy">
-              <strong>Your API key</strong>
-              <small>Generated keys are shown only once. Copy and store yours somewhere safe.</small>
+              <strong>Create an API key</strong>
+              <small>Give your key a recognizable name. The full key is displayed only once after creation.</small>
             </div>
+            <label class="developer-key-label" for="developerKeyName">Key name</label>
+            <input id="developerKeyName" class="developer-key-name-input" type="text" maxlength="40" placeholder="e.g. My Roblox game" autocomplete="off">
+            <button id="createDeveloperKey" class="developer-create-key-button" type="button">＋ Create API Key</button>
             <code id="developerGeneratedKey" class="developer-generated-key" hidden></code>
             <button id="copyDeveloperKey" class="developer-copy-key-button" type="button" hidden>Copy API Key</button>
-            <p id="developerKeyStatus" class="developer-key-status" role="status" aria-live="polite">The secure key generator will activate when the FROSTGPT™ backend is connected.</p>
+            <p id="developerKeyStatus" class="developer-key-status" role="status" aria-live="polite">Your keys are private. The full key will never be written to the browser console.</p>
           </div>
+          <section class="developer-key-list-section" aria-labelledby="developerKeyListTitle">
+            <div class="developer-key-list-heading">
+              <h4 id="developerKeyListTitle">Your keys</h4>
+              <button id="refreshDeveloperKeys" class="developer-refresh-keys-button" type="button">↻ Refresh</button>
+            </div>
+            <div id="developerKeyList" class="developer-key-list" aria-live="polite">
+              <p class="developer-key-status">Loading your API keys…</p>
+            </div>
+          </section>
         </div>
         <div id="developerDocsPage" hidden>
           <button class="developer-back-button" id="backFromDeveloperDocs" type="button">← Back to Developer</button>
           <h3 class="developer-page-title">API Documentation</h3>
-          <p class="developer-page-description">Guides, endpoints, authentication examples, and API reference will appear here when the public API is ready.</p>
-          <div class="developer-notice">FROSTGPT™ API documentation is being prepared.</div>
+          <p class="developer-page-description">Use your FROSTGPT™ API key to authenticate requests from your own applications.</p>
+          <div class="developer-notice"><strong>Endpoint:</strong> <code>POST /api/chat</code><br><strong>Header:</strong> <code>Authorization: Bearer YOUR_FROSTGPT_API_KEY</code><br><strong>Content-Type:</strong> <code>application/json</code><br><br>Send a JSON body containing a <code>messages</code> array with role/content objects and a valid <code>conversationId</code>. Keep your key on your server; never embed it in public browser code or publish it in a repository.</div>
         </div>
       </main>
       <footer class="developer-security-warning" role="note">
@@ -522,5 +534,6 @@
   <script src="/chat.js?v=20261126-1"></script>
   <script src="/classic.js"></script>
   <script type="module" src="/app.js?v=20261127-11"></script>
+  <script type="module" src="/developer.js?v=20261127-keys1"></script>
 </body>
 </html>
