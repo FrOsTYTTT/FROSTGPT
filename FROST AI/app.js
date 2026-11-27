@@ -1280,6 +1280,7 @@ import {
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
   let voiceCallActive = false;
+  let voiceCallPhase = "ended";
   let dictateActive = false;
   let voiceCaptureMode = "call";
   let thinkModeEnabled = false;
@@ -1515,10 +1516,12 @@ import {
     }
   }
 
-  function updateVoiceCallVisualState(state) {
+  function updateVoiceCallVisualState(state, detail = "") {
+    voiceCallPhase = state;
     const screen = $("voiceCallScreen");
     const orb = $("voiceCallOrbWrap");
     const label = $("voiceCallStatus");
+    const message = $("voiceCallMessage");
     if (!screen || !orb || !label) return;
     orb.classList.toggle("is-listening", state === "listening");
     orb.classList.toggle("is-speaking", state === "speaking");
@@ -1527,7 +1530,19 @@ import {
       : state === "thinking" ? "FROSTGPT is thinking..."
       : state === "listening" ? "Listening..."
       : state === "connecting" ? "Connecting..."
+      : state === "error" ? "Voice call needs attention"
+      : state === "reply" ? "FROSTGPT replied"
       : "Call ended";
+    if (message && detail) {
+      message.textContent = detail;
+      message.hidden = false;
+    } else if (message && state === "connecting") {
+      message.textContent = "Say something when the microphone is ready.";
+      message.hidden = false;
+    } else if (message && state === "listening") {
+      message.textContent = "I'm listening. Your words and my replies will appear here.";
+      message.hidden = false;
+    }
   }
 
   function updateVoiceButtons() {
@@ -1566,9 +1581,6 @@ import {
     }
 
     updateComposerActionButton();
-    if (voiceCallActive) {
-      updateVoiceCallVisualState(window.speechSynthesis?.speaking ? "speaking" : (voiceListening ? "listening" : "thinking"));
-    }
   }
 
   function createVoiceOptionsPanel() {
@@ -1898,6 +1910,9 @@ import {
         event.error
       );
 
+      if (voiceCallActive) {
+        updateVoiceCallVisualState("error", `Text reply received, but your browser couldn't play the voice: ${event.error || "speech playback error"}.`);
+      }
       updateVoiceButtons();
       if (voiceCallActive && !isThinking && !voiceListening) {
         void startVoiceInput("call");
@@ -2085,6 +2100,7 @@ import {
             messageInput.value = transcript;
             messageInput.dispatchEvent(new Event("input", { bubbles: true }));
             setStatus("Sending your voice message...");
+            updateVoiceCallVisualState("thinking", `You: ${transcript}`);
             sendMessage();
           }
           applyingVoiceTranscript = false;
@@ -2092,12 +2108,16 @@ import {
         } catch (error) {
           console.error("FROSTGPT: Microphone transcription failed.", error);
           setStatus(error.message || "Could not transcribe microphone audio.");
-          if (voiceCallActive) void startVoiceInput("call");
+          if (voiceCallActive) {
+            updateVoiceCallVisualState("error", error.message || "I couldn't transcribe that recording. Please try again.");
+            void startVoiceInput("call");
+          }
           updateVoiceButtons();
         }
       };
 
       micRecorder.start(500);
+      if (voiceCallActive) updateVoiceCallVisualState("listening");
       setStatus(mode === "dictate"
         ? "Dictating... Pause briefly or press Dictate again to finish."
         : "Listening... Speak, then pause briefly and FROSTGPT will respond.");
@@ -4427,6 +4447,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         ? window.FROSTGPTSupport.formatReply(message, modelReply)
         : modelReply;
 
+      if (voiceCallActive) {
+        updateVoiceCallVisualState("speaking", `FROSTGPT: ${displayReply}`);
+      }
+
       if (mode === "flash") {
         conversation.flash.push({
           role: "assistant",
@@ -4460,11 +4484,15 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       console.error("FROSTGPT: Request failed.", error);
       removeTyping();
 
+      const visibleError = error.message || "Something went wrong. Please try again.";
       addMessage(
         "assistant",
-        `⚠️ ${error.message || "Something went wrong. Please try again."}`,
+        `⚠️ ${visibleError}`,
         { mode }
       );
+      if (voiceCallActive) {
+        updateVoiceCallVisualState("error", `I couldn't complete that reply: ${visibleError}`);
+      }
     } finally {
       if (currentRequest === requestId) {
         pendingVideoAudioContext = "";
