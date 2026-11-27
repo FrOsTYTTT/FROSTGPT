@@ -1,5 +1,5 @@
 
-import { verifyFirebaseIdentity, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
+import { verifyFirebaseIdentity, verifyDeveloperApiKey, classifyLatestMessage, recordSafetyViolation } from "../_shared/safety.js";
 import { analyzeVideoUrl } from "../_shared/video-links.js";
 
 const MODELS = [
@@ -316,12 +316,15 @@ export async function onRequest({ request, env }) {
     return json({ error: "FROSTGPT safety storage is not connected." }, 503);
   }
   const identity = await verifyFirebaseIdentity(request);
-  if (!identity?.uid) return json({ error: "Your sign-in session expired. Please sign in again." }, 401);
-  const userId = identity.uid;
-  const isVerifiedFounderAccount =
+  const apiKeyUserId = identity?.uid ? null : await verifyDeveloperApiKey(request, env.SAFETY_DB);
+  const userId = identity?.uid || apiKeyUserId;
+  if (!userId) return json({ error: "Sign in with Firebase or provide a valid FROSTGPT API key." }, 401);
+  const isVerifiedFounderAccount = Boolean(
+    identity &&
     identity.emailVerified === true &&
     identity.email?.toLowerCase() === "2025ytsonic@gmail.com" &&
-    identity.providers.includes("google.com");
+    identity.providers.includes("google.com")
+  );
   if (typeof body.conversationId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(body.conversationId)) {
     return json({ error: "A valid conversation ID is required." }, 400);
   }

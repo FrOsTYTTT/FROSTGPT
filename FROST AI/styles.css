@@ -1361,3 +1361,23 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .composer-tool-option:hover{background:var(--surface-hover)}
 .composer-tool-option>span:first-child{flex:0 0 24px;text-align:center;font-size:17px}
 @media(max-width:600px){.composer-menu-wrap,.composer-menu-wrap>.composer-button{flex-basis:42px;width:42px;height:42px}}
+
+
+/* Developer API key manager */
+.developer-key-label{font-size:12px;font-weight:650;color:var(--muted)}
+.developer-key-name-input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--background);color:var(--text);font:inherit;font-size:13px}
+.developer-create-key-button,.developer-refresh-keys-button,.developer-revoke-key-button{min-height:38px;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-hover);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.developer-create-key-button{justify-self:start;background:var(--accent);border-color:var(--accent);color:#fff}
+.developer-create-key-button:disabled,.developer-revoke-key-button:disabled{opacity:.55;cursor:wait}
+.developer-key-list-section{display:grid;gap:10px;margin-top:18px}
+.developer-key-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.developer-key-list-heading h4{margin:0;color:var(--text);font-size:15px}
+.developer-key-list{display:grid;gap:9px}
+.developer-key-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--surface)}
+.developer-key-row-copy{display:grid;gap:4px;min-width:0}
+.developer-key-row-copy strong{overflow-wrap:anywhere;color:var(--text);font-size:13px}
+.developer-key-row-copy small{color:var(--muted);font-size:11px;line-height:1.45}
+.developer-key-prefix{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.developer-key-status-pill{font-size:10px;font-weight:750;letter-spacing:.04em;color:#16a34a}
+.developer-revoke-key-button{flex:0 0 auto;border-color:rgba(239,68,68,.4);color:#ef4444;background:transparent}
+@media(max-width:520px){.developer-key-row{align-items:flex-start;flex-direction:column}.developer-revoke-key-button{width:100%}}
