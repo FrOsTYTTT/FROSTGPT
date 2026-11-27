@@ -2805,32 +2805,28 @@ import {
     container.appendChild(fragment);
   }
 
-  const PINNED_MESSAGES_KEY = () => `frostgpt_pinned_messages_${currentUserId || "guest"}`;
+  const PINNED_CHATS_KEY = () => `frostgpt_pinned_chats_${currentUserId || "guest"}`;
 
-  function readPinnedMessages() {
+  function readPinnedChats() {
     try {
-      const saved = JSON.parse(localStorage.getItem(PINNED_MESSAGES_KEY()) || "[]");
-      return Array.isArray(saved) ? saved.filter(item =>
-        item && typeof item.conversationId === "string" && typeof item.messageId === "string"
-      ) : [];
+      const saved = JSON.parse(localStorage.getItem(PINNED_CHATS_KEY()) || "[]");
+      return Array.isArray(saved) ? [...new Set(saved.filter(id => typeof id === "string"))] : [];
     } catch { return []; }
   }
 
-  function writePinnedMessages(items) {
+  function writePinnedChats(ids) {
     try {
-      localStorage.setItem(PINNED_MESSAGES_KEY(), JSON.stringify(items));
+      localStorage.setItem(PINNED_CHATS_KEY(), JSON.stringify([...new Set(ids)]));
       return true;
     } catch (error) {
-      console.warn("FROSTGPT: Pinned messages could not be saved.", error);
-      setStatus("Pinned messages could not be saved");
+      console.warn("FROSTGPT: Pinned chats could not be saved.", error);
+      setStatus("Pinned chats could not be saved");
       return false;
     }
   }
 
-  function isMessagePinned(conversationId, messageId) {
-    return readPinnedMessages().some(item =>
-      item.conversationId === conversationId && item.messageId === messageId
-    );
+  function isChatPinned(conversationId) {
+    return readPinnedChats().includes(conversationId);
   }
 
   function setSidebarTab(tab) {
@@ -2841,88 +2837,78 @@ import {
     pinnedTabButton?.classList.toggle("active", showPinned);
     chatsTabButton?.setAttribute("aria-selected", String(!showPinned));
     pinnedTabButton?.setAttribute("aria-selected", String(showPinned));
-    if (showPinned) renderPinnedMessages();
+    if (showPinned) renderPinnedChats();
   }
 
-  function renderPinnedMessages() {
+  function openConversationById(conversationId) {
+    const conversation = conversations.find(item => item.id === conversationId);
+    if (!conversation) {
+      setStatus("Chat is not loaded yet. Refresh chat history and try again.");
+      return;
+    }
+    if (isThinking) stopGenerating();
+    activeConversationId = conversation.id;
+    watchActiveConversationMessages();
+    attachments = [];
+    updateAttachmentPreview();
+    renderHistory();
+    renderConversation();
+    setSidebarTab("pinned");
+    if (window.innerWidth <= 700 && sidebar) sidebar.classList.remove("open");
+  }
+
+  function renderPinnedChats() {
     if (!pinnedMessagesList) return;
     pinnedMessagesList.replaceChildren();
-    const pins = readPinnedMessages();
-    if (!pins.length) {
+    const pinnedConversations = readPinnedChats()
+      .map(id => conversations.find(item => item.id === id))
+      .filter(Boolean);
+
+    if (!pinnedConversations.length) {
       const empty = document.createElement("p");
       empty.className = "pinned-empty";
-      empty.textContent = "Messages you pin will appear here.";
+      empty.textContent = "Chats you pin will appear here.";
       pinnedMessagesList.appendChild(empty);
       return;
     }
-    pins.forEach(pin => {
+
+    pinnedConversations.forEach(conversation => {
       const row = document.createElement("div");
       row.className = "pinned-message-row";
       const openButton = document.createElement("button");
       openButton.type = "button";
       openButton.className = "pinned-message-open";
       const title = document.createElement("strong");
-      title.textContent = pin.title || "Pinned chat";
+      title.textContent = conversation.title || "Untitled chat";
       const preview = document.createElement("span");
-      preview.textContent = pin.text || "Pinned message";
+      const lastMessage = conversation.display?.filter(message => !message.typing).slice(-1)[0];
+      preview.textContent = String(lastMessage?.text || "Open this conversation").slice(0, 110);
       openButton.append(title, preview);
-      openButton.addEventListener("click", () => {
-        const conversation = conversations.find(item => item.id === pin.conversationId);
-        if (!conversation) {
-          setStatus("Chat is not loaded yet. Refresh chat history and try again.");
-          return;
-        }
-        if (isThinking) stopGenerating();
-        activeConversationId = conversation.id;
-        watchActiveConversationMessages();
-        renderHistory();
-        renderConversation();
-        setSidebarTab("chats");
-        requestAnimationFrame(() => {
-          const target = [...chatInner.querySelectorAll("[data-message-id]")]
-            .find(node => node.dataset.messageId === pin.messageId);
-          target?.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-        if (window.innerWidth <= 700 && sidebar) sidebar.classList.remove("open");
-      });
+      openButton.addEventListener("click", () => openConversationById(conversation.id));
+
       const unpinButton = document.createElement("button");
       unpinButton.type = "button";
       unpinButton.className = "message-pin-button pinned";
       unpinButton.textContent = "📌";
-      unpinButton.title = "Unpin message";
-      unpinButton.setAttribute("aria-label", "Unpin message");
-      unpinButton.addEventListener("click", () => {
-        const next = readPinnedMessages().filter(item =>
-          !(item.conversationId === pin.conversationId && item.messageId === pin.messageId)
-        );
-        if (writePinnedMessages(next)) renderPinnedMessages();
-      });
+      unpinButton.title = "Unpin chat";
+      unpinButton.setAttribute("aria-label", "Unpin chat");
+      unpinButton.addEventListener("click", () => togglePinnedChat(conversation.id));
+
       row.append(openButton, unpinButton);
       pinnedMessagesList.appendChild(row);
     });
   }
 
-  function togglePinnedMessage(conversation, message) {
-    if (!conversation || !message?.id) return;
-    const pins = readPinnedMessages();
-    const index = pins.findIndex(item =>
-      item.conversationId === conversation.id && item.messageId === message.id
-    );
-    if (index >= 0) {
-      pins.splice(index, 1);
-    } else {
-      pins.unshift({
-        conversationId: conversation.id,
-        messageId: message.id,
-        title: conversation.title || "Untitled chat",
-        text: String(message.text || "").slice(0, 1200),
-        createdAt: message.createdAt || Date.now()
-      });
-    }
-    if (!writePinnedMessages(pins)) return;
-    renderConversation();
-    renderPinnedMessages();
-    setStatus(index >= 0 ? "Message unpinned" : "Message pinned");
+  function togglePinnedChat(conversationId) {
+    if (!conversationId) return;
+    const pinned = readPinnedChats();
+    const index = pinned.indexOf(conversationId);
+    if (index >= 0) pinned.splice(index, 1);
+    else pinned.unshift(conversationId);
+    if (!writePinnedChats(pinned)) return;
+    renderHistory();
+    renderPinnedChats();
+    setStatus(index >= 0 ? "Chat unpinned" : "Chat pinned");
   }
 
   chatsTabButton?.addEventListener("click", () => setSidebarTab("chats"));
@@ -3035,19 +3021,6 @@ import {
     }
 
     row.append(avatar, content);
-    if (!message.typing && message.id) {
-      const conversation = getConversation();
-      const pinned = isMessagePinned(conversation?.id, message.id);
-      const pinButton = document.createElement("button");
-      pinButton.type = "button";
-      pinButton.className = `message-pin-button${pinned ? " pinned" : ""}`;
-      pinButton.textContent = "📌";
-      pinButton.title = pinned ? "Unpin message" : "Pin message";
-      pinButton.setAttribute("aria-label", pinButton.title);
-      pinButton.setAttribute("aria-pressed", String(pinned));
-      pinButton.addEventListener("click", () => togglePinnedMessage(conversation, message));
-      row.appendChild(pinButton);
-    }
     chatInner.appendChild(row);
 
     if (shouldScroll) scrollBottom();
@@ -3077,7 +3050,7 @@ import {
     if (!historyList) return;
 
     historyList.replaceChildren();
-    renderPinnedMessages();
+    renderPinnedChats();
 
     const search = searchChats
       ? searchChats.value.toLowerCase()
@@ -3116,6 +3089,20 @@ import {
         });
 
         row.appendChild(button);
+
+        const pinButton = document.createElement("button");
+        pinButton.className = `message-pin-button${isChatPinned(item.id) ? " pinned" : ""}`;
+        pinButton.type = "button";
+        pinButton.textContent = "📌";
+        pinButton.title = isChatPinned(item.id) ? "Unpin chat" : "Pin chat";
+        pinButton.setAttribute("aria-label", pinButton.title);
+        pinButton.setAttribute("aria-pressed", String(isChatPinned(item.id)));
+        pinButton.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          togglePinnedChat(item.id);
+        });
+        row.appendChild(pinButton);
 
         if (settings.chatHistory) {
           const deleteButton = document.createElement("button");
