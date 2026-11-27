@@ -72,8 +72,11 @@
     .app.visible { display:flex; }
 
     #sidebar {
+      position:relative;
       width:260px;
-      flex-shrink:0;
+      flex:0 0 260px;
+      min-width:220px;
+      max-width:480px;
       display:flex;
       flex-direction:column;
       gap:12px;
@@ -1278,7 +1281,14 @@ button, .model-picker-trigger, .model-picker-option,
 .pinned-message-open span,.pinned-empty{color:var(--muted);font-size:11px;line-height:1.5}
 .message-pin-button{flex:0 0 34px;width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;opacity:.58}
 .message-row:hover .message-pin-button,.message-pin-button.pinned{opacity:1}
-.history-row .message-pin-button{opacity:.82}
+.history-row .message-pin-button{opacity:.82;flex:0 0 26px;width:26px;height:30px;min-height:30px;font-size:15px}
+.history-row{gap:2px}
+.history-row .history-item{padding:10px 7px}
+#sidebarResizeHandle{position:absolute;z-index:20;top:0;right:0;width:6px;height:100%;cursor:col-resize;touch-action:none;background:transparent}
+#sidebarResizeHandle:hover,#sidebarResizeHandle:focus-visible{background:var(--accent);opacity:.55;outline:0}
+body.sidebar-resizing{cursor:col-resize!important;user-select:none!important}
+body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
+@media(max-width:700px){#sidebarResizeHandle{display:none!important}}
 .message-pin-button:hover{background:var(--surface-hover)}
 .composer-menu-wrap{position:relative;flex:0 0 42px;width:42px;height:42px}
 .composer-menu-wrap>.composer-button{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;min-height:42px;padding:0;font-size:24px;line-height:1}
