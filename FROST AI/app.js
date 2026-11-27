@@ -1923,6 +1923,11 @@ import {
 
   async function startVoiceInput() {
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      if (voiceCallActive) {
+        voiceCallActive = false;
+        voiceReplyEnabled = false;
+        updateVoiceButtons();
+      }
       setStatus("Microphone recording is not supported here. Try the latest Chrome or Edge over HTTPS.");
       return;
     }
