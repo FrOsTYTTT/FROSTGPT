@@ -3220,6 +3220,16 @@ import {
         downloadPrompt.append(clickLabel, downloadButton, downloadLabel);
         content.appendChild(downloadPrompt);
       }
+
+      // Keep the subtle finishing line beneath every completed assistant reply.
+      if (message.role === "assistant") {
+        const responseLine = document.createElement("div");
+        responseLine.className = "assistant-response-line";
+        responseLine.setAttribute("aria-hidden", "true");
+        responseLine.style.cssText =
+          "width:28px;height:2px;margin-top:12px;border-radius:2px;background:currentColor;opacity:.28;";
+        content.appendChild(responseLine);
+      }
     }
 
     row.append(avatar, content);
