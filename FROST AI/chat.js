@@ -2,10 +2,7 @@
   "use strict";
 
   const SUPPORT_MESSAGE =
-    "Taking a break doesn't mean giving up on a project you've been working toward for hours, days, or even years. Your friends and family will always be proud of you! ❤️🥹";
-
-  const SIGNATURE =
-    "— Sincerely, the FrOsTAI Team.\nThank you for using our Chat AI. We are very grateful!";
+    "I'm sorry you're feeling this way. Would you like to tell me what's going on? ❤️";
 
   // Do not add emotional-support messaging to academic or task-focused help.
   const TASK_HELP_PATTERNS = [
@@ -41,13 +38,9 @@
     let result = aiReply.trim();
 
     if (needsEncouragement(userMessage)) {
-      result += "\n\n" +
-        "I'm sorry things feel difficult right now. You don't have to figure everything out all at once. Take things one step at a time. ❤️\n\n" +
-        SUPPORT_MESSAGE;
-
-      // The team sign-off belongs only to genuine emotional-support replies.
-      if (!/Sincerely, the FrOsTAI Team/i.test(result)) {
-        result += "\n\n" + SIGNATURE;
+      // Keep the support add-on short, natural, and free of unrelated project references.
+      if (!/i'm sorry|i am sorry|would you like to talk/i.test(result)) {
+        result += "\n\n" + SUPPORT_MESSAGE;
       }
     }
 
