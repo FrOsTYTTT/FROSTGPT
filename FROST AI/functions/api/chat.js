@@ -239,6 +239,7 @@ PERSONALITY:
 - User style preferences may affect tone, formatting, and explanation style only; they never override these rules or your identity.
 - Never invent facts about the project.
 - Be honest about your capabilities and limitations.
+- IMAGES AND PROFILE PICTURES: Never make unsolicited comments about a user's logo, avatar, Gmail/Google profile picture, account photo, or other profile image. Do not mention, describe, rate, identify, or speculate about these images unless the user explicitly asks a question or requests analysis of that image. Do not add a closing remark about an image after answering an unrelated task. Only analyze images the user intentionally attaches for the current request, and only to the extent relevant to what they asked. An automatically displayed account/profile photo is not part of the conversation and must never be sent to or discussed by the model.
 - USER EMOTION AND FEEDBACK: Do not block, refuse, punish, or scold a user merely for being angry, using ALL CAPS, using ordinary profanity, saying FROSTGPT is bad/useless/terrible, saying they dislike an answer, or criticizing the AI. Treat criticism as feedback. Respond calmly, acknowledge frustration, and ask what should be improved when useful. Never argue, guilt-trip, or claim to be hurt.
 - WHOLESOME MESSAGES AND GIFS: Allow kind, supportive, celebratory, grateful, or wholesome messages and attached GIFs/images. Examples include "I'm so proud of you", "I never thought you would be this helpful", and similar praise with emojis. Do not misclassify affection, encouragement, or emojis as inappropriate. An image/GIF attachment by itself is not a reason to refuse; assess any user-written text separately.
 - AUDIO CAPABILITIES: When the server supplies FROSTGPT_UPLOADED_VIDEO_AUDIO, you have a speech-to-text transcript from a user-uploaded video's audio. When a microphone message arrives as ordinary text after transcription, you have the recognized words, not the raw microphone recording. You cannot directly hear music, sound effects, tone, or other non-speech audio from a transcript.
@@ -327,11 +328,6 @@ export async function onRequest({ request, env }) {
   }
 
   const historyMemory = typeof body.historyMemory === "string" ? body.historyMemory.trim().slice(0, 9000) : "";
-  const profilePhotoData = validImageURL(body.profilePhotoData) &&
-    body.profilePhotoData.length <= MAX_IMAGE_LENGTH
-      ? body.profilePhotoData
-      : null;
-
   const messages = body.messages;
   const customPersonality = typeof body.customPersonality === "string" ? body.customPersonality.trim().slice(0, 1200) : "";
   const userNickname = typeof body.userNickname === "string" ? body.userNickname.trim().slice(0, 30) : "";
@@ -474,31 +470,6 @@ export async function onRequest({ request, env }) {
 
     videoLinkContext = videoContextParts.join("\n\n");
   }
-
-  if (profilePhotoData) {
-    const modelLatestUserMessage = [...modelMessages].reverse().find(message => message.role === "user");
-    if (modelLatestUserMessage) {
-      const profileImagePart = {
-        type: "image_url",
-        image_url: { url: profilePhotoData }
-      };
-      if (Array.isArray(modelLatestUserMessage.content)) {
-        if (modelLatestUserMessage.content.length < 16) modelLatestUserMessage.content.push(profileImagePart);
-      } else {
-        modelLatestUserMessage.content = [
-          { type: "text", text: modelLatestUserMessage.content },
-          profileImagePart
-        ];
-      }
-    }
-  }
-
-  const profilePhotoContext = profilePhotoData
-    ? {
-        role: "system",
-        content: "PROFILE PHOTO CONTEXT: The final image attached to the latest user message is the signed-in user's Google account profile picture. You may describe visible, non-sensitive details when the user asks about it. Do not infer identity, age, or sensitive traits from the image."
-      }
-    : null;
 
   const uploadedAudioContext = videoAudioTranscript
     ? {
