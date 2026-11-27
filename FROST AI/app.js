@@ -1278,6 +1278,9 @@ import {
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
   let voiceCallActive = false;
+  let dictateActive = false;
+  let voiceCaptureMode = "call";
+  let thinkModeEnabled = false;
   let applyingVoiceTranscript = false;
   let voiceFinalTranscript = "";
 
@@ -1480,27 +1483,47 @@ import {
   let composerInputFocused = false;
 
   function updateComposerActionButton() {
-    if (!sendButton) return;
-    const hasDraft = Boolean(messageInput.value.trim()) || attachments.length > 0;
-    const showVoiceCall = !hasDraft && !composerInputFocused;
-    const callActive = voiceCallActive;
-    if (showVoiceCall && !callActive) {
-      sendButton.innerHTML = `
-        <svg class="voice-call-waveform" viewBox="0 0 28 24" width="25" height="24"
-          aria-hidden="true" focusable="false">
-          <path d="M2 10v4 M7 6v12 M12 2v20 M17 7v10 M22 4v16 M27 10v4"
-            fill="none" stroke="currentColor" stroke-width="2.4"
-            stroke-linecap="round"/>
-        </svg>
-      `;
-    } else {
-      sendButton.textContent = callActive ? "⏹" : "↑";
+    if (sendButton) {
+      sendButton.textContent = isThinking ? "⏹" : "↑";
+      sendButton.title = isThinking ? "Stop generating" : "Send message";
+      sendButton.setAttribute("aria-label", sendButton.title);
+      sendButton.disabled = false;
     }
-    sendButton.classList.toggle("is-voice-call", callActive || showVoiceCall);
-    sendButton.title = callActive ? "End voice call" : (showVoiceCall ? "Start voice call" : "Send message");
-    sendButton.setAttribute("aria-label", sendButton.title);
-    sendButton.setAttribute("aria-pressed", String(callActive));
-    sendButton.disabled = isThinking;
+    const thinkButton = $("thinkButton");
+    if (thinkButton) {
+      thinkButton.classList.toggle("is-active", thinkModeEnabled);
+      thinkButton.setAttribute("aria-pressed", String(thinkModeEnabled));
+      thinkButton.title = thinkModeEnabled ? "Turn deeper reasoning off" : "Enable deeper reasoning";
+    }
+    const dictateButton = $("dictateButton");
+    if (dictateButton) {
+      dictateButton.classList.toggle("is-active", dictateActive);
+      dictateButton.setAttribute("aria-pressed", String(dictateActive));
+      dictateButton.title = dictateActive ? "Stop dictation" : "Dictate a message";
+    }
+    const callButton = $("voiceCallButton");
+    if (callButton) {
+      callButton.classList.toggle("is-active", voiceCallActive);
+      callButton.innerHTML = voiceCallActive ? "⏹" : `<svg class="voice-call-waveform" viewBox="0 0 28 24" width="25" height="24" aria-hidden="true" focusable="false"><path d="M2 10v4 M7 6v12 M12 2v20 M17 7v10 M22 4v16 M27 10v4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+      callButton.title = voiceCallActive ? "End voice call" : "Start voice call";
+      callButton.setAttribute("aria-label", callButton.title);
+      callButton.setAttribute("aria-pressed", String(voiceCallActive));
+    }
+  }
+
+  function updateVoiceCallVisualState(state) {
+    const screen = $("voiceCallScreen");
+    const orb = $("voiceCallOrbWrap");
+    const label = $("voiceCallStatus");
+    if (!screen || !orb || !label) return;
+    orb.classList.toggle("is-listening", state === "listening");
+    orb.classList.toggle("is-speaking", state === "speaking");
+    orb.classList.toggle("is-thinking", state === "thinking");
+    label.textContent = state === "speaking" ? "FROSTGPT is speaking..."
+      : state === "thinking" ? "FROSTGPT is thinking..."
+      : state === "listening" ? "Listening..."
+      : state === "connecting" ? "Connecting..."
+      : "Call ended";
   }
 
   function updateVoiceButtons() {
@@ -1539,6 +1562,9 @@ import {
     }
 
     updateComposerActionButton();
+    if (voiceCallActive) {
+      updateVoiceCallVisualState(window.speechSynthesis?.speaking ? "speaking" : (voiceListening ? "listening" : "thinking"));
+    }
   }
 
   function createVoiceOptionsPanel() {
@@ -1850,11 +1876,15 @@ import {
     utterance.pitch = voicePreferences.pitch;
     utterance.volume = voicePreferences.volume;
 
-    utterance.onstart = updateVoiceButtons;
+    utterance.onstart = () => {
+      updateVoiceCallVisualState("speaking");
+      updateVoiceButtons();
+    };
     utterance.onend = () => {
+      updateVoiceCallVisualState("listening");
       updateVoiceButtons();
       if (voiceCallActive && !isThinking && !voiceListening) {
-        void startVoiceInput();
+        void startVoiceInput("call");
       }
     };
 
@@ -1866,7 +1896,7 @@ import {
 
       updateVoiceButtons();
       if (voiceCallActive && !isThinking && !voiceListening) {
-        void startVoiceInput();
+        void startVoiceInput("call");
       }
     };
 
@@ -1901,7 +1931,8 @@ import {
     updateVoiceButtons();
   }
 
-  async function startVoiceInput() {
+  async function startVoiceInput(mode = "call") {
+    voiceCaptureMode = mode;
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       if (voiceCallActive) {
         voiceCallActive = false;
@@ -1964,8 +1995,10 @@ import {
 
       micRecorder.onstop = async () => {
         const shouldSend = voiceSessionActive;
+        const completedMode = voiceCaptureMode;
         voiceSessionActive = false;
         voiceListening = false;
+        if (completedMode === "dictate") dictateActive = false;
 
         micStream?.getTracks().forEach(track => track.stop());
         micStream = null;
@@ -2012,11 +2045,20 @@ import {
           }
 
           applyingVoiceTranscript = true;
-          messageInput.value = transcript;
-          messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+          if (completedMode === "dictate") {
+            const existing = messageInput.value.trim();
+            messageInput.value = [existing, transcript].filter(Boolean).join(existing ? " " : "");
+            messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+            setStatus("Dictation added to your message. Review it before sending.");
+            messageInput.focus();
+          } else {
+            messageInput.value = transcript;
+            messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+            setStatus("Sending your voice message...");
+            sendMessage();
+          }
           applyingVoiceTranscript = false;
-          setStatus("Sending your voice message...");
-          sendMessage();
+          updateVoiceButtons();
         } catch (error) {
           console.error("FROSTGPT: Microphone transcription failed.", error);
           setStatus(error.message || "Could not transcribe microphone audio.");
@@ -2025,7 +2067,7 @@ import {
       };
 
       micRecorder.start(500);
-      setStatus("🎙️ Recording... Press the microphone button again or Stop audio when finished.");
+      setStatus(mode === "dictate" ? "Dictating... Press Dictate again to finish." : "Listening... Speak naturally; the current recording is transcribed at the end of the turn.");
       updateVoiceButtons();
 
       // Limit a single microphone recording to 60 seconds.
@@ -2057,14 +2099,20 @@ import {
     if (voiceCallActive || isThinking) return;
     voiceCallActive = true;
     voiceReplyEnabled = true;
+    const callScreen = $("voiceCallScreen");
+    if (callScreen) callScreen.hidden = false;
+    updateVoiceCallVisualState("connecting");
     updateVoiceButtons();
     setStatus("Starting voice call...");
-    await startVoiceInput();
+    await startVoiceInput("call");
   }
 
   function endVoiceCall() {
     voiceCallActive = false;
     voiceReplyEnabled = false;
+    const callScreen = $("voiceCallScreen");
+    if (callScreen) callScreen.hidden = true;
+    updateVoiceCallVisualState("ended");
     stopVoiceInput(false);
     stopSpeaking();
     updateVoiceButtons();
@@ -3729,7 +3777,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         historyMemory: buildSavedHistoryMemory(conversation.id),
         customPersonality: getSavedPersonality().trim().slice(0, 1200),
         userNickname: getSavedNickname().slice(0, 30),
-        preferredBackupModel: settings.preferredBackupModel
+        preferredBackupModel: settings.preferredBackupModel,
+        thinkMode: thinkModeEnabled
       }, signal);
       const data = await parseResponse(response);
       if (typeof data.reply !== "string" || !data.reply.trim()) {
@@ -4661,11 +4710,35 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
   sendButton.addEventListener("pointerdown", event => event.preventDefault());
   sendButton.addEventListener("click", () => {
-    const hasDraft = Boolean(messageInput.value.trim()) || attachments.length > 0;
-    const showVoiceCall = !hasDraft && !composerInputFocused;
-    if (voiceCallActive) endVoiceCall();
-    else if (showVoiceCall) void startVoiceCall();
+    if (isThinking) stopGenerating();
     else void sendMessage();
+  });
+
+  $("voiceCallButton")?.addEventListener("click", () => {
+    if (voiceCallActive) endVoiceCall();
+    else void startVoiceCall();
+  });
+  $("endVoiceCallButton")?.addEventListener("click", endVoiceCall);
+
+  $("dictateButton")?.addEventListener("click", () => {
+    if (dictateActive) {
+      stopVoiceInput(true);
+      return;
+    }
+    if (voiceCallActive || isThinking) return;
+    dictateActive = true;
+    updateVoiceButtons();
+    void startVoiceInput("dictate");
+  });
+
+  $("thinkButton")?.addEventListener("click", () => {
+    if (settings.flashProvider !== "online") {
+      setStatus("Think mode currently requires the Online Gemma 4 model.");
+      return;
+    }
+    thinkModeEnabled = !thinkModeEnabled;
+    updateComposerActionButton();
+    setStatus(thinkModeEnabled ? "Think mode enabled for Gemma 4." : modeName());
   });
 
   // Hide the message field's scrollbar when the draft contains a newline.
