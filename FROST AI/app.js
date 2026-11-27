@@ -2561,9 +2561,9 @@ import {
 
   function getGeneratedImageFilename(prompt) {
     const cleanName = String(prompt || "")
-      .replace(/^(please\\s+)?(generate|create|make|draw|visualize)\\s+(an?\\s+)?(image|picture|illustration|photo)\\s+(of\\s+)?/i, "")
+      .replace(/^(please\s+)?(generate|create|make|draw|visualize)\s+(an?\s+)?(image|picture|illustration|photo)\s+(of\s+)?/i, "")
       .normalize("NFKD")
-      .replace(/[\\u0300-\\u036f]/g, "")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
@@ -2596,7 +2596,7 @@ import {
       const objectURL = URL.createObjectURL(pngBlob);
       const link = document.createElement("a");
       link.href = objectURL;
-      link.download = String(fileName || "frostgpt-image.png").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/\\.png$/i, "") + ".png";
+      link.download = String(fileName || "frostgpt-image.png").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/\.png$/i, "") + ".png";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -4551,6 +4551,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           ? "Your image is ready! I couldn't generate its visual description this time, but you can still ask me questions or tell me what you'd like to change."
           : "Your image is ready! It was generated from your prompt: " + prompt + ". I can keep chatting with you about the idea or help revise the prompt.";
       }
+      description += `\\n\\n**File:** \\`${generatedImageName}\\``;
 
       removeTyping();
       addMessage("assistant", description, {
