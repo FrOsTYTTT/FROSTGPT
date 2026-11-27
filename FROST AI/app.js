@@ -1463,6 +1463,8 @@ import {
       .replace(/^\s*>\s?/gm, "")
       .replace(/^\s*[-+]\s+/gm, "")
       .replace(/^\s*\d+\.\s+/gm, "")
+      // Give speech engines a phonetic spelling so the brand is spoken as one name.
+      .replace(/FROSTGPT(?:™)?/gi, "Frost-jipt")
       .replace(/\s+/g, " ")
       .trim();
   }
