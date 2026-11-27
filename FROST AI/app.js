@@ -4546,10 +4546,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         console.warn("FROSTGPT: Image description was unavailable.", descriptionError);
       }
 
-      const imageNameMatch = description.match(/^\\s*IMAGE_NAME:\\s*(.+)$/im);
+      const imageNameMatch = description.match(/^\s*IMAGE_NAME:\s*(.+)$/im);
       if (imageNameMatch?.[1]) {
         generatedImageName = getGeneratedImageFilename(imageNameMatch[1]);
-        description = description.replace(/^\\s*IMAGE_NAME:.*$/im, "").trim();
+        description = description.replace(/^\s*IMAGE_NAME:.*$/im, "").trim();
       }
 
       if (!description) {
