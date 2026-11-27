@@ -114,7 +114,7 @@ export async function recordSafetyViolation(db, userId) {
  * the plaintext credential is never logged or persisted.
  */
 export async function verifyDeveloperApiKey(request, db) {
-  const match = (request.headers.get("Authorization") || "").match(/^Bearer\\s+(frost_sk_[A-Za-z0-9_-]{40,})$/i);
+  const match = (request.headers.get("Authorization") || "").match(/^Bearer\s+(frost_sk_[A-Za-z0-9_-]{40,})$/i);
   if (!match || !db) return null;
   try {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(match[1]));
