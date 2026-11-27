@@ -739,6 +739,87 @@ import {
     syncProviderPicker();
   }
 
+  // Custom rounded Online AI Model picker, matching the provider picker.
+  const backupModelSelect = $("settingBackupModel");
+  if (backupModelSelect) {
+    const backupModelPicker = document.createElement("div");
+    backupModelPicker.className = "provider-picker backup-model-picker";
+    backupModelPicker.innerHTML = `
+      <button class="provider-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="provider-picker-label"></span><span class="provider-picker-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="provider-picker-menu" role="listbox" aria-label="Choose Online AI model" hidden></div>
+    `;
+    const trigger = backupModelPicker.querySelector(".provider-picker-trigger");
+    const label = backupModelPicker.querySelector(".provider-picker-label");
+    const menu = backupModelPicker.querySelector(".provider-picker-menu");
+    backupModelSelect.parentNode.insertBefore(backupModelPicker, backupModelSelect);
+    backupModelPicker.appendChild(backupModelSelect);
+    backupModelSelect.hidden = true;
+
+    function syncBackupModelPicker() {
+      const selected = backupModelSelect.selectedOptions[0];
+      if (selected) label.textContent = selected.textContent;
+      menu.querySelectorAll("[data-model-value]").forEach(item => {
+        const active = item.dataset.modelValue === backupModelSelect.value;
+        item.classList.toggle("selected", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+    }
+
+    function closeBackupModelPicker() {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
+
+    [...backupModelSelect.options].forEach(option => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "provider-picker-option";
+      item.setAttribute("role", "option");
+      item.dataset.modelValue = option.value;
+      item.textContent = option.textContent;
+      item.addEventListener("click", () => {
+        backupModelSelect.value = option.value;
+        backupModelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        closeBackupModelPicker();
+        syncBackupModelPicker();
+        trigger.focus();
+      });
+      menu.appendChild(item);
+    });
+
+    trigger.addEventListener("click", () => {
+      if (!menu.hidden) {
+        closeBackupModelPicker();
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const menuHeight = menu.scrollHeight || 150;
+      const placeAbove = window.innerHeight - rect.bottom < menuHeight + 12 && rect.top > menuHeight + 12;
+      menu.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 220) - 12))}px`;
+      menu.style.width = `${Math.max(rect.width, 220)}px`;
+      menu.style.top = placeAbove ? "auto" : `${rect.bottom + 8}px`;
+      menu.style.bottom = placeAbove ? `${window.innerHeight - rect.top + 8}px` : "auto";
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+    });
+
+    document.addEventListener("click", event => {
+      if (!backupModelPicker.contains(event.target)) closeBackupModelPicker();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !menu.hidden) {
+        closeBackupModelPicker();
+        trigger.focus();
+      }
+    });
+    document.addEventListener("scroll", closeBackupModelPicker, true);
+    window.addEventListener("resize", closeBackupModelPicker);
+    backupModelSelect.addEventListener("change", syncBackupModelPicker);
+    syncBackupModelPicker();
+  }
+
   $("settingCustomColor")?.addEventListener("input", event => {
     settings.customColor = event.target.value;
     settings.accent = "custom";
