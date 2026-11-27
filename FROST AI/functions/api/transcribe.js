@@ -49,7 +49,7 @@ export async function onRequest({ request, env }) {
 
   const audioFile = form.get("audio");
   if (!(audioFile instanceof File) || audioFile.size < 1) {
-    return json({ error: "Choose a video with an audio track to transcribe." }, 400);
+    return json({ error: "No microphone audio was received. Please record again." }, 400);
   }
 
   if (audioFile.size > MAX_AUDIO_BYTES) {
@@ -82,6 +82,6 @@ export async function onRequest({ request, env }) {
     });
   } catch (error) {
     console.error("FROSTGPT: Audio transcription failed.", error);
-    return json({ error: "FROSTGPT could not transcribe this video's audio. Please try another video." }, 502);
+    return json({ error: "FROSTGPT could not transcribe the audio. Please try speaking again." }, 502);
   }
 }
