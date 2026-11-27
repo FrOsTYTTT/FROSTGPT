@@ -45,6 +45,15 @@ import {
   const $ = id => document.getElementById(id);
 
   const gifButton = $("gifButton");
+  const composerToolsMenu = $("composerToolsMenu");
+  const openFileAttachButton = $("openFileAttach");
+  const openImageCreateButton = $("openImageCreate");
+  const openGifCreateButton = $("openGifCreate");
+  const pinnedTabButton = $("pinnedTabButton");
+  const chatsTabButton = $("chatsTabButton");
+  const pinnedMessagesList = $("pinnedMessagesList");
+  const chatsTabPanel = $("chatsTabPanel");
+  const pinnedTabPanel = $("pinnedTabPanel");
   const gifPicker = $("gifPicker");
   const gifSearchInput = $("gifSearchInput");
   const gifSearchButton = $("gifSearchButton");
@@ -2796,9 +2805,133 @@ import {
     container.appendChild(fragment);
   }
 
+  const PINNED_MESSAGES_KEY = () => `frostgpt_pinned_messages_${currentUserId || "guest"}`;
+
+  function readPinnedMessages() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PINNED_MESSAGES_KEY()) || "[]");
+      return Array.isArray(saved) ? saved.filter(item =>
+        item && typeof item.conversationId === "string" && typeof item.messageId === "string"
+      ) : [];
+    } catch { return []; }
+  }
+
+  function writePinnedMessages(items) {
+    try {
+      localStorage.setItem(PINNED_MESSAGES_KEY(), JSON.stringify(items));
+      return true;
+    } catch (error) {
+      console.warn("FROSTGPT: Pinned messages could not be saved.", error);
+      setStatus("Pinned messages could not be saved");
+      return false;
+    }
+  }
+
+  function isMessagePinned(conversationId, messageId) {
+    return readPinnedMessages().some(item =>
+      item.conversationId === conversationId && item.messageId === messageId
+    );
+  }
+
+  function setSidebarTab(tab) {
+    const showPinned = tab === "pinned";
+    if (chatsTabPanel) chatsTabPanel.hidden = showPinned;
+    if (pinnedTabPanel) pinnedTabPanel.hidden = !showPinned;
+    chatsTabButton?.classList.toggle("active", !showPinned);
+    pinnedTabButton?.classList.toggle("active", showPinned);
+    chatsTabButton?.setAttribute("aria-selected", String(!showPinned));
+    pinnedTabButton?.setAttribute("aria-selected", String(showPinned));
+    if (showPinned) renderPinnedMessages();
+  }
+
+  function renderPinnedMessages() {
+    if (!pinnedMessagesList) return;
+    pinnedMessagesList.replaceChildren();
+    const pins = readPinnedMessages();
+    if (!pins.length) {
+      const empty = document.createElement("p");
+      empty.className = "pinned-empty";
+      empty.textContent = "Messages you pin will appear here.";
+      pinnedMessagesList.appendChild(empty);
+      return;
+    }
+    pins.forEach(pin => {
+      const row = document.createElement("div");
+      row.className = "pinned-message-row";
+      const openButton = document.createElement("button");
+      openButton.type = "button";
+      openButton.className = "pinned-message-open";
+      const title = document.createElement("strong");
+      title.textContent = pin.title || "Pinned chat";
+      const preview = document.createElement("span");
+      preview.textContent = pin.text || "Pinned message";
+      openButton.append(title, preview);
+      openButton.addEventListener("click", () => {
+        const conversation = conversations.find(item => item.id === pin.conversationId);
+        if (!conversation) {
+          setStatus("Chat is not loaded yet. Refresh chat history and try again.");
+          return;
+        }
+        if (isThinking) stopGenerating();
+        activeConversationId = conversation.id;
+        watchActiveConversationMessages();
+        renderHistory();
+        renderConversation();
+        setSidebarTab("chats");
+        requestAnimationFrame(() => {
+          const target = [...chatInner.querySelectorAll("[data-message-id]")]
+            .find(node => node.dataset.messageId === pin.messageId);
+          target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        if (window.innerWidth <= 700 && sidebar) sidebar.classList.remove("open");
+      });
+      const unpinButton = document.createElement("button");
+      unpinButton.type = "button";
+      unpinButton.className = "message-pin-button pinned";
+      unpinButton.textContent = "📌";
+      unpinButton.title = "Unpin message";
+      unpinButton.setAttribute("aria-label", "Unpin message");
+      unpinButton.addEventListener("click", () => {
+        const next = readPinnedMessages().filter(item =>
+          !(item.conversationId === pin.conversationId && item.messageId === pin.messageId)
+        );
+        if (writePinnedMessages(next)) renderPinnedMessages();
+      });
+      row.append(openButton, unpinButton);
+      pinnedMessagesList.appendChild(row);
+    });
+  }
+
+  function togglePinnedMessage(conversation, message) {
+    if (!conversation || !message?.id) return;
+    const pins = readPinnedMessages();
+    const index = pins.findIndex(item =>
+      item.conversationId === conversation.id && item.messageId === message.id
+    );
+    if (index >= 0) {
+      pins.splice(index, 1);
+    } else {
+      pins.unshift({
+        conversationId: conversation.id,
+        messageId: message.id,
+        title: conversation.title || "Untitled chat",
+        text: String(message.text || "").slice(0, 1200),
+        createdAt: message.createdAt || Date.now()
+      });
+    }
+    if (!writePinnedMessages(pins)) return;
+    renderConversation();
+    renderPinnedMessages();
+    setStatus(index >= 0 ? "Message unpinned" : "Message pinned");
+  }
+
+  chatsTabButton?.addEventListener("click", () => setSidebarTab("chats"));
+  pinnedTabButton?.addEventListener("click", () => setSidebarTab("pinned"));
+
   function renderMessage(message, shouldScroll = true) {
     const row = document.createElement("div");
     row.className = `message-row ${message.role}`;
+    if (message.id) row.dataset.messageId = message.id;
 
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
@@ -2902,6 +3035,19 @@ import {
     }
 
     row.append(avatar, content);
+    if (!message.typing && message.id) {
+      const conversation = getConversation();
+      const pinned = isMessagePinned(conversation?.id, message.id);
+      const pinButton = document.createElement("button");
+      pinButton.type = "button";
+      pinButton.className = `message-pin-button${pinned ? " pinned" : ""}`;
+      pinButton.textContent = "📌";
+      pinButton.title = pinned ? "Unpin message" : "Pin message";
+      pinButton.setAttribute("aria-label", pinButton.title);
+      pinButton.setAttribute("aria-pressed", String(pinned));
+      pinButton.addEventListener("click", () => togglePinnedMessage(conversation, message));
+      row.appendChild(pinButton);
+    }
     chatInner.appendChild(row);
 
     if (shouldScroll) scrollBottom();
@@ -2931,6 +3077,7 @@ import {
     if (!historyList) return;
 
     historyList.replaceChildren();
+    renderPinnedMessages();
 
     const search = searchChats
       ? searchChats.value.toLowerCase()
@@ -4452,18 +4599,51 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
   });
 
-  if (attachButton && fileInput) {
-    attachButton.addEventListener("click", () => {
-      if (!isThinking) fileInput.click();
-    });
-
-    fileInput.addEventListener("change", async () => {
-      await handleFiles(fileInput.files);
-      fileInput.value = "";
-    });
+  function closeComposerToolsMenu() {
+    if (!composerToolsMenu) return;
+    composerToolsMenu.hidden = true;
+    attachButton?.setAttribute("aria-expanded", "false");
   }
 
-  imageButton?.addEventListener("click", generateImage);
+  attachButton?.addEventListener("click", () => {
+    if (!composerToolsMenu) return;
+    const opening = composerToolsMenu.hidden;
+    composerToolsMenu.hidden = !opening;
+    attachButton.setAttribute("aria-expanded", String(opening));
+  });
+
+  openFileAttachButton?.addEventListener("click", () => {
+    closeComposerToolsMenu();
+    if (!isThinking) fileInput?.click();
+  });
+
+  openImageCreateButton?.addEventListener("click", () => {
+    closeComposerToolsMenu();
+    messageInput?.focus();
+    if (!messageInput?.value.trim()) {
+      messageInput.placeholder = "Describe anything you want FROSTGPT to create...";
+      addMessage("assistant", "What would you like to visualize? Describe your image in the message box, then choose Visualize Anything again.");
+      return;
+    }
+    generateImage();
+  });
+
+  openGifCreateButton?.addEventListener("click", () => {
+    closeComposerToolsMenu();
+    openGifPicker();
+  });
+
+  document.addEventListener("click", event => {
+    if (composerToolsMenu && !composerToolsMenu.hidden &&
+        !composerToolsMenu.contains(event.target) && event.target !== attachButton) {
+      closeComposerToolsMenu();
+    }
+  });
+
+  fileInput?.addEventListener("change", async () => {
+    await handleFiles(fileInput.files);
+    fileInput.value = "";
+  });
 
   modeSelect.addEventListener("change", () => {
     setStatus(modeName());
