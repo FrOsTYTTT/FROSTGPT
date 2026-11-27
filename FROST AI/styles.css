@@ -1290,6 +1290,8 @@ button, .model-picker-trigger, .model-picker-option,
 body.sidebar-resizing{cursor:col-resize!important;user-select:none!important}
 body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 @media(max-width:700px){#sidebarResizeHandle{display:none!important}}
+.voice-call-button[hidden],#sendButton[hidden]{display:none!important}
+.voice-call-button{font-size:19px;line-height:1}
 .message-pin-button:hover{background:var(--surface-hover)}
 .composer-menu-wrap{position:relative;flex:0 0 42px;width:42px;height:42px}
 .composer-menu-wrap>.composer-button{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;min-height:42px;padding:0;font-size:24px;line-height:1}
