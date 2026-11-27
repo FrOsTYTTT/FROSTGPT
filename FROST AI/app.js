@@ -1484,7 +1484,18 @@ import {
     const hasDraft = Boolean(messageInput.value.trim()) || attachments.length > 0;
     const showVoiceCall = !hasDraft && !composerInputFocused;
     const callActive = voiceCallActive;
-    sendButton.textContent = callActive ? "⏹" : (showVoiceCall ? "🎙️" : "↑");
+    if (showVoiceCall && !callActive) {
+      sendButton.innerHTML = `
+        <svg class="voice-call-waveform" viewBox="0 0 28 24" width="25" height="24"
+          aria-hidden="true" focusable="false">
+          <path d="M2 10v4 M7 6v12 M12 2v20 M17 7v10 M22 4v16 M27 10v4"
+            fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round"/>
+        </svg>
+      `;
+    } else {
+      sendButton.textContent = callActive ? "⏹" : "↑";
+    }
     sendButton.classList.toggle("is-voice-call", callActive || showVoiceCall);
     sendButton.title = callActive ? "End voice call" : (showVoiceCall ? "Start voice call" : "Send message");
     sendButton.setAttribute("aria-label", sendButton.title);
