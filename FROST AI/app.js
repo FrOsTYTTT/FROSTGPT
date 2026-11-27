@@ -658,6 +658,87 @@ import {
     });
   }
 
+  // Custom rounded provider picker, matching the model switcher in the chat header.
+  const providerSelect = $("settingFlashProvider");
+  if (providerSelect) {
+    const providerPicker = document.createElement("div");
+    providerPicker.className = "provider-picker";
+    providerPicker.innerHTML = `
+      <button class="provider-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="provider-picker-label"></span><span class="provider-picker-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div class="provider-picker-menu" role="listbox" aria-label="Choose FROSTGPT Flash provider" hidden></div>
+    `;
+    const trigger = providerPicker.querySelector(".provider-picker-trigger");
+    const label = providerPicker.querySelector(".provider-picker-label");
+    const menu = providerPicker.querySelector(".provider-picker-menu");
+    providerSelect.parentNode.insertBefore(providerPicker, providerSelect);
+    providerPicker.appendChild(providerSelect);
+    providerSelect.hidden = true;
+
+    function syncProviderPicker() {
+      const selected = providerSelect.selectedOptions[0];
+      if (selected) label.textContent = selected.textContent;
+      menu.querySelectorAll("[data-provider-value]").forEach(item => {
+        const active = item.dataset.providerValue === providerSelect.value;
+        item.classList.toggle("selected", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+    }
+
+    function closeProviderPicker() {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
+
+    [...providerSelect.options].forEach(option => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "provider-picker-option";
+      item.setAttribute("role", "option");
+      item.dataset.providerValue = option.value;
+      item.textContent = option.textContent;
+      item.addEventListener("click", () => {
+        providerSelect.value = option.value;
+        providerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        closeProviderPicker();
+        syncProviderPicker();
+        trigger.focus();
+      });
+      menu.appendChild(item);
+    });
+
+    trigger.addEventListener("click", () => {
+      if (!menu.hidden) {
+        closeProviderPicker();
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const menuHeight = menu.scrollHeight || 110;
+      const placeAbove = window.innerHeight - rect.bottom < menuHeight + 12 && rect.top > menuHeight + 12;
+      menu.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 220) - 12))}px`;
+      menu.style.width = `${Math.max(rect.width, 220)}px`;
+      menu.style.top = placeAbove ? "auto" : `${rect.bottom + 8}px`;
+      menu.style.bottom = placeAbove ? `${window.innerHeight - rect.top + 8}px` : "auto";
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+    });
+
+    document.addEventListener("click", event => {
+      if (!providerPicker.contains(event.target)) closeProviderPicker();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !menu.hidden) {
+        closeProviderPicker();
+        trigger.focus();
+      }
+    });
+    document.addEventListener("scroll", closeProviderPicker, true);
+    window.addEventListener("resize", closeProviderPicker);
+    providerSelect.addEventListener("change", syncProviderPicker);
+    syncProviderPicker();
+  }
+
   $("settingCustomColor")?.addEventListener("input", event => {
     settings.customColor = event.target.value;
     settings.accent = "custom";
