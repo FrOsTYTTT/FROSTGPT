@@ -1785,7 +1785,9 @@ import {
     stopSpeaking();
 
     const utterance = new SpeechSynthesisUtterance(
-      "Hello! This is how FROSTGPT will sound with your selected voice."
+      cleanTextForSpeech(
+        "Hello! This is how FROSTGPT will sound with your selected voice."
+      )
     );
 
     const selectedVoice = getSelectedVoice();
