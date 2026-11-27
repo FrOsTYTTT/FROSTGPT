@@ -1484,9 +1484,19 @@ import {
 
   function updateComposerActionButton() {
     if (sendButton) {
-      sendButton.textContent = isThinking ? "⏹" : "↑";
-      sendButton.title = isThinking ? "Stop generating" : "Send message";
+      const hasText = Boolean(messageInput.value.trim());
+      if (isThinking) {
+        sendButton.textContent = "⏹";
+        sendButton.title = "Stop generating";
+      } else if (hasText) {
+        sendButton.textContent = "↑";
+        sendButton.title = "Send message";
+      } else {
+        sendButton.innerHTML = `<svg class="voice-call-waveform" viewBox="0 0 28 24" width="25" height="24" aria-hidden="true" focusable="false"><path d="M2 10v4 M7 6v12 M12 2v20 M17 7v10 M22 4v16 M27 10v4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+        sendButton.title = "Start voice call";
+      }
       sendButton.setAttribute("aria-label", sendButton.title);
+      sendButton.dataset.action = isThinking ? "stop" : (hasText ? "send" : "voice-call");
       sendButton.disabled = false;
     }
     const thinkButton = $("thinkButton");
@@ -1500,14 +1510,6 @@ import {
       dictateButton.classList.toggle("is-active", dictateActive);
       dictateButton.setAttribute("aria-pressed", String(dictateActive));
       dictateButton.title = dictateActive ? "Stop dictation" : "Dictate a message";
-    }
-    const callButton = $("voiceCallButton");
-    if (callButton) {
-      callButton.classList.toggle("is-active", voiceCallActive);
-      callButton.innerHTML = voiceCallActive ? "⏹" : `<svg class="voice-call-waveform" viewBox="0 0 28 24" width="25" height="24" aria-hidden="true" focusable="false"><path d="M2 10v4 M7 6v12 M12 2v20 M17 7v10 M22 4v16 M27 10v4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
-      callButton.title = voiceCallActive ? "End voice call" : "Start voice call";
-      callButton.setAttribute("aria-label", callButton.title);
-      callButton.setAttribute("aria-pressed", String(voiceCallActive));
     }
   }
 
@@ -2138,43 +2140,18 @@ import {
   }
 
   function createVoiceControls() {
-    if ($("frostgptVoiceControls")) return;
-    const inputArea = messageInput.parentElement;
-    if (!inputArea) return;
+    const settingsContainer = $("settingsGeneralPage");
+    if (!settingsContainer) return;
 
-    const controls = document.createElement("div");
-    controls.id = "frostgptVoiceControls";
-    controls.style.cssText = "display:flex;justify-content:flex-end;width:100%;margin-top:8px;";
+    const panel = createVoiceOptionsPanel();
+    panel.hidden = false;
+    panel.style.display = "block";
+    panel.style.maxWidth = "none";
+    panel.style.marginTop = "20px";
+    settingsContainer.appendChild(panel);
 
-    voiceOptionsButton = document.createElement("button");
-    voiceOptionsButton.id = "frostgptVoiceOptionsButton";
-    voiceOptionsButton.type = "button";
-    voiceOptionsButton.textContent = "🎚️ Voice settings";
-    voiceOptionsButton.title = "Open voice settings";
-    voiceOptionsButton.style.cssText = `
-      padding: 7px 11px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color, rgba(255,255,255,.16));
-      background: var(--input-background, rgba(128,128,128,.12));
-      color: inherit;
-      font: inherit;
-      font-size: 12px;
-      cursor: pointer;
-    `;
-
-    voiceOptionsButton.addEventListener("click", () => {
-      const panel = createVoiceOptionsPanel();
-      const willOpen = panel.hidden;
-      panel.hidden = !willOpen;
-      panel.style.display = willOpen ? "block" : "none";
-      voiceOptionsButton.setAttribute("aria-expanded", String(willOpen));
-    });
-
-    controls.appendChild(voiceOptionsButton);
-    inputArea.appendChild(controls);
-    inputArea.appendChild(createVoiceOptionsPanel());
     updateVoiceButtons();
-    console.log("FROSTGPT: Voice settings control created.");
+    console.log("FROSTGPT: Voice settings added to app Settings.");
   }
 
   // Load guest preferences first.
@@ -4731,12 +4708,11 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
   sendButton.addEventListener("pointerdown", event => event.preventDefault());
   sendButton.addEventListener("click", () => {
-    if (isThinking) stopGenerating();
-    else void sendMessage();
-  });
-
-  $("voiceCallButton")?.addEventListener("click", () => {
-    if (voiceCallActive) endVoiceCall();
+    if (isThinking) {
+      stopGenerating();
+      return;
+    }
+    if (messageInput.value.trim()) void sendMessage();
     else void startVoiceCall();
   });
   $("endVoiceCallButton")?.addEventListener("click", endVoiceCall);
@@ -4769,6 +4745,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   // Hide the message field's scrollbar when the draft contains a newline.
   function updateMessageInputScrollbar() {
     messageInput.classList.toggle("has-hidden-scrollbar", messageInput.value.includes("\n"));
+    messageInput.style.height = "24px";
+    messageInput.style.height = `${Math.min(messageInput.scrollHeight, 160)}px`;
   }
 
   messageInput.addEventListener("focus", () => {
