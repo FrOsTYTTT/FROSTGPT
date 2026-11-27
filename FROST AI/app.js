@@ -250,7 +250,8 @@ import {
     chatHistory: true,
     sounds: false,
     animations: true,
-    preferredBackupModel: "auto"
+    preferredBackupModel: "auto",
+    flashProvider: "frostai"
   };
 
   let settings = { ...DEFAULT_SETTINGS };
@@ -267,7 +268,10 @@ import {
           ...parsed,
           preferredBackupModel: ["auto", "@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3.8-27b"].includes(parsed.preferredBackupModel)
             ? parsed.preferredBackupModel
-            : "auto"
+            : "auto",
+          flashProvider: ["online", "frostai"].includes(parsed.flashProvider)
+            ? parsed.flashProvider
+            : "frostai"
         };
       }
     } catch (error) {
@@ -351,7 +355,8 @@ import {
       settingHistory: settings.chatHistory,
       settingSounds: settings.sounds,
       settingAnimations: settings.animations,
-      settingBackupModel: settings.preferredBackupModel
+      settingBackupModel: settings.preferredBackupModel,
+      settingFlashProvider: settings.flashProvider
     };
 
     for (const [id, value] of Object.entries(controls)) {
@@ -643,7 +648,8 @@ import {
     settingAccent: "accent",
     settingFontSize: "fontSize",
     settingEnter: "enterKey",
-    settingBackupModel: "preferredBackupModel"
+    settingBackupModel: "preferredBackupModel",
+    settingFlashProvider: "flashProvider"
   };
 
   for (const [id, key] of Object.entries(settingBindings)) {
@@ -3331,10 +3337,36 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   }
 
   async function callFlashAI(conversation, signal) {
-    // The experimental Ubuntu inference API currently accepts one text field:
-    // { message: "..." }. It does not yet support image payloads or the old
-    // Cloudflare messages[] request format.
-    const history = conversation.flash.slice(-8);
+    const history = conversation.flash.slice(-80);
+
+    // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
+    // is explicit and persisted in Settings; failures never switch providers.
+    if (settings.flashProvider === "online") {
+      const messages = history.map(item => ({
+        role: item.role,
+        content: item.content
+      }));
+      const latestUserMessage = [...messages].reverse().find(item => item.role === "user");
+      if (!latestUserMessage) throw new Error("Please enter a text message.");
+
+      const response = await postWithFreshAuth("/api/chat", {
+        conversationId: conversation.id,
+        messages,
+        historyMemory: buildSavedHistoryMemory(conversation.id),
+        customPersonality: getSavedPersonality().trim().slice(0, 1200),
+        userNickname: getSavedNickname().slice(0, 30),
+        profilePhotoData: currentProfilePhotoData || null,
+        preferredBackupModel: settings.preferredBackupModel
+      }, signal);
+      const data = await parseResponse(response);
+      if (typeof data.reply !== "string" || !data.reply.trim()) {
+        throw new Error("FROSTGPT Online returned no AI reply.");
+      }
+      return data;
+    }
+
+    // FrOsTAI's Ubuntu inference API accepts one text field and supports
+    // text-only requests. It does not silently fall back to Online.
     const promptParts = [];
 
     for (const item of history) {
