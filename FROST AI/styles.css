@@ -1390,3 +1390,45 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 @keyframes frost-orb-listen { 0%,100% { transform: scale(.96); filter: brightness(.95); } 50% { transform: scale(1.08); filter: brightness(1.2); } }
 @keyframes frost-orb-speak { from { transform: scale(.96); } to { transform: scale(1.1); } }
 @media (max-width: 560px) { .composer-mode-button { padding: 0 8px; } .voice-call-orb-wrap { width: 160px; height: 160px; } .voice-call-orb { width: 130px; height: 130px; } .voice-call-orb-core { width: 96px; height: 96px; } }
+
+
+/* Compact composer with Think, Dictate, and the context-aware call/send button grouped together. */
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.composer-menu-wrap { margin-right: auto; }
+#sendButton { margin-left: 0; flex: 0 0 42px; }
+#messageInput {
+  display: block;
+  box-sizing: border-box;
+  height: 24px;
+  min-height: 24px;
+  max-height: 160px;
+  padding: 3px 8px;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+  field-sizing: content;
+}
+.composer { padding: 10px 12px; }
+#frostgptVoiceOptions {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none !important;
+  margin: 18px 0 4px !important;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+#frostgptVoiceOptions select {
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  #messageInput { height: 24px; min-height: 24px; max-height: 144px; padding: 3px 7px; }
+  .composer-actions { gap: 5px; flex-wrap: nowrap; }
+  .composer-mode-button { min-width: 38px; padding: 0 8px; }
+  #sendButton { flex: 0 0 42px; }
+}
