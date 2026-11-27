@@ -613,13 +613,26 @@
       outline-offset:2px;
     }
 
-    .provider-picker { position:relative;flex:0 0 auto;min-width:0;z-index:35; }
-/* Keep the provider selector above the later Online AI Model row if their hit areas overlap. */
-.provider-picker:not(.backup-model-picker) { z-index:45; }
-.backup-model-picker { z-index:25; }
+    /* Give both model-setting rows their own full-width control line.
+       This prevents the Flash Provider control from overlapping the backup model. */
+    .setting-row:has(> .provider-picker) {
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .setting-row:has(> .provider-picker) > .setting-copy {
+      flex:1 1 100%;
+      min-width:0;
+    }
+    .setting-row:has(> .provider-picker) > .provider-picker {
+      position:relative;
+      flex:1 1 100%;
+      width:100%;
+      min-width:0;
+      z-index:auto;
+    }
     .provider-picker-trigger {
       display:flex;align-items:center;justify-content:space-between;gap:12px;
-      width:220px;max-width:55vw;min-width:0;min-height:40px;padding:10px 14px 10px 16px;
+      width:100%;max-width:100%;min-width:0;min-height:40px;padding:10px 14px 10px 16px;
       border:1px solid var(--border);border-radius:999px;background:var(--surface);
       color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
     }
