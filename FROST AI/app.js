@@ -2559,31 +2559,47 @@ import {
     chatInner.appendChild(welcome);
   }
 
-  async function downloadGeneratedImage(imageData, button) {
-    const originalText = button.textContent;
+  function getGeneratedImageFilename(prompt) {
+    const cleanName = String(prompt || "")
+      .replace(/^(please\\s+)?(generate|create|make|draw|visualize)\\s+(an?\\s+)?(image|picture|illustration|photo)\\s+(of\\s+)?/i, "")
+      .normalize("NFKD")
+      .replace(/[\\u0300-\\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 64)
+      .replace(/-+$/g, "");
+    return `${cleanName || "frostgpt-image"}.png`;
+  }
 
+  async function downloadGeneratedImage(imageData, button, fileName = "frostgpt-image.png") {
+    const originalText = button.textContent;
     button.disabled = true;
-    button.textContent = "Preparing download...";
+    button.textContent = "Preparing PNG...";
 
     try {
       const response = await fetch(imageData);
       if (!response.ok) throw new Error("Could not retrieve the image.");
+      const sourceBlob = await response.blob();
+      const bitmap = await createImageBitmap(sourceBlob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not prepare the PNG image.");
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close?.();
 
-      const blob = await response.blob();
-      const extension = blob.type.split("/")[1]
-        ?.split(";")[0]
-        ?.replace("jpeg", "jpg") || "png";
-
-      const objectURL = URL.createObjectURL(blob);
-
+      const pngBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("PNG conversion failed.")), "image/png");
+      });
+      const objectURL = URL.createObjectURL(pngBlob);
       const link = document.createElement("a");
       link.href = objectURL;
-      link.download = `FROSTGPT-${Date.now()}.${extension}`;
-
+      link.download = String(fileName || "frostgpt-image.png").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/\\.png$/i, "") + ".png";
       document.body.appendChild(link);
       link.click();
       link.remove();
-
       setTimeout(() => URL.revokeObjectURL(objectURL), 2000);
       button.textContent = "✓ Downloaded";
     } catch (error) {
@@ -2591,7 +2607,6 @@ import {
       button.textContent = "Could not download";
     } finally {
       button.disabled = false;
-
       setTimeout(() => {
         if (button.isConnected) button.textContent = originalText;
       }, 2500);
@@ -3012,7 +3027,7 @@ import {
         downloadLabel.textContent = "To download";
 
         downloadButton.addEventListener("click", () => {
-          downloadGeneratedImage(message.generatedImage, downloadButton);
+          downloadGeneratedImage(message.generatedImage, downloadButton, message.generatedImageName || "frostgpt-image.png");
         });
 
         downloadPrompt.append(clickLabel, downloadButton, downloadLabel);
@@ -3177,6 +3192,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       text: String(text || ""),
       images: options.images || [],
       generatedImage: options.generatedImage || null,
+      generatedImageName: options.generatedImageName || null,
       mode: options.mode || currentMode(),
       contextContent: options.contextContent ?? null,
       createdAt: Date.now()
@@ -4492,11 +4508,56 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         throw new Error("The image endpoint returned an invalid image.");
       }
 
-      removeTyping();
+      const generatedImageName = getGeneratedImageFilename(prompt);
+      const describeInstruction = "Please describe the generated image for the user. Describe only visible details you can actually identify. Be clear and helpful, then invite the user to continue chatting about the image. Do not claim details that are not visible.";
 
-      addMessage("assistant", "Here's your generated image!", {
+      let description = "";
+      try {
+        if (mode === "flash" && settings.flashProvider === "online") {
+          conversation.flash.push({
+            role: "user",
+            content: [
+              { type: "text", text: describeInstruction },
+              { type: "image_url", image_url: { url: data.image } }
+            ]
+          });
+          const descriptionResult = await callFlashAI(conversation, controller.signal);
+          description = String(descriptionResult.reply || "").trim();
+          if (description) {
+            conversation.flash.push({ role: "assistant", content: description });
+          }
+        } else {
+          const promptDescription = "An image was generated from this exact prompt: " + prompt +
+            ". Describe the intended scene using only details stated or clearly implied by the prompt. Do not pretend you inspected the actual pixels. " +
+            "Then invite the user to keep chatting about the image.";
+          if (mode === "flash") {
+            conversation.flash.push({ role: "user", content: promptDescription });
+            const descriptionResult = await callFlashAI(conversation, controller.signal);
+            description = String(descriptionResult.reply || "").trim();
+            if (description) conversation.flash.push({ role: "assistant", content: description });
+          } else {
+            description = await callClassicAI(conversation, promptDescription);
+            description = String(description || "").trim();
+            if (description) conversation.classic.push({ role: "assistant", content: description });
+          }
+        }
+      } catch (descriptionError) {
+        if (descriptionError.name === "AbortError") throw descriptionError;
+        console.warn("FROSTGPT: Image description was unavailable.", descriptionError);
+      }
+
+      if (!description) {
+        description = settings.flashProvider === "online" && mode === "flash"
+          ? "Your image is ready! I couldn't generate its visual description this time, but you can still ask me questions or tell me what you'd like to change."
+          : "Your image is ready! It was generated from your prompt: " + prompt + ". I can keep chatting with you about the idea or help revise the prompt.";
+      }
+
+      removeTyping();
+      addMessage("assistant", description, {
         generatedImage: data.image,
-        mode
+        generatedImageName,
+        mode,
+        contextContent: description
       });
 
       recordGeneratedImage();
