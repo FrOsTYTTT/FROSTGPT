@@ -3348,7 +3348,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         content = content
           .filter(part => part?.type === "text" && typeof part.text === "string")
           .map(part => part.text)
-          .join("\\n");
+          .join("\n");
       }
 
       if (typeof content === "string" && content.trim()) {
@@ -3356,10 +3356,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       }
     }
 
-    let prompt = promptParts.join("\\n\\n").slice(-3600);
+    let prompt = promptParts.join("\n\n").slice(-3600);
     const personality = getSavedPersonality().trim().slice(0, 300);
     if (personality) {
-      prompt = "Response preferences: " + personality + "\\n\\n" + prompt;
+      prompt = "Response preferences: " + personality + "\n\n" + prompt;
     }
     if (!prompt.trim()) throw new Error("Please enter a text message.");
 
