@@ -4739,7 +4739,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
     thinkModeEnabled = !thinkModeEnabled;
     updateComposerActionButton();
-    setStatus(thinkModeEnabled ? "Think mode enabled for Gemma 4." : modeName());
+    setStatus(thinkModeEnabled ? "Think mode enabled for FROSTGPT™ Flash 3.0 🧠" : modeName());
   });
 
   // Hide the message field's scrollbar when the draft contains a newline.
