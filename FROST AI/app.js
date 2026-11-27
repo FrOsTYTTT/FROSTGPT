@@ -1070,7 +1070,9 @@ import {
   modeSelect.addEventListener("change", syncModelPicker);
   syncModelPicker();
 
-  const CHAT_API = "/api/chat";
+  // Temporary public Ubuntu API endpoint for online FROSTGPT Flash testing.
+  // Replace this Quick Tunnel URL when a stable named tunnel/domain is configured.
+  const CHAT_API = "https://significantly-instant-reload-lens.trycloudflare.com/api/chat";
   const IMAGE_API = "/api/image";
 
   const MAX_IMAGES = 4;
@@ -3329,18 +3331,46 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   }
 
   async function callFlashAI(conversation, signal) {
+    // The experimental Ubuntu inference API currently accepts one text field:
+    // { message: "..." }. It does not yet support image payloads or the old
+    // Cloudflare messages[] request format.
+    const history = conversation.flash.slice(-8);
+    const promptParts = [];
+
+    for (const item of history) {
+      const role = item.role === "assistant" ? "FROSTGPT" : "User";
+      let content = item.content;
+
+      if (Array.isArray(content)) {
+        if (content.some(part => part?.type === "image_url")) {
+          throw new Error("The online experimental FROSTGPT server currently supports text messages only. Image and video understanding will be connected separately.");
+        }
+        content = content
+          .filter(part => part?.type === "text" && typeof part.text === "string")
+          .map(part => part.text)
+          .join("\\n");
+      }
+
+      if (typeof content === "string" && content.trim()) {
+        promptParts.push(role + ": " + content.trim());
+      }
+    }
+
+    let prompt = promptParts.join("\\n\\n").slice(-3600);
+    const personality = getSavedPersonality().trim().slice(0, 300);
+    if (personality) {
+      prompt = "Response preferences: " + personality + "\\n\\n" + prompt;
+    }
+    if (!prompt.trim()) throw new Error("Please enter a text message.");
+
     const response = await postWithFreshAuth(CHAT_API, {
-      messages: conversation.flash.slice(-80),
-      conversationId: conversation.id,
-      preferredBackupModel: settings.preferredBackupModel,
-      customPersonality: getSavedPersonality(),
-      userNickname: getSavedNickname().trim().slice(0, 30),
-      profilePhotoData: currentProfilePhotoData,
-      historyMemory: buildSavedHistoryMemory(conversation.id),
-      videoAudioTranscript: pendingVideoAudioContext
+      message: prompt.slice(-4000)
     }, signal);
     const data = await parseResponse(response);
-    if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Cloudflare returned no AI reply.");
+
+    if (typeof data.reply !== "string" || !data.reply.trim()) {
+      throw new Error("FROSTGPT's online server returned no AI reply.");
+    }
     return data;
   }
 
