@@ -400,22 +400,6 @@
     byId("backFromDeveloperKeys")?.addEventListener("click", () => showDeveloperView("home"));
     byId("backFromDeveloperDocs")?.addEventListener("click", () => showDeveloperView("home"));
 
-    byId("copyDeveloperKey")?.addEventListener("click", async () => {
-      const keyElement = byId("developerGeneratedKey");
-      const status = byId("developerKeyStatus");
-      const key = keyElement?.textContent?.trim();
-      if (!key || !key.startsWith("frost_sk_")) {
-        if (status) status.textContent = "There is no generated API key to copy yet.";
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(key);
-        if (status) status.textContent = "Copied to clipboard!";
-      } catch {
-        if (status) status.textContent = "Clipboard access was blocked. Select and copy the key manually.";
-      }
-    });
-
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && developerPanel && !developerPanel.hidden) {
         closeDeveloperPortal();
