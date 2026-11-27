@@ -1154,6 +1154,7 @@ import {
     fileInput: $("fileInput"),
     messageInput: $("messageInput"),
     sendButton: $("sendButton"),
+    voiceCallButton: $("voiceCallButton"),
     imageButton: $("imageButton")
   };
 
@@ -1173,6 +1174,7 @@ import {
     fileInput,
     messageInput,
     sendButton,
+    voiceCallButton,
     imageButton
   } = elements;
 
@@ -1312,6 +1314,8 @@ import {
   let voiceListening = false;
   let voiceReplyEnabled = false;
   let voiceSessionActive = false;
+  let voiceCallActive = false;
+  let applyingVoiceTranscript = false;
   let voiceFinalTranscript = "";
 
   let voiceMicButton = null;
@@ -1508,6 +1512,19 @@ import {
     updateVoiceButtons();
   }
 
+  function updateComposerActionButton() {
+    if (!voiceCallButton || !sendButton) return;
+    const hasDraft = Boolean(messageInput.value.trim()) || attachments.length > 0;
+    const showVoiceCall = !isThinking && !hasDraft;
+    voiceCallButton.hidden = !showVoiceCall;
+    sendButton.hidden = showVoiceCall;
+    voiceCallButton.textContent = voiceCallActive ? "⏹" : "🎙️";
+    voiceCallButton.title = voiceCallActive ? "End voice call" : "Start voice call";
+    voiceCallButton.setAttribute("aria-label", voiceCallButton.title);
+    voiceCallButton.setAttribute("aria-pressed", String(voiceCallActive));
+    voiceCallButton.disabled = isThinking;
+  }
+
   function updateVoiceButtons() {
     if (voiceMicButton) {
       voiceMicButton.textContent = voiceListening
@@ -1542,6 +1559,8 @@ import {
       voiceStopButton.style.opacity =
         voiceStopButton.disabled ? ".5" : "1";
     }
+
+    updateComposerActionButton();
   }
 
   function createVoiceOptionsPanel() {
@@ -1852,7 +1871,12 @@ import {
     utterance.volume = voicePreferences.volume;
 
     utterance.onstart = updateVoiceButtons;
-    utterance.onend = updateVoiceButtons;
+    utterance.onend = () => {
+      updateVoiceButtons();
+      if (voiceCallActive && !isThinking && !voiceListening) {
+        void startVoiceInput();
+      }
+    };
 
     utterance.onerror = event => {
       console.warn(
@@ -1861,6 +1885,9 @@ import {
       );
 
       updateVoiceButtons();
+      if (voiceCallActive && !isThinking && !voiceListening) {
+        void startVoiceInput();
+      }
     };
 
     window.speechSynthesis.speak(utterance);
@@ -1995,16 +2022,20 @@ import {
           const transcript = typeof data.text === "string" ? data.text.trim() : "";
           if (!transcript) {
             setStatus("No speech was detected. Try speaking a little closer to the microphone.");
+            if (voiceCallActive) void startVoiceInput();
             return;
           }
 
+          applyingVoiceTranscript = true;
           messageInput.value = transcript;
           messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+          applyingVoiceTranscript = false;
           setStatus("Sending your voice message...");
           sendMessage();
         } catch (error) {
           console.error("FROSTGPT: Microphone transcription failed.", error);
           setStatus(error.message || "Could not transcribe microphone audio.");
+          if (voiceCallActive) void startVoiceInput();
         }
       };
 
@@ -2023,6 +2054,10 @@ import {
       console.error("FROSTGPT: Could not start microphone recording.", error);
       voiceSessionActive = false;
       voiceListening = false;
+      if (voiceCallActive) {
+        voiceCallActive = false;
+        voiceReplyEnabled = false;
+      }
       micStream?.getTracks().forEach(track => track.stop());
       micStream = null;
       micRecorder = null;
@@ -2031,6 +2066,24 @@ import {
         ? "Microphone permission was denied."
         : (error.message || "Could not start microphone."));
     }
+  }
+
+  async function startVoiceCall() {
+    if (voiceCallActive || isThinking) return;
+    voiceCallActive = true;
+    voiceReplyEnabled = true;
+    updateVoiceButtons();
+    setStatus("Starting voice call...");
+    await startVoiceInput();
+  }
+
+  function endVoiceCall() {
+    voiceCallActive = false;
+    voiceReplyEnabled = false;
+    stopVoiceInput(false);
+    stopSpeaking();
+    updateVoiceButtons();
+    setStatus("Voice call ended.");
   }
 
   function createVoiceControls() {
@@ -3543,6 +3596,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     }
 
     updateVoiceButtons();
+    updateComposerActionButton();
 
     if (!voiceListening) {
       setStatus(value ? "Thinking..." : modeName());
@@ -3807,6 +3861,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       wrapper.appendChild(remove);
       attachmentPreview.appendChild(wrapper);
     });
+
+    updateComposerActionButton();
   }
 
   function readImage(file) {
@@ -4619,12 +4675,24 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
   sendButton.addEventListener("click", sendMessage);
 
+  voiceCallButton?.addEventListener("click", () => {
+    if (voiceCallActive) endVoiceCall();
+    else void startVoiceCall();
+  });
+
   // Hide the message field's scrollbar when the draft contains a newline.
   function updateMessageInputScrollbar() {
     messageInput.classList.toggle("has-hidden-scrollbar", messageInput.value.includes("\n"));
   }
 
-  messageInput.addEventListener("input", updateMessageInputScrollbar);
+  messageInput.addEventListener("input", () => {
+    updateMessageInputScrollbar();
+    if (voiceCallActive && !applyingVoiceTranscript && messageInput.value.trim()) {
+      endVoiceCall();
+    }
+    updateComposerActionButton();
+  });
+  updateComposerActionButton();
   updateMessageInputScrollbar();
 
   messageInput.addEventListener("keydown", event => {
