@@ -2816,10 +2816,33 @@ import {
     content.className = "message-content";
 
     if (message.typing) {
-      const typing = document.createElement("div");
-      typing.className = "typing-indicator";
-      typing.textContent = "Thinking...";
-      content.appendChild(typing);
+      const thinkingPanel = document.createElement("details");
+      thinkingPanel.className = "thinking-panel";
+      thinkingPanel.open = true;
+
+      const summary = document.createElement("summary");
+      summary.className = "thinking-summary";
+
+      const indicator = document.createElement("span");
+      indicator.className = "thinking-indicator";
+      indicator.setAttribute("aria-hidden", "true");
+      indicator.innerHTML = "<span></span><span></span><span></span>";
+
+      const title = document.createElement("span");
+      title.textContent = "FROSTGPT™ is thinking";
+
+      const toggle = document.createElement("span");
+      toggle.className = "thinking-toggle";
+      toggle.textContent = "Details";
+
+      summary.append(indicator, title, toggle);
+
+      const details = document.createElement("div");
+      details.className = "thinking-details";
+      details.textContent = "Processing your message and preparing a response. This is a progress indicator, not a display of private internal reasoning.";
+
+      thinkingPanel.append(summary, details);
+      content.appendChild(thinkingPanel);
     } else {
       if (message.text) {
         const text = document.createElement("div");
