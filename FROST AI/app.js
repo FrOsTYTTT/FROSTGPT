@@ -2682,6 +2682,9 @@ import {
       }
 
       if (line.trim().startsWith("```")) {
+        const codeBlockStart = index;
+        const fenceInfo = line.trim().slice(3).trim();
+        const codeLanguage = fenceInfo.split(/\s+/)[0] || "code";
         index++;
 
         const codeLines = [];
@@ -2696,13 +2699,78 @@ import {
 
         if (index < lines.length) index++;
 
+        const codeText = codeLines.join("\n");
+        const contextBeforeCode = lines
+          .slice(0, codeBlockStart)
+          .join("\n")
+          .slice(-1200);
+        const fullScriptCue =
+          /\b(full|complete|entire|whole)\s+(?:working\s+)?(?:script|file|code)\b|\ball\s+(?:of\s+)?(?:the\s+)?code\s+(?:together|in\s+one)|\b(all\s+in\s+one|all\s+together)\b|\breplace\s+(?:the\s+)?(?:entire\s+)?file\b/i;
+        const snippetCue =
+          /\b(snippet|partial\s+code|just\s+this\s+section|only\s+the\s+relevant\s+part)\b/i;
+        const isFullScript =
+          fullScriptCue.test(contextBeforeCode) &&
+          !snippetCue.test(contextBeforeCode);
+
+        const block = document.createElement("section");
+        block.className = "code-block";
+        block.dataset.codeType = isFullScript ? "full-script" : "snippet";
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "code-block-toolbar";
+
+        const typeLabel = document.createElement("span");
+        typeLabel.className = "code-block-type";
+        typeLabel.textContent = isFullScript ? "Full script · all together" : "Snippet";
+
+        const languageLabel = document.createElement("span");
+        languageLabel.className = "code-block-language";
+        languageLabel.textContent = codeLanguage;
+
+        const copyButton = document.createElement("button");
+        copyButton.className = "code-copy-button";
+        copyButton.type = "button";
+        copyButton.textContent = "Copy code";
+        copyButton.setAttribute("aria-label", "Copy code block");
+
         const pre = document.createElement("pre");
         const code = document.createElement("code");
-
-        code.textContent = codeLines.join("\n");
-
+        code.textContent = codeText;
         pre.appendChild(code);
-        fragment.appendChild(pre);
+
+        copyButton.addEventListener("click", async () => {
+          const originalLabel = "Copy code";
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(codeText);
+            } else {
+              const temporary = document.createElement("textarea");
+              temporary.value = codeText;
+              temporary.setAttribute("readonly", "");
+              temporary.style.position = "fixed";
+              temporary.style.opacity = "0";
+              document.body.appendChild(temporary);
+              temporary.select();
+              const copied = document.execCommand("copy");
+              temporary.remove();
+              if (!copied) throw new Error("Clipboard copy was blocked");
+            }
+
+            copyButton.textContent = "Copied!";
+            copyButton.classList.add("copied");
+          } catch (error) {
+            copyButton.textContent = "Copy failed";
+          }
+
+          window.setTimeout(() => {
+            copyButton.textContent = originalLabel;
+            copyButton.classList.remove("copied");
+          }, 1800);
+        });
+
+        toolbar.append(typeLabel, languageLabel, copyButton);
+        block.append(toolbar, pre);
+        fragment.appendChild(block);
         continue;
       }
 
