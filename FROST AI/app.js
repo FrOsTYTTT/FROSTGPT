@@ -3909,27 +3909,34 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       if (currentRequest !== requestId) return;
       removeTyping();
 
+      // Keep the model's original reply clean for future context. The support
+      // note and team sign-off are added only to the user-facing response.
+      const modelReply = String(reply ?? "").trim();
+      const displayReply = window.FROSTGPTSupport
+        ? window.FROSTGPTSupport.formatReply(message, modelReply)
+        : modelReply;
+
       if (mode === "flash") {
         conversation.flash.push({
           role: "assistant",
-          content: reply
+          content: modelReply
         });
       } else {
         conversation.classic.push({
           role: "assistant",
-          content: reply
+          content: modelReply
         });
       }
 
-      addMessage("assistant", reply, {
+      addMessage("assistant", displayReply, {
         mode,
-        contextContent: reply
+        contextContent: modelReply
       });
 
       playSound(760);
 
       // Use the currently selected voice and saved settings.
-      speakReply(reply);
+      speakReply(displayReply);
 
     } catch (error) {
       if (error.name === "AbortError") {
