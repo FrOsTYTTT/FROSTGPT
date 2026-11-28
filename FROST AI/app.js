@@ -1966,7 +1966,13 @@ import {
 
     if (!spokenText) return;
 
-    stopSpeaking();
+    // During Voice Call, preserve the silent utterance queued by the
+    // call button. Cancelling it here can make Chrome block delayed speech.
+    if (!voiceCallActive) {
+      stopSpeaking();
+    } else {
+      window.speechSynthesis.resume();
+    }
 
     const utterance = new SpeechSynthesisUtterance(spokenText);
     const selectedVoice = getSelectedVoice();
@@ -4630,8 +4636,11 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         : modelReply;
 
       if (voiceCallActive) {
-        voiceCallTranscript = [voiceCallTranscript.replace(/FROSTGPT: Thinking\.\.\.$/, "").trim(), `FROSTGPT: ${displayReply}`].filter(Boolean).join("\n\n");
-        updateVoiceCallVisualState("speaking", voiceCallTranscript);
+        voiceCallTranscript = [
+          voiceCallTranscript.replace(/FROSTGPT: Thinking\.\.\.$/, "").trim(),
+          `FROSTGPT: ${displayReply}`
+        ].filter(Boolean).join("\n\n");
+        updateVoiceCallVisualState("reply", voiceCallTranscript);
       }
 
       if (mode === "flash") {
