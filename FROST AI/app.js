@@ -3813,6 +3813,21 @@ import {
         renderMarkdown(message.text, text);
 
         content.appendChild(text);
+
+        const looksLikeEmailDraft = message.role === "assistant" &&
+          /(?:^|\\n)\\s*(?:subject\\s*:|to\\s*:)|\\b(?:email draft|draft email|dear [^\\n,]{2,}|best regards|sincerely,)\\b/i.test(message.text);
+        if (looksLikeEmailDraft) {
+          const emailAction = document.createElement("button");
+          emailAction.type = "button";
+          emailAction.className = "assistant-email-plugin-action";
+          emailAction.textContent = "✉ Connect Gmail to send";
+          emailAction.addEventListener("click", () => {
+            const openPlugins = document.getElementById("openPlugins");
+            if (openPlugins) openPlugins.click();
+            document.getElementById("gmailConnectNotice")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+          });
+          content.appendChild(emailAction);
+        }
       }
 
       if (message.images?.length) {
