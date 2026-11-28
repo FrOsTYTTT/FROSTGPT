@@ -143,12 +143,20 @@ function isNicknameQuestion(message) {
     /\b(can\s+you\s+see|do\s+you\s+know|what\s+is|what's|whats)\b.{0,80}\b(my|the)\s+(account\s+)?nickname\b/i.test(text);
 }
 
-function isFounderClaim(message) {
+function isFounderVerificationQuestion(message) {
   const text = getTextContent(message.content).trim();
   if (!text || text.length > 500) return false;
-  const claimsRole = /\b(i am|i'm|im)\b.{0,100}\b(owner|founder|creator|developer|part of the team|on the team|in the team)\b/i.test(text);
-  const namesProject = /\b(frosta[iy]|frostgpt)\b/i.test(text);
-  return claimsRole && namesProject;
+
+  // Only intercept an explicit request to verify founder/owner status.
+  // Casual statements, jokes, and celebrations should reach the normal chat model.
+  const asksForVerification =
+    /\b(am i|is (?:this|my) (?:signed-in )?account|can you (?:verify|confirm|check)|could you (?:verify|confirm|check)|please (?:verify|confirm|check)|check (?:whether|if)|verify (?:whether|if)|can you tell (?:whether|if)|do you (?:recognize|know) me)\b/i.test(text);
+  const mentionsFounderRole = /\b(owner|founder|creator|developer)\b/i.test(text);
+  const identifiesProjectOrAccount =
+    /\b(frosta[iy]|frostgpt|my (?:signed-in )?account|this account)\b/i.test(text) ||
+    /\bam i\b/i.test(text);
+
+  return asksForVerification && mentionsFounderRole && identifiesProjectOrAccount;
 }
 
 
@@ -220,6 +228,8 @@ IDENTITY:
 
 CREATOR QUESTIONS:
 If someone asks who created, made, developed, or owns FROSTGPT, explain that FrOsTAI created the FROSTGPT application and FrOsT is its founder.
+- Treat casual statements, jokes, excitement, or playful remarks about the user being the owner, founder, or a team developer as ordinary conversation. Respond naturally to their tone.
+- Do not announce that an account is verified, or give a formal identity-verification report, unless the user directly asks you to verify their founder/owner status.
 
 ORIGIN STORY:
 - FROSTGPT began with a Roblox project that FrOsTAI was working on.
@@ -409,7 +419,7 @@ export async function onRequest({ request, env }) {
   }
 
   // Nicknames are editable display labels, not secure proof of identity.
-  if (isFounderClaim(latestMessage)) {
+  if (isFounderVerificationQuestion(latestMessage)) {
     if (!isVerifiedFounderAccount) {
       return json({
         reply: "You're not! Your saved account nickname doesn't match one of the founder labels configured for FROSTGPT™. The FROSTGPT™ application was created by the FrOsTAI team, and FrOsT is its founder. FrOsTAI builds websites, AI experiences, and technology projects. FROSTGPT™ uses underlying AI models through Cloudflare Workers AI; the team built the application, not the underlying base models. ❄️",
