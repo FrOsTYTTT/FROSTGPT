@@ -1370,6 +1370,7 @@ import {
   let voiceSessionActive = false;
   let voiceCallActive = false;
   let voiceCallPhase = "ended";
+  let voiceCallTranscript = "";
   let dictateActive = false;
   let voiceCaptureMode = "call";
   let thinkModeEnabled = false;
@@ -1559,7 +1560,7 @@ import {
       .replace(/^\s*[-+]\s+/gm, "")
       .replace(/^\s*\d+\.\s+/gm, "")
       // Give speech engines a phonetic spelling so the brand is spoken as one name.
-      .replace(/FROSTGPT(?:™)?/gi, "Frost-jipt")
+      .replace(/FROSTGPT(?:™)?/gi, "Frost G P T")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -1629,7 +1630,7 @@ import {
       message.textContent = "Say something when the microphone is ready.";
       message.hidden = false;
     } else if (message && state === "listening") {
-      message.textContent = "I'm listening. Your words and my replies will appear here.";
+      message.textContent = voiceCallTranscript || "I'm listening. Your words and my replies will appear here.";
       message.hidden = false;
     }
   }
@@ -2197,7 +2198,8 @@ import {
               ? "Cloudflare AI Online"
               : "FrOsTAI's Servers";
             setStatus(`Sending your voice message to ${providerLabel}...`);
-            updateVoiceCallVisualState("thinking", `You: ${transcript}\nSending to ${providerLabel}...`);
+            voiceCallTranscript = [voiceCallTranscript, `You: ${transcript}`, `FROSTGPT: Thinking...`].filter(Boolean).join("\n\n");
+            updateVoiceCallVisualState("thinking", voiceCallTranscript);
             void sendMessage({ provider: selectedProvider });
           }
           applyingVoiceTranscript = false;
@@ -2310,6 +2312,13 @@ import {
     if (voiceCallActive || isThinking) return;
     voiceCallActive = true;
     voiceReplyEnabled = true;
+    voiceCallTranscript = "";
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+      voiceCallActive = false;
+      voiceReplyEnabled = false;
+      updateVoiceCallVisualState("error", "This browser does not support spoken AI replies. Try the latest Chrome or Edge.");
+      return;
+    }
     unlockVoiceOutput();
     const callScreen = $("voiceCallScreen");
     if (callScreen) callScreen.hidden = false;
@@ -4619,7 +4628,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         : modelReply;
 
       if (voiceCallActive) {
-        updateVoiceCallVisualState("speaking", `FROSTGPT: ${displayReply}`);
+        voiceCallTranscript = [voiceCallTranscript.replace(/FROSTGPT: Thinking\.\.\.$/, "").trim(), `FROSTGPT: ${displayReply}`].filter(Boolean).join("\n\n");
+        updateVoiceCallVisualState("speaking", voiceCallTranscript);
       }
 
       if (mode === "flash") {
