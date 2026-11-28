@@ -141,6 +141,9 @@ import {
         turnstileWidgetId = window.turnstile.render(turnstileWidget, {
           sitekey: "0x4AAAAAAGWcQUNK6tmofMMw",
           theme: "dark",
+          size: "normal",
+          appearance: "always",
+          execution: "render",
           callback: async token => {
             if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
             try {
