@@ -2336,7 +2336,8 @@ import {
     const inVoiceCall = voiceCallActive;
     const detectedLanguage = detectSpeechLanguage(text);
     const selectedVoice = getSelectedVoice();
-    const targetLanguage = detectedLanguage || selectedVoice?.lang || navigator.language || "en-US";
+    // A voice explicitly selected by the user always takes priority.
+    const targetLanguage = selectedVoice?.lang || detectedLanguage || navigator.language || "en-US";
     const spokenText = cleanTextForSpeech(text, targetLanguage.toLowerCase());
     const speechChunks = splitSpeechIntoChunks(spokenText);
 
@@ -2350,7 +2351,7 @@ import {
       stopSpeaking();
     }
 
-    const matchingVoice = detectedLanguage ? getVoiceForLanguage(detectedLanguage) : selectedVoice;
+    const matchingVoice = selectedVoice || (detectedLanguage ? getVoiceForLanguage(detectedLanguage) : null);
     let chunkIndex = 0;
     let playbackFinished = false;
 
@@ -2861,11 +2862,15 @@ import {
     voiceReplyEnabled = false;
     const callScreen = $("voiceCallScreen");
     if (callScreen) callScreen.hidden = true;
+    // X closes only the call overlay and returns to the existing conversation.
+    if (authScreen) authScreen.style.display = "none";
+    if (appElement) appElement.classList.add("visible");
     updateVoiceCallVisualState("ended");
     stopVoiceInput(false);
     stopSpeaking();
     updateVoiceButtons();
-    setStatus("Voice call ended.");
+    setStatus("Voice call ended. Your conversation is in chat.");
+    scrollBottom();
   }
 
   function createVoiceControls() {
