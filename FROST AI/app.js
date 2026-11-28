@@ -190,12 +190,21 @@ import {
     }
   }
 
+  // Capture support clicks before other page scripts can stop propagation.
+  // This also prevents the browser from falling through to the #support hash.
   document.addEventListener("click", event => {
-    const supportLink = event.target.closest("[data-support-verification]");
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    const supportLink = path.find(node =>
+      node instanceof Element && node.matches("[data-support-verification]")
+    ) || (event.target instanceof Element ? event.target.closest("[data-support-verification]") : null);
     if (!supportLink) return;
     event.preventDefault();
-    openSupportWithVerification();
-  });
+    event.stopImmediatePropagation();
+    if (window.location.hash === "#support") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    void openSupportWithVerification();
+  }, true);
 
   supportBackButton?.addEventListener("click", () => {
     if (supportPage) supportPage.hidden = true;
