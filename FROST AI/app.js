@@ -1636,17 +1636,17 @@ import {
   function detectSpeechLanguage(text) {
     const sample = String(text || "").slice(0, 5000).toLowerCase();
     if (!sample.trim()) return "";
-    if (/[\\u3040-\\u30ff]/.test(sample)) return "ja";
-    if (/[\\uac00-\\ud7af]/.test(sample)) return "ko";
-    if (/[\\u4e00-\\u9fff]/.test(sample)) return "zh";
-    if (/[\\u0e00-\\u0e7f]/.test(sample)) return "th";
-    if (/[\\u0590-\\u05ff]/.test(sample)) return "he";
-    if (/[\\u0600-\\u06ff]/.test(sample)) return /[پچژگکی]/.test(sample) ? "fa" : "ar";
-    if (/[\\u0900-\\u097f]/.test(sample)) return "hi";
-    if (/[\\u0370-\\u03ff]/.test(sample)) return "el";
-    if (/[\\u0400-\\u04ff]/.test(sample)) {
-      if (/\\b(і|ї|є|ґ|що|це|як|дякую)\\b/.test(sample)) return "uk";
-      if (/\\b(jest|nie|że|jak|dziękuję)\\b/.test(sample)) return "pl";
+    if (/[\u3040-\u30ff]/.test(sample)) return "ja";
+    if (/[\uac00-\ud7af]/.test(sample)) return "ko";
+    if (/[\u4e00-\u9fff]/.test(sample)) return "zh";
+    if (/[\u0e00-\u0e7f]/.test(sample)) return "th";
+    if (/[\u0590-\u05ff]/.test(sample)) return "he";
+    if (/[\u0600-\u06ff]/.test(sample)) return /[پچژگکی]/.test(sample) ? "fa" : "ar";
+    if (/[\u0900-\u097f]/.test(sample)) return "hi";
+    if (/[\u0370-\u03ff]/.test(sample)) return "el";
+    if (/[\u0400-\u04ff]/.test(sample)) {
+      if (/\b(і|ї|є|ґ|що|це|як|дякую)\b/.test(sample)) return "uk";
+      if (/\b(jest|nie|że|jak|dziękuję)\b/.test(sample)) return "pl";
       return "ru";
     }
     const vocab = {
@@ -1669,7 +1669,7 @@ import {
       sw: "na ya kwa ni asante habari karibu",
       cs: "a je se že pro děkuji dobrý den"
     };
-    const words = sample.match(/[\\p{L}]+/gu) || [];
+    const words = sample.match(/[\p{L}]+/gu) || [];
     const scores = Object.entries(vocab).map(([lang, terms]) => {
       const known = new Set(terms.split(" "));
       return [lang, words.reduce((score, word) => score + (known.has(word) ? 1 : 0), 0)];
@@ -1679,18 +1679,18 @@ import {
 
   function cleanTextForSpeech(text, language = "") {
     const spoken = String(text || "")
-      .replace(/```[\\s\\S]*?```/g, " Code block omitted. ")
+      .replace(/```[\s\S]*?```/g, " Code block omitted. ")
       .replace(/`([^`]+)`/g, "$1")
-      .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
-      .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
-      .replace(/^#{1,6}\\s+/gm, "")
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/^#{1,6}\s+/gm, "")
       .replace(/[*_~]/g, "")
-      .replace(/^\\s*>\\s?/gm, "")
-      .replace(/^\\s*[-+]\\s+/gm, "")
-      .replace(/^\\s*\\d+\\.\\s+/gm, "");
+      .replace(/^\s*>\s?/gm, "")
+      .replace(/^\s*[-+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "");
     return spoken
       .replace(/FROSTGPT(?:™)?/gi, language.startsWith("en") || !language ? "Frost Gee Pee Tee" : "FROST G P T")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
