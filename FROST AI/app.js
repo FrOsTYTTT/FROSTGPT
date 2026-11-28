@@ -789,7 +789,8 @@ import {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Test New Chat Feature";
-      button.style.cssText = "padding:10px 14px;border:0;border-radius:10px;background:var(--accent,#3694ff);color:white;font:inherit;font-weight:650;cursor:pointer;";
+      button.className = "new-chat-feature-test-button";
+      button.style.cssText = "border:0;background:var(--accent,#3694ff);color:white;font:inherit;font-weight:600;cursor:pointer;";
       button.addEventListener("click", startNewChatFeatureTest);
       newChatFeatureTestSection.append(heading, description, button);
       settingsPage.appendChild(newChatFeatureTestSection);
@@ -1547,14 +1548,12 @@ import {
   }
 
   const MAX_CHAT_MESSAGES = 80;
-  const chatFullNotice = document.createElement("div");
-  chatFullNotice.id = "chatFullNotice";
-  chatFullNotice.className = "chat-full-notice";
-  chatFullNotice.hidden = true;
-  chatFullNotice.innerHTML = '<button type="button" class="chat-full-new-button">New Chat!</button><div class="chat-full-copy"><strong>Continue in new chat!</strong><span>Your previous chat memory will carry over.</span></div>';
-  const chatFullNewButton = chatFullNotice.querySelector(".chat-full-new-button");
-  const composerAreaForLimit = document.querySelector(".composer-area");
-  if (chat && composerAreaForLimit && chat.parentNode) chat.parentNode.insertBefore(chatFullNotice, composerAreaForLimit);
+  // Keep the continuation notice in the page markup directly above the composer.
+  const chatFullNotice = document.getElementById("chatFullNotice");
+  const chatFullNewButton = chatFullNotice?.querySelector(".chat-full-new-button");
+  if (!chatFullNotice || !chatFullNewButton) {
+    console.error("FROSTGPT: The chat continuation notice is missing from index.html.");
+  }
 
   function conversationMessageCount(conversation) {
     return conversation ? conversation.display.filter(message => !message.typing).length : 0;
