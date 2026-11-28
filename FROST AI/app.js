@@ -1518,6 +1518,94 @@ import {
     return;
   }
 
+  const MAX_CHAT_MESSAGES = 80;
+  const chatFullNotice = document.createElement("div");
+  chatFullNotice.id = "chatFullNotice";
+  chatFullNotice.className = "chat-full-notice";
+  chatFullNotice.hidden = true;
+  chatFullNotice.innerHTML = '<button type="button" class="chat-full-new-button">New Chat</button><div class="chat-full-copy"><strong>Continue in new chat!</strong><span>Your memory will be saved!</span></div>';
+  const chatFullNewButton = chatFullNotice.querySelector(".chat-full-new-button");
+  const composerAreaForLimit = document.querySelector(".composer-area");
+  if (chat && composerAreaForLimit && chat.parentNode) chat.parentNode.insertBefore(chatFullNotice, composerAreaForLimit);
+
+  function conversationMessageCount(conversation) {
+    return conversation ? conversation.display.filter(message => !message.typing).length : 0;
+  }
+
+  function updateChatLimitUI() {
+    const full = conversationMessageCount(getConversation()) >= MAX_CHAT_MESSAGES;
+    chatFullNotice.hidden = !full;
+    messageInput.disabled = full;
+    if (attachButton) attachButton.disabled = full;
+    if (imageButton) imageButton.disabled = full;
+    if (full) {
+      messageInput.placeholder = "This chat is full. Continue in a new chat.";
+      sendButton.disabled = true;
+    } else {
+      messageInput.placeholder = "Message FROSTGPT™...";
+      sendButton.disabled = false;
+    }
+    chatFullNotice.setAttribute("aria-live", "polite");
+  }
+
+  function makeContinuationContext(messages) {
+    return (Array.isArray(messages) ? messages : []).slice(-20).map(item => {
+      let content = item && item.content;
+      if (Array.isArray(content)) {
+        content = content.map(part => {
+          if (part && part.type === "image_url") return "[An image from the previous chat is not attached here.]";
+          return part && typeof part.text === "string" ? part.text : "";
+        }).filter(Boolean).join("\n");
+      }
+      return { role: item && item.role === "assistant" ? "assistant" : "user", content: String(content || "").slice(-2400) };
+    }).filter(item => item.content.trim());
+  }
+
+  function continueConversation(previous) {
+    if (!previous) return;
+    if (isThinking) stopGenerating();
+    stopSpeaking();
+    stopVoiceInput();
+    const oldTitle = previous.title || "New chat";
+    const suffixStart = oldTitle.lastIndexOf(" (");
+    const suffixEnd = oldTitle.endsWith(")") ? oldTitle.length - 1 : -1;
+    const suffixText = suffixStart >= 0 && suffixEnd > suffixStart ? oldTitle.slice(suffixStart + 2, suffixEnd) : "";
+    const hasNumberSuffix = suffixText && String(Number(suffixText)) === suffixText;
+    const baseTitle = (hasNumberSuffix ? oldTitle.slice(0, suffixStart) : oldTitle).trim() || "New chat";
+    const usedNumbers = conversations.filter(item => item.title === baseTitle || item.title.startsWith(baseTitle + " ("))
+      .map(item => {
+        const start = item.title.lastIndexOf(" (");
+        const end = item.title.endsWith(")") ? item.title.length - 1 : -1;
+        const value = start >= 0 && end > start ? item.title.slice(start + 2, end) : "";
+        return value && String(Number(value)) === value ? Number(value) : 0;
+      });
+    const nextNumber = Math.max(0, ...usedNumbers) + 1;
+    const now = Date.now();
+    const continued = {
+      id: createId(),
+      title: baseTitle + " (" + nextNumber + ")",
+      createdAt: now,
+      updatedAt: now,
+      continuationFrom: oldTitle,
+      continuationFlash: makeContinuationContext([...(previous.continuationFlash || []), ...(previous.flash || [])]),
+      continuationClassic: makeContinuationContext([...(previous.continuationClassic || []), ...(previous.classic || [])]),
+      display: [],
+      flash: [],
+      classic: []
+    };
+    conversations.unshift(continued);
+    activeConversationId = continued.id;
+    watchActiveConversationMessages();
+    attachments = [];
+    updateAttachmentPreview();
+    renderHistory();
+    renderConversation();
+    trackChatWrite(saveConversationMetadata(continued));
+    if (window.innerWidth <= 700 && sidebar) sidebar.classList.remove("open");
+  }
+
+  chatFullNewButton.addEventListener("click", () => continueConversation(getConversation()));
+
   // Rounded custom model picker; the native select remains the source of truth.
   const modelPicker = document.createElement("div");
   modelPicker.className = "model-picker";
@@ -3017,7 +3105,10 @@ import {
         {
           title: conversation.title,
           createdAt: conversation.createdAt || now,
-          updatedAt: now
+          updatedAt: now,
+          continuationFrom: conversation.continuationFrom || null,
+          continuationFlash: conversation.continuationFlash || [],
+          continuationClassic: conversation.continuationClassic || []
         },
         { merge: true }
       );
@@ -3146,6 +3237,9 @@ import {
             title: data.title || "New chat",
             createdAt: data.createdAt || Date.now(),
             updatedAt: data.updatedAt || data.createdAt || Date.now(),
+            continuationFrom: data.continuationFrom || null,
+            continuationFlash: Array.isArray(data.continuationFlash) ? data.continuationFlash : [],
+            continuationClassic: Array.isArray(data.continuationClassic) ? data.continuationClassic : [],
             display: [], flash: [], classic: []
           });
         }
@@ -3290,8 +3384,17 @@ import {
   // MESSAGE DISPLAY
   // ==========================================
 
+  function appendContinuationHeader(container, conversation) {
+    if (!conversation || !conversation.continuationFrom) return;
+    const banner = document.createElement("div");
+    banner.className = "continued-from-banner";
+    banner.textContent = "Continued From " + conversation.continuationFrom;
+    container.appendChild(banner);
+  }
+
   function showWelcome() {
     chatInner.replaceChildren();
+    appendContinuationHeader(chatInner, getConversation());
 
     const welcome = document.createElement("div");
     welcome.className = "welcome-screen";
@@ -3903,10 +4006,13 @@ import {
 
     if (!conversation || conversation.display.length === 0) {
       showWelcome();
+      updateChatLimitUI();
       return;
     }
 
+    appendContinuationHeader(chatInner, conversation);
     conversation.display.forEach(message => renderMessage(message, false));
+    updateChatLimitUI();
     scrollBottom();
   }
 
@@ -4000,6 +4106,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       title: "New chat",
       createdAt: now,
       updatedAt: now,
+      continuationFrom: null,
+      continuationFlash: [],
+      continuationClassic: [],
       display: [],
       flash: [],
       classic: []
@@ -4015,6 +4124,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     renderConversation();
 
     trackChatWrite(saveConversationMetadata(conversation));
+    updateChatLimitUI();
 
     return conversation;
   }
@@ -4122,6 +4232,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
           title: chatData.title || "New chat",
           createdAt: chatData.createdAt || Date.now(),
           updatedAt: chatData.updatedAt || chatData.createdAt || Date.now(),
+          continuationFrom: chatData.continuationFrom || null,
+          continuationFlash: Array.isArray(chatData.continuationFlash) ? chatData.continuationFlash : [],
+          continuationClassic: Array.isArray(chatData.continuationClassic) ? chatData.continuationClassic : [],
           display: [],
           flash: [],
           classic: []
@@ -4576,7 +4689,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     if (thinkModeEnabled && selectedProvider !== "online") {
       throw new Error("Think mode requires the Online Gemma 4 model. Switch providers or turn Think off.");
     }
-    const history = conversation.flash.slice(-80);
+    const history = [...(conversation.continuationFlash || []), ...conversation.flash].slice(-80);
     // Give Flash accurate project facts as context, while letting the model answer naturally.
     const projectContext = [
       "FROSTGPT™ project facts (use as factual context, not as a script or mandatory response):",
@@ -4679,7 +4792,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     return await window.FROSTGPTClassic.reply(
       message,
-      conversation.classic
+      [...(conversation.continuationClassic || []), ...conversation.classic]
     );
   }
 
@@ -5056,6 +5169,11 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     const message = messageInput.value.trim();
 
     if (!message && attachments.length === 0) return;
+    if (conversationMessageCount(getConversation()) >= MAX_CHAT_MESSAGES - 1) {
+      updateChatLimitUI();
+      setStatus("This chat is full. Continue in a new chat to keep going.");
+      return;
+    }
 
     if (isBlockedInsultMessage(message)) {
       setStatus("That message wasn't sent. Please keep the chat respectful.");
@@ -5263,6 +5381,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         pendingVideoAudioContext = "";
         activeController = null;
         setThinking(false);
+        updateChatLimitUI();
       }
     }
   }
