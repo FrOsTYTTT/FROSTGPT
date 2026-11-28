@@ -26,7 +26,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261128-53">
+  <link rel="stylesheet" href="/styles.css?v=20261128-live-screen-1">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))" onerror="window.dispatchEvent(new Event('frost-turnstile-error'))"></script>
 </head>
 
@@ -281,8 +281,12 @@
       <div class="voice-call-orb-wrap" id="voiceCallOrbWrap"><div class="voice-call-orb"><div class="voice-call-orb-core"></div></div></div>
       <h2 id="voiceCallTitle">FROSTGPT Voice</h2>
       <p id="voiceCallStatus" aria-live="polite">Connecting...</p>
-      <div class="voice-call-controls"><button id="endVoiceCallButton" type="button" class="voice-call-end-button" aria-label="End voice call">✕</button></div>
-      <small>Voice conversations are processed using transcription and speech playback.</small>
+      <video id="voiceCallScreenPreview" class="voice-call-screen-preview" autoplay muted playsinline aria-label="Live screen-share preview" hidden></video>
+      <div class="voice-call-controls">
+        <button id="voiceCallScreenShareButton" type="button" class="voice-call-screen-share-button" aria-label="Share your screen live" aria-pressed="false" title="Share your screen live">💻</button>
+        <button id="endVoiceCallButton" type="button" class="voice-call-end-button" aria-label="End voice call">✕</button>
+      </div>
+      <small>Screen sharing captures recent live frames for FROSTGPT when you speak. Stop sharing or end the call at any time.</small>
     </div>
   </section>
 
@@ -513,7 +517,7 @@
         <section id="screenShareStage" class="screen-share-stage" hidden>
           <div class="screen-share-stage-heading"><h3>Screen Sharing💻</h3><button id="stopScreenShare" class="plugin-secondary-button" type="button">Stop sharing</button></div>
           <video id="screenSharePreview" autoplay muted playsinline></video>
-          <p>Only the content you selected in your browser’s sharing prompt is shared. FROSTGPT Flash can inspect a still screenshot when you send a message while sharing. It does not continuously stream video to the AI. Stop sharing at any time.</p>
+          <p>Only the content you selected in your browser’s sharing prompt is shared. FROSTGPT samples recent live frames while sharing and sends them with your next chat message or voice turn so Flash can compare visible changes. It does not upload a raw continuous video stream. Stop sharing at any time.</p>
         </section>
         <div id="gmailConnectNotice" class="plugins-notice" hidden role="status">Gmail installation is ready, but account connection needs FROSTGPT™’s Google OAuth web client configuration. No Gmail account has been connected yet.</div>
       </main>
@@ -602,6 +606,8 @@
     const readList = key => { try { const value = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(value) ? value : []; } catch { return []; } };
     const writeList = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } };
     let activeScreenStream = null;
+    let screenFrameTimer = null;
+    let recentScreenFrames = [];
     const isInstalledPWA = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     const installed = id => readList(installedKey).includes(id);
     const setInstalled = (id, value) => { const list = readList(installedKey).filter(item => item !== id); if (value) list.push(id); writeList(installedKey, list); renderPlugins(); };
@@ -636,16 +642,14 @@
     byId("installScreenPlugin")?.addEventListener("click", () => setInstalled("screen-sharing", !installed("screen-sharing")));
     byId("installGmailPlugin")?.addEventListener("click", () => { setInstalled("gmail", !installed("gmail")); byId("gmailConnectNotice").hidden = true; });
     byId("connectGmailPlugin")?.addEventListener("click", () => { byId("gmailConnectNotice").hidden = false; byId("gmailConnectNotice").scrollIntoView({behavior:"smooth",block:"nearest"}); });
-    function stopSharing() {
-      if (activeScreenStream) { activeScreenStream.getTracks().forEach(track => track.stop()); activeScreenStream = null; }
-      const video = byId("screenSharePreview"); if (video) video.srcObject = null;
-      byId("screenShareStage").hidden = true; renderPlugins();
+    function getScreenPreviewVideo() {
+      const callPreview = byId("voiceCallScreenPreview");
+      const pluginPreview = byId("screenSharePreview");
+      return callPreview?.srcObject ? callPreview : pluginPreview;
     }
-    // Expose a still-frame capture function to chat. Nothing is transmitted
-    // until the user sends a message while screen sharing is active.
-    window.frostgptCaptureSharedScreenFrame = () => {
+    function captureScreenFrame() {
       if (!activeScreenStream) return null;
-      const video = byId("screenSharePreview");
+      const video = getScreenPreviewVideo();
       if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) return null;
       const maxWidth = 1280;
       const scale = Math.min(1, maxWidth / video.videoWidth);
@@ -655,19 +659,77 @@
       const context = canvas.getContext("2d", { alpha: false });
       if (!context) return null;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.68);
-    };
-    byId("startScreenShare")?.addEventListener("click", async () => {
-      if (!isInstalledPWA()) { byId("screenPluginStatus").textContent = "Install FROSTGPT™ as a PWA to use this plugin."; return; }
+      return canvas.toDataURL("image/jpeg", 0.62);
+    }
+    function updateCallShareButton() {
+      const button = byId("voiceCallScreenShareButton");
+      if (!button) return;
+      button.textContent = activeScreenStream ? "💻" : "💻";
+      button.classList.toggle("is-sharing", !!activeScreenStream);
+      button.setAttribute("aria-pressed", String(!!activeScreenStream));
+      button.title = activeScreenStream ? "Stop live screen sharing" : "Share your screen live";
+      button.setAttribute("aria-label", button.title);
+    }
+    function stopSharing() {
+      if (screenFrameTimer) { clearInterval(screenFrameTimer); screenFrameTimer = null; }
+      recentScreenFrames = [];
+      if (activeScreenStream) { activeScreenStream.getTracks().forEach(track => track.stop()); activeScreenStream = null; }
+      for (const id of ["screenSharePreview", "voiceCallScreenPreview"]) {
+        const video = byId(id); if (video) video.srcObject = null;
+      }
+      byId("screenShareStage").hidden = true;
+      updateCallShareButton();
+      renderPlugins();
+    }
+    // Capture a rolling sequence of recent frames while the browser's live
+    // screen stream is active. Frames are sent only with the user's next
+    // message/voice turn; the raw screen stream is never uploaded.
+    window.frostgptCaptureSharedScreenFrame = captureScreenFrame;
+    window.frostgptGetSharedScreenFrames = () => recentScreenFrames.map(frame => frame.data).slice(-5);
+    window.frostgptIsScreenSharing = () => !!activeScreenStream;
+    window.frostgptStopScreenShareFromCall = stopSharing;
+    async function startScreenSharing() {
+      if (activeScreenStream) return true;
+      if (!installed("screen-sharing")) {
+        byId("screenPluginStatus").textContent = "Install the Screen Sharing plugin first.";
+        return false;
+      }
+      if (!isInstalledPWA()) {
+        byId("screenPluginStatus").textContent = "Install FROSTGPT™ as a PWA to use this plugin.";
+        return false;
+      }
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        byId("screenPluginStatus").textContent = "Live screen sharing is unavailable in this browser.";
+        return false;
+      }
       try {
-        activeScreenStream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
-        const video = byId("screenSharePreview"); video.srcObject = activeScreenStream;
+        activeScreenStream = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:15,max:30}},audio:false});
+        const pluginVideo = byId("screenSharePreview");
+        const callVideo = byId("voiceCallScreenPreview");
+        if (pluginVideo) { pluginVideo.srcObject = activeScreenStream; void pluginVideo.play().catch(() => {}); }
+        if (callVideo) { callVideo.srcObject = activeScreenStream; void callVideo.play().catch(() => {}); }
         byId("screenShareStage").hidden = false;
+        recentScreenFrames = [];
+        screenFrameTimer = setInterval(() => {
+          const frame = captureScreenFrame();
+          if (!frame) return;
+          recentScreenFrames.push({data:frame, capturedAt:Date.now()});
+          if (recentScreenFrames.length > 5) recentScreenFrames.shift();
+        }, 1000);
         activeScreenStream.getVideoTracks()[0]?.addEventListener("ended", stopSharing, {once:true});
+        updateCallShareButton();
         renderPlugins();
+        return true;
       } catch (error) {
         byId("screenPluginStatus").textContent = error?.name === "NotAllowedError" ? "Screen sharing was cancelled." : "Screen sharing is unavailable in this browser.";
+        return false;
       }
+    }
+    window.frostgptStartScreenShareFromCall = startScreenSharing;
+    byId("startScreenShare")?.addEventListener("click", () => { void startScreenSharing(); });
+    byId("voiceCallScreenShareButton")?.addEventListener("click", async () => {
+      if (activeScreenStream) stopSharing();
+      else await startScreenSharing();
     });
     byId("stopScreenShare")?.addEventListener("click", stopSharing);
     byId("createPluginForm")?.addEventListener("submit", event => {
@@ -795,6 +857,6 @@
 
   <script src="/chat.js?v=20261126-1"></script>
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261128-screen-share-1"></script>
+  <script type="module" src="/app.js?v=20261128-live-screen-1"></script>
 </body>
 </html>
