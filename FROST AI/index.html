@@ -629,8 +629,10 @@
       });
     }
     byId("openPlugins")?.addEventListener("click", () => { panel.hidden = false; renderPlugins(); byId("closePlugins")?.focus(); });
-    byId("closePlugins")?.addEventListener("click", () => { stopSharing(); panel.hidden = true; byId("openPlugins")?.focus(); });
-    panel?.addEventListener("click", event => { if (event.target === panel) { stopSharing(); panel.hidden = true; } });
+    // Hiding the Plugins panel must not end sharing: the user needs to return
+    // to chat and send a message for the AI to inspect the current screen frame.
+    byId("closePlugins")?.addEventListener("click", () => { panel.hidden = true; byId("openPlugins")?.focus(); });
+    panel?.addEventListener("click", event => { if (event.target === panel) panel.hidden = true; });
     byId("installScreenPlugin")?.addEventListener("click", () => setInstalled("screen-sharing", !installed("screen-sharing")));
     byId("installGmailPlugin")?.addEventListener("click", () => { setInstalled("gmail", !installed("gmail")); byId("gmailConnectNotice").hidden = true; });
     byId("connectGmailPlugin")?.addEventListener("click", () => { byId("gmailConnectNotice").hidden = false; byId("gmailConnectNotice").scrollIntoView({behavior:"smooth",block:"nearest"}); });
