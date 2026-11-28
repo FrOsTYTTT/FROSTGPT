@@ -1556,13 +1556,21 @@ import {
   }
 
   function conversationMessageCount(conversation) {
-    return conversation ? conversation.display.filter(message => !message.typing).length : 0;
+    if (!conversation) return 0;
+    // Count the visible transcript and each model's stored transcript. This
+    // keeps the limit correct if a render/sync refresh temporarily rebuilds
+    // the display list while the model history already contains the messages.
+    const visibleCount = Array.isArray(conversation.display)
+      ? conversation.display.filter(message => !message.typing).length
+      : 0;
+    const flashCount = Array.isArray(conversation.flash) ? conversation.flash.length : 0;
+    const classicCount = Array.isArray(conversation.classic) ? conversation.classic.length : 0;
+    return Math.max(visibleCount, flashCount, classicCount);
   }
 
-  function updateChatLimitUI() {
-    // Reserve room for a complete user/assistant turn. Normal chats reach
-    // exactly 80 messages; an incomplete odd-numbered history is safely locked at 79.
-    const full = conversationMessageCount(getConversation()) >= MAX_CHAT_MESSAGES - 1;
+  function updateChatLimitUI(conversation = getConversation()) {
+    // Show New Chat! as soon as the 79th visible/model-history message exists.
+    const full = conversationMessageCount(conversation) >= MAX_CHAT_MESSAGES - 1;
     chatFullNotice.hidden = !full;
     messageInput.disabled = full;
     if (attachButton) attachButton.disabled = full;
@@ -4280,9 +4288,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     conversation.display.push(message);
     renderMessage(message);
-    // Show the continuation prompt immediately when message 79 is added,
-    // instead of waiting for the assistant's reply and the final request cleanup.
-    updateChatLimitUI();
+    // Evaluate this exact conversation after every message is appended.
+    updateChatLimitUI(conversation);
 
     if (role === "user") updateTitle(conversation, text);
 
