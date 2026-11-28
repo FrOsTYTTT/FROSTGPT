@@ -675,7 +675,8 @@
       recentScreenFrames = [];
       if (activeScreenStream) { activeScreenStream.getTracks().forEach(track => track.stop()); activeScreenStream = null; }
       for (const id of ["screenSharePreview", "voiceCallScreenPreview"]) {
-        const video = byId(id); if (video) video.srcObject = null;
+        const video = byId(id);
+        if (video) { video.srcObject = null; if (id === "voiceCallScreenPreview") video.hidden = true; }
       }
       byId("screenShareStage").hidden = true;
       updateCallShareButton();
@@ -707,7 +708,7 @@
         const pluginVideo = byId("screenSharePreview");
         const callVideo = byId("voiceCallScreenPreview");
         if (pluginVideo) { pluginVideo.srcObject = activeScreenStream; void pluginVideo.play().catch(() => {}); }
-        if (callVideo) { callVideo.srcObject = activeScreenStream; void callVideo.play().catch(() => {}); }
+        if (callVideo) { callVideo.srcObject = activeScreenStream; callVideo.hidden = false; void callVideo.play().catch(() => {}); }
         byId("screenShareStage").hidden = false;
         recentScreenFrames = [];
         screenFrameTimer = setInterval(() => {
