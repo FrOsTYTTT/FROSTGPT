@@ -74,6 +74,8 @@ import {
   const turnstileStatus = $("turnstileStatus");
   const turnstileWidget = $("frostTurnstileWidget");
   const turnstileScreen = $("turnstileVerificationScreen");
+  const preVerificationScreen = $("preVerificationScreen");
+  const preVerificationCheckbox = $("beginTurnstileCheck");
   let turnstileWidgetId = null;
   let turnstileVerificationResolver = null;
   let turnstileVerificationInProgress = false;
@@ -102,11 +104,37 @@ import {
     }
   }
 
+  function showPreVerificationPage() {
+    if (authScreen) authScreen.style.display = "none";
+    if (appElement) appElement.classList.remove("visible");
+    if (turnstileScreen) turnstileScreen.hidden = true;
+    if (preVerificationCheckbox) preVerificationCheckbox.checked = false;
+    if (preVerificationScreen) preVerificationScreen.hidden = false;
+  }
+
+  function waitForPreVerificationCheckbox() {
+    if (!preVerificationScreen || !preVerificationCheckbox) {
+      throw new Error("The security verification step is unavailable. Please refresh and try again.");
+    }
+
+    return new Promise(resolve => {
+      const onCheckboxChange = () => {
+        if (!preVerificationCheckbox.checked) return;
+        preVerificationCheckbox.removeEventListener("change", onCheckboxChange);
+        preVerificationScreen.hidden = true;
+        resolve(true);
+      };
+
+      preVerificationCheckbox.addEventListener("change", onCheckboxChange);
+    });
+  }
+
   function showTurnstileVerificationPage() {
     if (authScreen) authScreen.style.display = "none";
     if (appElement) appElement.classList.remove("visible");
+    if (preVerificationScreen) preVerificationScreen.hidden = true;
     if (turnstileScreen) turnstileScreen.hidden = false;
-    if (turnstileStatus) turnstileStatus.textContent = "Please click the Cloudflare checkbox to continue.";
+    if (turnstileStatus) turnstileStatus.textContent = "Cloudflare is checking your browser…";
   }
 
   async function runTurnstileVerification() {
@@ -133,6 +161,7 @@ import {
       });
     }
     if (!window.turnstile) throw new Error("Cloudflare verification could not load. Please refresh and try again.");
+    const verificationStartedAt = Date.now();
     if (turnstileWidgetId !== null) {
       try { window.turnstile.remove(turnstileWidgetId); } catch {}
       turnstileWidgetId = null;
@@ -151,6 +180,11 @@ import {
             if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
             try {
               await verifyTurnstileToken(token);
+              const minimumWait = Math.max(0, 3000 - (Date.now() - verificationStartedAt));
+              if (minimumWait > 0) {
+                if (turnstileStatus) turnstileStatus.textContent = "Security check complete. Finishing up…";
+                await new Promise(resolve => window.setTimeout(resolve, minimumWait));
+              }
               const pending = turnstileVerificationResolver;
               turnstileVerificationResolver = null;
               if (pending) pending.resolve(true);
@@ -175,6 +209,13 @@ import {
     });
   }
 
+  async function runSecurityVerificationFlow() {
+    showPreVerificationPage();
+    await waitForPreVerificationCheckbox();
+    showTurnstileVerificationPage();
+    await runTurnstileVerification();
+  }
+
   const appElement = $("app");
   const supportPage = $("supportPage");
   const supportBackButton = $("supportBackButton");
@@ -186,8 +227,7 @@ import {
     supportVerificationInProgress = true;
     supportReturnToApp = Boolean(appElement?.classList.contains("visible"));
     try {
-      showTurnstileVerificationPage();
-      await runTurnstileVerification();
+      await runSecurityVerificationFlow();
       if (turnstileScreen) turnstileScreen.hidden = true;
       if (supportPage) supportPage.hidden = false;
     } catch (error) {
@@ -3984,8 +4024,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
       // The CAPTCHA is a separate page shown only after provider authentication succeeds.
       turnstileVerificationInProgress = true;
-      showTurnstileVerificationPage();
-      await runTurnstileVerification();
+      await runSecurityVerificationFlow();
       turnstileVerificationInProgress = false;
       if (turnstileScreen) turnstileScreen.hidden = true;
 
@@ -4038,6 +4077,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       openSettingsAfterSignIn = false;
       console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
 
+      if (preVerificationScreen) preVerificationScreen.hidden = true;
       if (turnstileScreen) turnstileScreen.hidden = true;
       const verificationScreen = $("providerVerificationScreen");
       if (verificationScreen) verificationScreen.hidden = true;
