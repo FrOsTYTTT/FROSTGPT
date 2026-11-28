@@ -2124,7 +2124,7 @@ import {
 
   async function startVoiceInput(mode = "call") {
     voiceCaptureMode = mode;
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    if ((!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) && !SpeechRecognition) {
       dictateActive = false;
       if (voiceCallActive) {
         voiceCallActive = false;
@@ -2134,7 +2134,7 @@ import {
         updateVoiceCallVisualState("ended");
       }
       updateVoiceButtons();
-      setStatus("Microphone recording is not supported here. Try the latest Chrome or Edge over HTTPS.");
+      setStatus("Voice input is not supported by this browser. Try the latest Chrome or Edge over HTTPS.");
       return;
     }
 
@@ -2143,6 +2143,113 @@ import {
       return;
     }
     if (voiceListening) return;
+
+    // Prefer the browser's built-in speech recognition when available.
+    // This avoids depending on a server transcription request for every turn.
+    if (SpeechRecognition) {
+      if (mode !== "call" || !voiceCallActive) stopSpeaking();
+      voiceSessionActive = true;
+      voiceListening = true;
+      voiceCaptureMode = mode;
+      voiceFinalTranscript = "";
+      updateVoiceButtons();
+      setStatus(mode === "dictate" ? "Dictating... speak now." : "Listening... speak naturally.");
+      if (voiceCallActive) updateVoiceCallVisualState("listening", voiceCallTranscript || "I'm listening.");
+
+      try {
+        const recognition = new SpeechRecognition();
+        voiceRecognition = recognition;
+        recognition.lang = getSelectedVoice()?.lang || navigator.language || "en-US";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = event => {
+          let interim = "";
+          for (let index = event.resultIndex; index < event.results.length; index++) {
+            const result = event.results[index];
+            const phrase = result?.[0]?.transcript || "";
+            if (result.isFinal) voiceFinalTranscript += phrase;
+            else interim += phrase;
+          }
+          if (mode === "call" && voiceCallActive && (voiceFinalTranscript || interim)) {
+            const liveText = [voiceCallTranscript, `You: ${voiceFinalTranscript}${interim ? ` ${interim}` : ""}`].filter(Boolean).join("\\n\\n");
+            updateVoiceCallVisualState("listening", liveText);
+          } else if (mode === "dictate" && interim) {
+            setStatus(`Dictating: ${interim}`);
+          }
+        };
+
+        recognition.onerror = event => {
+          console.warn("FROSTGPT: Browser speech recognition error.", event.error);
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            voiceSessionActive = false;
+            voiceListening = false;
+            dictateActive = false;
+            if (voiceCallActive) {
+              voiceCallActive = false;
+              voiceReplyEnabled = false;
+              updateVoiceCallVisualState("error", "Microphone or speech-recognition permission was denied. Check your browser's site permissions.");
+            }
+            setStatus("Speech recognition permission was denied. Check your browser's microphone permissions.");
+            updateVoiceButtons();
+          }
+        };
+
+        recognition.onend = () => {
+          if (voiceRecognition !== recognition) return;
+          voiceRecognition = null;
+          const shouldProcess = voiceSessionActive;
+          voiceSessionActive = false;
+          voiceListening = false;
+          if (mode === "dictate") dictateActive = false;
+          updateVoiceButtons();
+          if (!shouldProcess) return;
+
+          const transcript = voiceFinalTranscript.trim();
+          voiceFinalTranscript = "";
+          if (transcript) {
+            if (mode === "dictate") {
+              const existing = messageInput.value.trim();
+              messageInput.value = [existing, transcript].filter(Boolean).join(existing ? " " : "");
+              messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+              setStatus("Dictation added to your message. Review it before sending.");
+              messageInput.focus();
+            } else if (voiceCallActive) {
+              messageInput.value = transcript;
+              messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+              const selectedProvider = settings.flashProvider;
+              voiceCallTranscript = [voiceCallTranscript, `You: ${transcript}`, "FROSTGPT: Thinking..."].filter(Boolean).join("\\n\\n");
+              updateVoiceCallVisualState("thinking", voiceCallTranscript);
+              setStatus("Sending your voice message to FROSTGPT...");
+              void sendMessage({ provider: selectedProvider });
+            }
+          } else if (mode === "dictate") {
+            setStatus("I didn't catch any words. Press Dictate and try again.");
+          } else if (voiceCallActive) {
+            updateVoiceCallVisualState("listening", voiceCallTranscript || "I didn't catch that. Please speak again.");
+            setStatus("I didn't catch that. Listening again...");
+            setTimeout(() => {
+              if (voiceCallActive && !isThinking && !voiceListening) void startVoiceInput("call");
+            }, 600);
+          }
+        };
+
+        recognition.start();
+        return;
+      } catch (error) {
+        console.warn("FROSTGPT: Browser speech recognition could not start; using audio upload fallback.", error);
+        voiceRecognition = null;
+        voiceSessionActive = false;
+        voiceListening = false;
+        updateVoiceButtons();
+        if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+          dictateActive = false;
+          setStatus(error.message || "Could not start speech recognition. Check microphone permissions.");
+          return;
+        }
+      }
+    }
 
     // Keep the speech engine's user-gesture unlock alive when a call
     // starts. Cancelling it here can make some browsers block later replies.
