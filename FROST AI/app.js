@@ -576,6 +576,7 @@ import {
 
   const DEFAULT_SETTINGS = {
     theme: "dark",
+    showModelSelector: true,
     accent: "blue",
     customColor: "#3694ff",
     fontSize: "medium",
@@ -670,6 +671,9 @@ import {
     body.classList.toggle("light-theme", lightTheme);
     body.classList.toggle("no-animations", !settings.animations);
 
+    const modelPickerElement = document.querySelector(".model-picker");
+    if (modelPickerElement) modelPickerElement.hidden = !settings.showModelSelector;
+
     const customColorRow = $("customColorRow");
     if (customColorRow) {
       customColorRow.hidden = settings.accent !== "custom";
@@ -684,6 +688,7 @@ import {
   function syncSettingsControls() {
     const controls = {
       settingTheme: settings.theme,
+      settingShowModelSelector: settings.showModelSelector,
       settingAccent: settings.accent,
       settingCustomColor: settings.customColor,
       settingFontSize: settings.fontSize,
@@ -1196,6 +1201,7 @@ import {
 
   const checkboxBindings = {
     settingHistory: "chatHistory",
+    settingShowModelSelector: "showModelSelector",
     settingSounds: "sounds",
     settingAnimations: "animations"
   };
@@ -1575,7 +1581,8 @@ import {
     messageInput.disabled = full;
     if (attachButton) attachButton.disabled = full;
     if (imageButton) imageButton.disabled = full;
-    if (modeSelect) modeSelect.disabled = full;
+    // A full chat blocks sending, not changing the selected model.
+    // Keep the model picker available so users can still switch back to Flash.
     ["dictateButton", "thinkButton", "openFileAttach", "openImageCreate", "openGifCreate"].forEach(id => {
       const control = document.getElementById(id);
       if (control) control.disabled = full;
@@ -1781,6 +1788,7 @@ import {
   });
   modeSelect.addEventListener("change", syncModelPicker);
   syncModelPicker();
+  applySettings();
 
   // Temporary public Ubuntu API endpoint for online FROSTGPT Flash testing.
   // Replace this Quick Tunnel URL when a stable named tunnel/domain is configured.
