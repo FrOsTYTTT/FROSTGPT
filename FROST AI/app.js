@@ -11,7 +11,8 @@ import {
   onAuthStateChanged,
   signOut,
   setPersistence,
-  inMemoryPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
@@ -71,6 +72,7 @@ import {
   const authExtra = $("authExtra");
   const tryOutButton = $("tryOutButton");
   const tryOutNote = $("tryOutNote");
+  const DEFAULT_TRY_OUT_NOTE = "This is only for guests that don't have Gmail accounts.";
   const guestAuthBackButton = $("guestAuthBackButton");
   let authGateMode = false;
 
@@ -261,7 +263,79 @@ import {
     }
   }
 
-  // Handle support and provider buttons at the window capture phase.
+  async function startGuestSession(button) {
+    if (!button || button.disabled) return;
+
+    const originalLabel = button.textContent || "Try Out";
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Starting…";
+
+    const showGuestStatus = message => {
+      if (authStatus) {
+        authStatus.hidden = false;
+        authStatus.textContent = message;
+      }
+    };
+
+    if (tryOutNote) {
+      tryOutNote.textContent = "Opening a temporary guest session…";
+      tryOutNote.style.maxWidth = "220px";
+    }
+    showGuestStatus("Starting your temporary guest session…");
+
+    try {
+      await authInitialization;
+      if (!firebaseReady || !auth) {
+        throw new Error("Guest access is unavailable because Firebase could not initialize.");
+      }
+
+      let guestUser = auth.currentUser;
+      if (!guestUser?.isAnonymous) {
+        // Store only the temporary sign-in session in this tab. Guest chat
+        // messages remain in memory and are never written to chat history.
+        await setPersistence(auth, browserSessionPersistence);
+        const result = await signInAnonymously(auth);
+        await auth.authStateReady();
+        guestUser = auth.currentUser || result.user;
+      }
+
+      if (!guestUser?.isAnonymous) {
+        throw new Error("Firebase did not establish a temporary guest session. Please try again.");
+      }
+
+      await handleSignedInUser(guestUser);
+      if (!isGuestSession) {
+        throw new Error("The guest session could not open. Please try again.");
+      }
+
+      if (authStatus) authStatus.textContent = "";
+    } catch (error) {
+      console.error("FROSTGPT: Guest sign-in failed.", error);
+      const messages = {
+        "auth/operation-not-allowed": "Guest sign-in is disabled in Firebase Authentication. Enable the Anonymous sign-in provider.",
+        "auth/admin-restricted-operation": "Guest sign-in is disabled for this Firebase project. Enable Anonymous sign-in.",
+        "auth/unauthorized-domain": "This website domain is not authorized for Firebase sign-in.",
+        "auth/network-request-failed": "A network error interrupted guest access. Check your connection and try again.",
+        "auth/too-many-requests": "Guest access is temporarily unavailable. Please try again later."
+      };
+      const message = messages[error?.code] || error?.message || "Could not start a guest session. Please try again.";
+      showGuestStatus(message);
+      if (tryOutNote) {
+        tryOutNote.textContent = error?.code === "auth/operation-not-allowed" ||
+          error?.code === "auth/admin-restricted-operation"
+          ? "Guest access needs Anonymous sign-in enabled in Firebase."
+          : "Guest access couldn't start. See the message below the sign-in options.";
+        tryOutNote.style.maxWidth = "220px";
+      }
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = originalLabel;
+    }
+  }
+
+  // Handle support, guest, and provider buttons at the window capture phase.
   // This runs before document/target handlers can swallow their clicks.
   window.addEventListener("click", event => {
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
@@ -277,6 +351,14 @@ import {
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
       }
       void openSupportWithVerification();
+      return;
+    }
+
+    const guestButton = findControl("#tryOutButton");
+    if (guestButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void startGuestSession(guestButton);
       return;
     }
 
@@ -330,7 +412,11 @@ import {
     if (authDescription) authDescription.textContent = "Choose a sign-in provider to continue to your AI workspace.";
     if (authExtra) authExtra.hidden = false;
     if (tryOutButton) tryOutButton.hidden = false;
-    if (tryOutNote) tryOutNote.hidden = false;
+    if (tryOutNote) {
+      tryOutNote.hidden = false;
+      tryOutNote.textContent = DEFAULT_TRY_OUT_NOTE;
+      tryOutNote.style.removeProperty("max-width");
+    }
     if (guestAuthBackButton) guestAuthBackButton.hidden = true;
     if (authStatus) authStatus.textContent = "";
   }
@@ -1362,12 +1448,14 @@ import {
     githubProvider = new GithubAuthProvider();
     githubProvider.addScope("user:email");
 
-    // Use memory-only sessions so a browser refresh or a new visit always
-    // returns to the sign-in screen instead of restoring a previous account.
+    // Keep regular accounts signed in across reloads. Guest authentication is
+    // session-only, so a refresh restores guest access without saving chat data.
     authInitialization = (async () => {
       await auth.authStateReady();
-      await setPersistence(auth, inMemoryPersistence);
-      if (auth.currentUser) await signOut(auth);
+      const persistence = auth.currentUser?.isAnonymous
+        ? browserSessionPersistence
+        : browserLocalPersistence;
+      await setPersistence(auth, persistence);
     })();
 
     firebaseReady = true;
@@ -5373,34 +5461,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   // EVENTS
   // ==========================================
 
-  tryOutButton?.addEventListener("click", async () => {
-    if (!firebaseReady) {
-      if (authStatus) authStatus.textContent = "Guest access is initializing. Please try again in a moment.";
-      try { await authInitialization; } catch {}
-    }
-    if (!firebaseReady || !auth) {
-      if (authStatus) authStatus.textContent = "Guest access is unavailable right now. Please try again later.";
-      return;
-    }
-    tryOutButton.disabled = true;
-    if (authStatus) authStatus.textContent = "Starting your temporary guest session…";
-    try {
-      const result = await signInAnonymously(auth);
-      await auth.authStateReady();
-      await handleSignedInUser(result.user);
-      if (authStatus) authStatus.textContent = "";
-    } catch (error) {
-      console.error("FROSTGPT: Guest sign-in failed.", error);
-      const messages = {
-        "auth/operation-not-allowed": "Guest access is not enabled in Firebase Authentication yet.",
-        "auth/network-request-failed": "A network error interrupted guest access. Check your connection and try again.",
-        "auth/too-many-requests": "Guest access is temporarily unavailable. Please try again later."
-      };
-      if (authStatus) authStatus.textContent = messages[error?.code] || error?.message || "Could not start a guest session.";
-    } finally {
-      tryOutButton.disabled = false;
-    }
-  });
+
 
   guestAuthBackButton?.addEventListener("click", () => {
     if (!isGuestSession || !currentUser) return;
