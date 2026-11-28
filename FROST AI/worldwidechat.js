@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { getFirestore, collection, doc, query, orderBy, limit, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSySyBfpeqUE8Dau5ZV5qNszWKoey1Cl4R5zIQ",authDomain:"frostgpt-4e3fa.firebaseapp.com",databaseURL:"https://frostgpt-4e3fa-default-rtdb.firebaseio.com",projectId:"frostgpt-4e3fa",storageBucket:"frostgpt-4e3fa.firebasestorage.app",messagingSenderId:"650451428263",appId:"1:650451428263:web:ce4dd9ea1678d2686c0c82",measurementId:"G-7EGCH66DG6"};
+const firebaseConfig={apiKey:"AIzaSyBfpeqUE8Dau5ZV5qNszWKoey1Cl4R5zIQ",authDomain:"frostgpt-4e3fa.firebaseapp.com",databaseURL:"https://frostgpt-4e3fa-default-rtdb.firebaseio.com",projectId:"frostgpt-4e3fa",storageBucket:"frostgpt-4e3fa.firebasestorage.app",messagingSenderId:"650451428263",appId:"1:650451428263:web:ce4dd9ea1678d2686c0c82",measurementId:"G-7EGCH66DG6"};
 const app=getApps().length?getApps()[0]:initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const status=$("status"),list=$("messages"),form=$("composer"),input=$("messageInput"),send=$("send"),notice=$("signInNotice"),preview=$("replyPreview"),replyText=$("replyText");
 let user=null,unsubscribe=null,replyTarget=null;
