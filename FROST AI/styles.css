@@ -2187,3 +2187,17 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .official-handbook-link{display:inline-flex;align-items:center;justify-content:center;margin:5px 6px;padding:5px 11px;border:1px solid var(--border-color,rgba(255,255,255,.22));border-radius:999px;color:var(--text-color,#e8eef8);font-size:11px;font-weight:700;text-decoration:none;transition:background .18s ease,border-color .18s ease,transform .18s ease}
 .official-handbook-link:hover{background:rgba(120,180,255,.12);border-color:rgba(120,180,255,.55);transform:translateY(-1px)}
 .official-handbook-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+
+/* Official FROSTAI intro tagline, appearing after the logo wordmark animation. */
+.frost-intro-caption{position:absolute;top:calc(50% + clamp(52px,7vw,68px));left:50%;color:#fff;font-size:clamp(12px,2.2vw,16px);font-weight:600;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;opacity:0;transform:translate(-50%,18px);text-shadow:0 3px 18px rgba(70,153,255,.35);animation:frost-intro-caption-in .8s cubic-bezier(.2,.8,.2,1) 4.05s forwards}
+@keyframes frost-intro-caption-in{to{opacity:1;transform:translate(-50%,0)}}
+.frost-intro-caption{z-index:2}
+
+/* Keep the handbook link white in every interactive state. */
+.official-handbook-link,.official-handbook-link:hover,.official-handbook-link:active,.official-handbook-link:visited,.official-handbook-link:focus,.official-handbook-link:focus-visible{color:#fff!important}
+.official-handbook-link:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.42)}
+
+/* Use the existing official icon wherever the main site's brand mark appears. */
+.brand img,.personality-header-button img,.pre-verification-brand img,.turnstile-verification-brand img,.provider-verification-brand img,.voice-call-brand img,.setting-copy strong img,.developer-brand img,.settings-header h2 img{display:inline-block;width:1.25em;height:1.25em;object-fit:contain;vertical-align:middle}
+.brand,.pre-verification-brand,.turnstile-verification-brand,.provider-verification-brand,.voice-call-brand,.developer-brand{display:flex;align-items:center;gap:8px}
