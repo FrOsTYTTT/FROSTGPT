@@ -9,6 +9,8 @@ import {
   signInWithPopup,
   onAuthStateChanged,
   signOut,
+  setPersistence,
+  inMemoryPersistence,
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
@@ -81,6 +83,7 @@ import {
       if (button) button.disabled = !enabled;
     });
   }
+  setProviderButtonsEnabled(false);
 
   async function verifyTurnstileToken(token) {
     if (!token || typeof token !== "string" || token.length > 2048) {
@@ -252,6 +255,7 @@ import {
   let appleProvider;
   let githubProvider;
   let firebaseReady = false;
+  let authInitialization = Promise.resolve();
   let currentUserId = null;
   let currentUser = null;
   // Declared with the other auth state to avoid temporal-dead-zone errors.
@@ -1267,6 +1271,14 @@ import {
 
     githubProvider = new GithubAuthProvider();
     githubProvider.addScope("user:email");
+
+    // Use memory-only sessions so a browser refresh or a new visit always
+    // returns to the sign-in screen instead of restoring a previous account.
+    authInitialization = (async () => {
+      await auth.authStateReady();
+      await setPersistence(auth, inMemoryPersistence);
+      if (auth.currentUser) await signOut(auth);
+    })();
 
     firebaseReady = true;
 
@@ -5512,16 +5524,22 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   }
 
   if (firebaseReady) {
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        // Let the Google success indicator finish before switching into the app.
-        if (providerVerificationPending) return;
-        await handleSignedInUser(user);
-      } else {
-        handledAuthUid = null;
-        openSettingsAfterSignIn = false;
-        showLogin();
-      }
+    void authInitialization.then(() => {
+      setProviderButtonsEnabled(true);
+      onAuthStateChanged(auth, async user => {
+        if (user) {
+          // Only a sign-in started during this page visit may open the app.
+          if (providerVerificationPending) return;
+          await handleSignedInUser(user);
+        } else {
+          handledAuthUid = null;
+          openSettingsAfterSignIn = false;
+          showLogin();
+        }
+      });
+    }).catch(error => {
+      console.error("FROSTGPT: Session reset could not be initialized.", error);
+      if (authStatus) authStatus.textContent = "Sign-in could not initialize. Please refresh and try again.";
     });
   }
 
