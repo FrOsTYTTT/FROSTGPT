@@ -2114,3 +2114,31 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
     display: none;
   }
 }
+
+
+/* Coordinated FrOsT AI auth-card lockup animation. */
+#authScreen .auth-card .auth-logo.auth-logo-lockup {
+  position: relative;
+  top: 0;
+  animation:
+    frost-auth-lockup-float 3.8s ease-in-out infinite,
+    frost-auth-lockup-glow 3.8s ease-in-out infinite !important;
+}
+
+@keyframes frost-auth-lockup-float {
+  0%, 100% { top: 0; }
+  50% { top: -5px; }
+}
+
+@keyframes frost-auth-lockup-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(91, 174, 255, 0)); }
+  50% { filter: drop-shadow(0 5px 13px rgba(91, 174, 255, .22)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #authScreen .auth-card .auth-logo.auth-logo-lockup {
+    animation: none !important;
+    top: 0;
+    filter: none;
+  }
+}
