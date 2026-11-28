@@ -1559,8 +1559,8 @@ import {
       .replace(/^\s*>\s?/gm, "")
       .replace(/^\s*[-+]\s+/gm, "")
       .replace(/^\s*\d+\.\s+/gm, "")
-      // Give speech engines a phonetic spelling so the brand is spoken as one name.
-      .replace(/FROSTGPT(?:™)?/gi, "Frost G P T")
+      // Spell out each letter; Google voices can blend "G P T" into a different word.
+      .replace(/FROSTGPT(?:™)?/gi, "Frost Gee Pee Tee")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -4622,7 +4622,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
       // Keep the model's original reply clean for future context. The support
       // note and team sign-off are added only to the user-facing response.
-      const modelReply = String(reply ?? "").trim();
+      const modelReply = String(reply ?? "")
+        .replace(/frost[\s-]*jipt/gi, "FROSTGPT™")
+        .trim();
       const displayReply = window.FROSTGPTSupport
         ? window.FROSTGPTSupport.formatReply(message, modelReply)
         : modelReply;
