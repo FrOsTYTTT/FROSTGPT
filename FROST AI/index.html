@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-27">
+  <link rel="stylesheet" href="/styles.css?v=20261127-28">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))"></script>
 </head>
 
@@ -36,7 +36,7 @@
         <img src="/icon.svg" alt="" width="30" height="30">
         <span>FROSTGPT™</span>
       </a>
-      <a class="support-mail-link" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support" aria-label="Email FROSTGPT support">
+      <a class="support-mail-link" href="#support" data-support-verification="true" aria-label="Email FROSTGPT support">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 6.75A2.75 2.75 0 0 1 5.25 4h13.5a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 18.75 20H5.25a2.75 2.75 0 0 1-2.75-2.75V6.75Zm2.1-.4 7.4 5.8 7.4-5.8a.75.75 0 0 0-.65-.35H5.25a.75.75 0 0 0-.65.35Zm14.9 2.5-7.04 5.51a.75.75 0 0 1-.92 0L4.5 8.85v8.4c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75v-8.4Z"/></svg>
         <span>Gmail Support</span>
       </a>
@@ -102,6 +102,16 @@
     </div>
   </section>
 
+  <section id="supportPage" class="support-page" hidden aria-label="FROSTGPT support information">
+    <div class="support-page-card">
+      <button id="supportBackButton" class="support-back-button" type="button">← Back</button>
+      <img class="support-page-logo" src="/icon.svg" alt="FROSTGPT icon">
+      <h1>FROSTGPT™ Support</h1>
+      <p>If you really need support, email this account about a bug, or an item you want inside of FROSTGPT™ and send it to us to make it happen!</p>
+      <a class="support-page-email" href="#support" data-support-verification="true">noreplyfrostai@gmail.com</a>
+    </div>
+  </section>
+
   <section id="providerVerificationScreen" class="provider-verification-screen" hidden aria-live="polite" aria-label="Sign-in verification">
     <div class="provider-verification-card">
       <div class="provider-verification-mark">✓</div>
@@ -156,7 +166,7 @@
         <span id="statusText">Ready</span>
 
         <button id="openSettings" type="button">⚙ Settings</button>
-        <a class="header-support-link" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support" aria-label="Email FROSTGPT support">✉ Support</a>
+        <a class="header-support-link" href="#support" data-support-verification="true" aria-label="Email FROSTGPT support">✉ Support</a>
         <button id="installButton" type="button" hidden>↓ Install app</button>
 
         <div id="accountArea" title="Signed-in account">
@@ -350,9 +360,9 @@
         <div class="setting-copy">
           <strong>My support account</strong>
           <small>Official FROSTGPT support email address.</small>
-          <a class="support-account-email" href="mailto:noreplyfrostai@gmail.com">noreplyfrostai@gmail.com</a>
+          <a class="support-account-email" href="#support" data-support-verification="true">noreplyfrostai@gmail.com</a>
         </div>
-        <a class="support-email-button" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support">Email support</a>
+        <a class="support-email-button" href="#support" data-support-verification="true">Email support</a>
       </div>
 
       <div class="settings-footer">
