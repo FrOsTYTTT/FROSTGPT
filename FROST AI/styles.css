@@ -1872,7 +1872,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .pre-verification-checkbox input{width:19px;height:19px;margin:0;accent-color:#3694ff;cursor:pointer}
 .pre-verification-checkbox:focus-within{outline:2px solid #3694ff;outline-offset:3px}
 
-/* FROSTGPT intro animation shown once on each fresh page load, before sign-in. */
+/* FROSTGPT intro animation: logo rises, then FrOsT and AI appear; total 5 seconds. */
 .frost-intro {
   --frost-intro-logo-size: clamp(58px, 12vw, 86px);
   --frost-intro-logo-half: clamp(29px, 6vw, 43px);
@@ -1888,7 +1888,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
     radial-gradient(ellipse at 50% 0%, #183452 0%, transparent 58%),
     #101722;
   opacity: 1;
-  animation: frost-intro-exit .7s ease 13s forwards;
+  animation: frost-intro-exit .45s ease 4.55s forwards;
 }
 .frost-intro-stage {
   position: relative;
@@ -1905,8 +1905,8 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   object-fit: contain;
   opacity: 0;
   filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px);
-  transform: translate(-50%, -50%) scale(.72) rotate(-8deg);
-  animation: frost-intro-logo-in 4s cubic-bezier(.2, .8, .2, 1) .12s forwards;
+  transform: translate(-50%, calc(-50% + 38vh)) scale(.72) rotate(-8deg);
+  animation: frost-intro-logo-in 1.35s cubic-bezier(.2, .8, .2, 1) .1s forwards;
 }
 .frost-intro-word {
   position: absolute;
@@ -1923,17 +1923,17 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .frost-intro-word-left {
   right: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
   transform: translate(54px, -50%);
-  animation: frost-intro-left-in 4s cubic-bezier(.18, .82, .22, 1) 4.2s forwards;
+  animation: frost-intro-left-in 1.05s cubic-bezier(.18, .82, .22, 1) 1.55s forwards;
 }
 .frost-intro-word-right {
   left: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
   color: #8fc5ff;
   transform: translate(-54px, -50%);
-  animation: frost-intro-right-in 4s cubic-bezier(.18, .82, .22, 1) 8.4s forwards;
+  animation: frost-intro-right-in 1.05s cubic-bezier(.18, .82, .22, 1) 2.75s forwards;
 }
 @keyframes frost-intro-logo-in {
-  0% { opacity: 0; filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px); transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
-  70% { opacity: 1; filter: drop-shadow(0 0 29px rgba(70, 153, 255, .52)) blur(0); transform: translate(-50%, -50%) scale(1.07) rotate(2deg); }
+  0% { opacity: 0; filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px); transform: translate(-50%, calc(-50% + 38vh)) scale(.72) rotate(-8deg); }
+  70% { opacity: 1; filter: drop-shadow(0 0 29px rgba(70, 153, 255, .52)) blur(0); transform: translate(-50%, calc(-50% - 2vh)) scale(1.07) rotate(2deg); }
   100% { opacity: 1; filter: drop-shadow(0 0 22px rgba(70, 153, 255, .38)) blur(0); transform: translate(-50%, -50%) scale(1) rotate(0); }
 }
 @keyframes frost-intro-left-in {
