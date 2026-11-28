@@ -1538,3 +1538,18 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .turnstile-section{display:flex;flex-direction:column;align-items:center;gap:12px;margin:24px 0 4px;min-height:82px}
 #frostTurnstileWidget{min-height:65px}
 #turnstileStatus{min-height:18px;color:#aab6c5;font-size:12px;line-height:1.4;text-align:center}
+
+
+/* Transparent, square Think and Dictate controls. */
+#thinkButton,
+#dictateButton {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
+#thinkButton.is-active,
+#dictateButton.is-active {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
