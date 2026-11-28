@@ -1179,6 +1179,24 @@ import {
 
     console.log("FROSTGPT: Firebase initialized.");
     console.log("FROSTGPT: Firestore initialized.");
+    
+    // Register sign-in clicks immediately after Firebase is ready. Delegation
+    // keeps the provider buttons responsive even if later UI initialization
+    // encounters an unrelated error.
+    document.addEventListener("click", event => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target?.closest("#googleSignInButton, #appleSignInButton, #githubSignInButton");
+      if (!button) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.id === "googleSignInButton") {
+        void signInWithProvider(googleProvider, button, "Google");
+      } else if (button.id === "appleSignInButton") {
+        void signInWithProvider(appleProvider, button, "Apple");
+      } else if (button.id === "githubSignInButton") {
+        void signInWithProvider(githubProvider, button, "GitHub");
+      }
+    }, true);
   } catch (error) {
     console.error("FROSTGPT: Firebase initialization failed.", error);
 
@@ -3957,18 +3975,6 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       button.style.opacity = "1";
     }
   }
-
-  googleSignInButton?.addEventListener("click", () => {
-    signInWithProvider(googleProvider, googleSignInButton, "Google");
-  });
-
-  appleSignInButton?.addEventListener("click", () => {
-    signInWithProvider(appleProvider, appleSignInButton, "Apple");
-  });
-
-  githubSignInButton?.addEventListener("click", () => {
-    signInWithProvider(githubProvider, githubSignInButton, "GitHub");
-  });
 
   // ==========================================
   // AUTHENTICATION DISPLAY
