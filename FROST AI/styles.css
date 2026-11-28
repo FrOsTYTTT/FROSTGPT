@@ -1965,15 +1965,21 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 
 /* FrOsT AI wordmark beside the snowflake in the authentication card. */
 .auth-logo.auth-logo-lockup {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: clamp(7px, 1.8vw, 13px);
+  justify-items: center;
+  column-gap: 10px;
   width: 100%;
   margin: 0 auto 12px;
+  text-align: center;
 }
+.auth-logo-lockup .auth-logo-word-left { justify-self: end; }
+.auth-logo-lockup .auth-logo-word-right { justify-self: start; }
 .auth-logo-lockup .auth-logo-image {
-  flex: 0 0 auto;
+  display: block;
+  grid-column: 2;
+  justify-self: center;
   width: 64px;
   height: 64px;
   margin: 0;
@@ -1989,8 +1995,18 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   text-shadow: 0 3px 18px rgba(77, 155, 255, .22);
 }
 .auth-logo-word-right { color: #8fc5ff; }
+.auth-card h1,
+.auth-card p {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
 @media (max-width: 520px) {
-  .auth-logo.auth-logo-lockup { gap: 7px; }
+  .auth-logo.auth-logo-lockup {
+    grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+    column-gap: 7px;
+  }
   .auth-logo-lockup .auth-logo-image { width: 56px; height: 56px; }
   .auth-logo-word { font-size: clamp(20px, 6vw, 25px); }
 }
