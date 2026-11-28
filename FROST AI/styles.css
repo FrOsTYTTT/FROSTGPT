@@ -1871,3 +1871,84 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .pre-verification-checkbox{display:flex;align-items:center;justify-content:center;gap:12px;width:max-content;max-width:100%;margin:26px auto 0;padding:15px 18px;border:1px solid #526274;border-radius:12px;background:#192330;color:#f5f7fb;font-size:14px;font-weight:600;cursor:pointer}
 .pre-verification-checkbox input{width:19px;height:19px;margin:0;accent-color:#3694ff;cursor:pointer}
 .pre-verification-checkbox:focus-within{outline:2px solid #3694ff;outline-offset:3px}
+
+/* FROSTGPT intro animation shown once on each fresh page load, before sign-in. */
+.frost-intro {
+  --frost-intro-logo-size: clamp(58px, 12vw, 86px);
+  --frost-intro-logo-half: clamp(29px, 6vw, 43px);
+  --frost-intro-gap: clamp(10px, 2.4vw, 19px);
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(39, 119, 203, .22), transparent 48%),
+    radial-gradient(ellipse at 50% 0%, #183452 0%, transparent 58%),
+    #101722;
+  opacity: 1;
+  animation: frost-intro-exit .7s ease 3.55s forwards;
+}
+.frost-intro-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.frost-intro-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: var(--frost-intro-logo-size);
+  height: var(--frost-intro-logo-size);
+  object-fit: contain;
+  opacity: 0;
+  filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px);
+  transform: translate(-50%, -50%) scale(.72) rotate(-8deg);
+  animation: frost-intro-logo-in .9s cubic-bezier(.2, .8, .2, 1) .12s forwards;
+}
+.frost-intro-word {
+  position: absolute;
+  top: 50%;
+  color: #f4f8ff;
+  font-size: clamp(28px, 7.2vw, 46px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.055em;
+  white-space: nowrap;
+  text-shadow: 0 4px 24px rgba(77, 155, 255, .25);
+  opacity: 0;
+}
+.frost-intro-word-left {
+  right: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
+  transform: translate(54px, -50%);
+  animation: frost-intro-left-in .78s cubic-bezier(.18, .82, .22, 1) 1.12s forwards;
+}
+.frost-intro-word-right {
+  left: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
+  color: #8fc5ff;
+  transform: translate(-54px, -50%);
+  animation: frost-intro-right-in .78s cubic-bezier(.18, .82, .22, 1) 2.04s forwards;
+}
+@keyframes frost-intro-logo-in {
+  0% { opacity: 0; filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px); transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
+  70% { opacity: 1; filter: drop-shadow(0 0 29px rgba(70, 153, 255, .52)) blur(0); transform: translate(-50%, -50%) scale(1.07) rotate(2deg); }
+  100% { opacity: 1; filter: drop-shadow(0 0 22px rgba(70, 153, 255, .38)) blur(0); transform: translate(-50%, -50%) scale(1) rotate(0); }
+}
+@keyframes frost-intro-left-in {
+  from { opacity: 0; transform: translate(54px, -50%); filter: blur(5px); }
+  to { opacity: 1; transform: translate(0, -50%); filter: blur(0); }
+}
+@keyframes frost-intro-right-in {
+  from { opacity: 0; transform: translate(-54px, -50%); filter: blur(5px); }
+  to { opacity: 1; transform: translate(0, -50%); filter: blur(0); }
+}
+@keyframes frost-intro-exit {
+  to { opacity: 0; visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frost-intro { animation: none; opacity: 0; visibility: hidden; }
+  .frost-intro-logo,
+  .frost-intro-word { animation: none; }
+}
