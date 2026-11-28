@@ -4280,6 +4280,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     conversation.display.push(message);
     renderMessage(message);
+    // Show the continuation prompt immediately when message 79 is added,
+    // instead of waiting for the assistant's reply and the final request cleanup.
+    updateChatLimitUI();
 
     if (role === "user") updateTitle(conversation, text);
 
