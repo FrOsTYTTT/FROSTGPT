@@ -2073,3 +2073,44 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 .guest-auth-back-button:hover { background: rgba(44,91,145,.42); }
 #authScreen [hidden] { display: none !important; }
+
+
+/* Keep the auth topbar actions out of the auth-screen layout flow. */
+#authScreen .auth-topbar-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+  width: max-content;
+  max-width: min(180px, 42vw);
+  pointer-events: auto;
+  z-index: 7;
+}
+#authScreen .try-out-topbar {
+  width: min(155px, 38vw);
+  max-width: 100%;
+  align-items: flex-end;
+}
+#authScreen .try-out-note {
+  max-width: 100%;
+  text-align: right !important;
+}
+#authScreen .auth-capability:nth-child(2) {
+  top: 132px;
+}
+@media (max-width: 520px) {
+  #authScreen .auth-topbar-actions {
+    max-width: min(150px, 43vw);
+  }
+  #authScreen .try-out-topbar {
+    width: min(132px, 40vw);
+  }
+  #authScreen .auth-capability:nth-child(2) {
+    display: none;
+  }
+}
