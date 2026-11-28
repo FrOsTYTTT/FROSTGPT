@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-22">
+  <link rel="stylesheet" href="/styles.css?v=20261127-23">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))"></script>
 </head>
 
@@ -39,7 +39,13 @@
       <div class="auth-capability"><span>▤</span> File Support</div>
       <div class="auth-capability"><span>↗</span> Creative Writing</div>
     </div>
-    <div class="auth-team-credit-background">Developed by FrOsT · FROSTGPT Development Team<br>Independent AI project, built with creativity and curiosity.</div>
+    <div class="auth-team-credit-background" aria-label="FROSTGPT development credits">
+      <span class="auth-credit-arc" aria-hidden="true"></span>
+      <span class="auth-credit-line auth-credit-founder">Developed by FrOsT</span>
+      <span class="auth-credit-line auth-credit-team">FROSTGPT Development Team</span>
+      <span class="auth-credit-line auth-credit-note">Independent AI project</span>
+      <span class="auth-credit-line auth-credit-tagline">Built with creativity and curiosity</span>
+    </div>
     <div class="auth-card">
       <div class="auth-logo">❄️</div>
       <h1>Welcome to FROSTGPT™</h1>
@@ -571,6 +577,6 @@
 
   <script src="/chat.js?v=20261126-1"></script>
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261127-32"></script>
+  <script type="module" src="/app.js?v=20261127-33"></script>
 </body>
 </html>
