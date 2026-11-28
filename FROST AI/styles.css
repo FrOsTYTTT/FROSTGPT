@@ -1860,3 +1860,14 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 
 
 .support-inline-logo{display:inline-block;width:21px;height:21px;object-fit:contain;vertical-align:-5px;margin:0 3px;border-radius:5px}
+
+/* First, visitors confirm they are ready to begin the real Cloudflare check. */
+.pre-verification-screen{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:24px;background:radial-gradient(ellipse at 50% 0%,#183452 0%,transparent 58%),#171717;color:#f5f7fb}
+.pre-verification-screen[hidden]{display:none!important}
+.pre-verification-card{width:min(100%,440px);padding:38px 28px;border:1px solid #3b4654;border-radius:22px;background:#212a35;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+.pre-verification-brand{margin-bottom:24px;color:#aab7c7;font-size:13px;font-weight:750;letter-spacing:.3px}
+.pre-verification-card h1{margin:0 0 10px;font-size:23px}
+.pre-verification-card p{margin:0;color:#aab7c7;font-size:13px;line-height:1.5}
+.pre-verification-checkbox{display:flex;align-items:center;justify-content:center;gap:12px;width:max-content;max-width:100%;margin:26px auto 0;padding:15px 18px;border:1px solid #526274;border-radius:12px;background:#192330;color:#f5f7fb;font-size:14px;font-weight:600;cursor:pointer}
+.pre-verification-checkbox input{width:19px;height:19px;margin:0;accent-color:#3694ff;cursor:pointer}
+.pre-verification-checkbox:focus-within{outline:2px solid #3694ff;outline-offset:3px}
