@@ -11,7 +11,7 @@
 header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-weight:750}.brand img{width:34px;height:34px}.back{color:var(--muted);text-decoration:none;font-size:13px}
 h1{margin:0;font-size:clamp(23px,4vw,30px)}.intro{margin:3px 0 0;color:var(--muted);font-size:13px}#status{color:var(--muted);font-size:12px}
-#messages{display:flex;flex:1;min-height:240px;max-height:calc(100vh - 290px);overflow:auto;flex-direction:column;gap:11px;padding:2px}
+#messages{display:flex;flex:1;min-height:240px;max-height:calc(100vh - 290px);overflow:auto;flex-direction:column;gap:11px;padding:2px}#messages{scrollbar-width:thin;scrollbar-color:transparent transparent}#messages::-webkit-scrollbar{opacity:0}#messages::-webkit-scrollbar-thumb,#messages::-webkit-scrollbar-track{background:transparent;opacity:0}
 .message{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow-wrap:anywhere}.meta{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-size:11px}.meta strong{color:var(--text);font-size:13px}
 .message p{margin:9px 0;white-space:pre-wrap}.reply-reference{margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);border-radius:5px;background:var(--surface2);color:var(--muted);font-size:12px}
 .actions{display:flex;gap:8px}button{font:inherit;cursor:pointer}.actions button,.cancel{padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);font-size:12px}
