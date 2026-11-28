@@ -3998,7 +3998,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       }
       // Show the provider verification screen for three seconds with a visible countdown.
       const verificationTimer = $("providerVerificationTimer");
-      for (let seconds = 3; seconds > 0; seconds--) {
+      for (let seconds = 5; seconds > 0; seconds--) {
         if (verificationTimer) {
           verificationTimer.textContent = `Continuing in ${seconds} second${seconds === 1 ? "" : "s"}…`;
         }
