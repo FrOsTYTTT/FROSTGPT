@@ -3592,23 +3592,29 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         emailVerified: auth.currentUser.emailVerified
       });
 
-      if (authStatus) {
+      {
         const providerIcons = {
           Google: `<svg class="auth-provider-verification-icon auth-google-mark" viewBox="0 0 48 48" role="img" aria-label="Google"><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.91c-.58 2.96-2.25 5.48-4.73 7.18l7.66 5.94c4.47-4.13 7.14-10.21 7.14-17.59Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.86l-7.66-5.94c-2.13 1.43-4.86 2.27-8.25 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z"/><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/></svg>`,
           Apple: `<svg class="auth-provider-verification-icon" viewBox="0 0 24 24" role="img" aria-label="Apple"><path fill="currentColor" d="M16.37 12.26c.02 2.17 1.9 2.89 1.92 2.9-.02.05-.3 1.04-.99 2.06-.6.89-1.22 1.77-2.2 1.79-.96.02-1.27-.58-2.37-.58s-1.45.56-2.36.6c-.95.04-1.68-.96-2.29-1.84-1.25-1.81-2.2-5.12-.92-7.36.63-1.11 1.75-1.81 2.96-1.83.92-.02 1.79.63 2.37.63.57 0 1.65-.78 2.78-.67.47.02 1.8.19 2.65 1.43-.07.04-1.58.92-1.56 2.87ZM14.55 6.75c.5-.6.84-1.43.75-2.25-.72.03-1.59.48-2.1 1.08-.46.53-.87 1.37-.76 2.18.8.06 1.61-.4 2.11-1.01Z"/></svg>`,
           GitHub: `<svg class="auth-provider-verification-icon" viewBox="0 0 24 24" role="img" aria-label="GitHub"><path fill="currentColor" d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.55.1.76-.24.76-.54v-2.1c-3.1.67-3.76-1.32-3.76-1.32-.5-1.28-1.23-1.62-1.23-1.62-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 .1.76 2.23 3.31 1.69.1-.72.39-1.2.7-1.48-2.47-.28-5.07-1.24-5.07-5.5 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.42.11-2.96 0 0 .94-.3 3.05 1.14a10.6 10.6 0 0 1 5.55 0c2.11-1.44 3.05-1.14 3.05-1.14.61 1.54.23 2.68.11 2.96.72.78 1.15 1.78 1.15 3 0 4.27-2.6 5.21-5.08 5.49.4.35.75 1.02.75 2.06v3.05c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z"/></svg>`
         };
-        authStatus.classList.add("is-verifying");
-        authStatus.innerHTML = `
-          <span class="auth-verification-row">
-            ${providerIcons[providerName] || ""}
-            <strong>${providerName} Verified</strong>
-            <span class="auth-loading-spinner" aria-label="Loading"></span>
-          </span>
-          <span class="auth-verification-caption">Authentication successful · Logging in to FROSTGPT™…</span>
-        `;
+        const verificationScreen = $("providerVerificationScreen");
+        const verificationStatus = $("providerVerificationStatus");
+        if (verificationStatus) {
+          verificationStatus.innerHTML = `
+            <span class="auth-verification-row">
+              ${providerIcons[providerName] || ""}
+              <strong>${providerName} Verified</strong>
+              <span class="auth-loading-spinner" aria-label="Loading"></span>
+            </span>
+            <span class="auth-verification-caption">Authentication successful · Logging in to FROSTGPT™…</span>
+          `;
+        }
+        if (authScreen) authScreen.style.display = "none";
+        if (appElement) appElement.classList.remove("visible");
+        if (verificationScreen) verificationScreen.hidden = false;
       }
-      // Show the identity provider that actually completed authentication.
+      // Show a dedicated full-page provider verification screen.
       await new Promise(resolve => window.setTimeout(resolve, 900));
       providerVerificationPending = false;
 
@@ -3670,6 +3676,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   // ==========================================
 
   function showLogin() {
+    const verificationScreen = $("providerVerificationScreen");
+    if (verificationScreen) verificationScreen.hidden = true;
     stopVoiceInput();
     stopSpeaking();
 
@@ -3701,6 +3709,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   }
 
   function showApp(user) {
+    const verificationScreen = $("providerVerificationScreen");
+    if (verificationScreen) verificationScreen.hidden = true;
     currentUser = user;
     currentUserId = user.uid;
     updateImageGenerationLimitUI();
