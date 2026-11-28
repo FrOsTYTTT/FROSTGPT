@@ -1179,24 +1179,6 @@ import {
 
     console.log("FROSTGPT: Firebase initialized.");
     console.log("FROSTGPT: Firestore initialized.");
-    
-    // Register sign-in clicks immediately after Firebase is ready. Delegation
-    // keeps the provider buttons responsive even if later UI initialization
-    // encounters an unrelated error.
-    document.addEventListener("click", event => {
-      const target = event.target instanceof Element ? event.target : null;
-      const button = target?.closest("#googleSignInButton, #appleSignInButton, #githubSignInButton");
-      if (!button) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (button.id === "googleSignInButton") {
-        void signInWithProvider(googleProvider, button, "Google");
-      } else if (button.id === "appleSignInButton") {
-        void signInWithProvider(appleProvider, button, "Apple");
-      } else if (button.id === "githubSignInButton") {
-        void signInWithProvider(githubProvider, button, "GitHub");
-      }
-    }, true);
   } catch (error) {
     console.error("FROSTGPT: Firebase initialization failed.", error);
 
@@ -1205,6 +1187,25 @@ import {
         "Firebase initialization failed: " + error.message;
     }
   }
+
+  // Always register the provider-button handler, even when Firebase setup
+  // fails. This guarantees a click produces a visible status instead of
+  // silently doing nothing.
+  document.addEventListener("click", event => {
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest("#googleSignInButton, #appleSignInButton, #githubSignInButton");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (button.id === "googleSignInButton") {
+      void signInWithProvider(googleProvider, button, "Google");
+    } else if (button.id === "appleSignInButton") {
+      void signInWithProvider(appleProvider, button, "Apple");
+    } else if (button.id === "githubSignInButton") {
+      void signInWithProvider(githubProvider, button, "GitHub");
+    }
+  }, true);
 
   // ==========================================
   // CHAT ELEMENTS
