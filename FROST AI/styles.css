@@ -645,12 +645,12 @@
     #settingsPanel[hidden] { display:none !important; }
 
     .settings-card {
-      width:min(520px,100%);
-      max-height:min(88vh,760px);
+      width:min(440px,100%);
+      max-height:min(78vh,680px);
       overflow:auto;
       scrollbar-width:none;
       -ms-overflow-style:none;
-      padding:22px;
+      padding:16px;
       border:1px solid var(--border);
       border-radius:18px;
       background:var(--background);
@@ -681,15 +681,17 @@
       color:var(--text);
     }
 
-    .setting-row { padding:13px 0;border-bottom:1px solid var(--border); }
-    .setting-copy { min-width:0; }
-    .setting-copy strong { display:block;font-size:14px; }
-    .setting-copy small { display:block;margin-top:4px;color:var(--muted);font-size:12px; }
+    .setting-row { padding:10px 0;border-bottom:1px solid var(--border);gap:10px; }
+    .setting-copy { min-width:0;flex:1 1 auto; }
+    .setting-copy strong { display:block;font-size:13px; }
+    .setting-copy small { display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35; }
 
     .setting-control {
-      width:150px;
-      max-width:45%;
-      padding:9px;
+      flex:0 1 145px;
+      width:145px;
+      min-width:0;
+      max-width:42%;
+      padding:8px;
       border:1px solid var(--border);
       border-radius:9px;
       background:var(--surface);
@@ -698,10 +700,12 @@
 
     /* Rounded provider dropdown for switching between Online and FrOsTAI servers. */
     .setting-control.provider-select {
-      width:190px;
-      max-width:55%;
-      min-height:42px;
-      padding:10px 38px 10px 16px;
+      flex:0 1 165px;
+      width:165px;
+      max-width:44%;
+      min-width:0;
+      min-height:36px;
+      padding:8px 30px 8px 12px;
       appearance:none;
       -webkit-appearance:none;
       border-radius:999px;
@@ -1072,9 +1076,10 @@ button, .model-picker-trigger, .model-picker-option,
   #messageInput { min-height: 42px; max-height: 132px; padding: 10px 7px; }
   .composer-actions { gap: 6px; }
   .composer-button { width: 42px; height: 42px; flex: 0 0 42px; }
-  .settings-card, .personality-card { width: 100%; padding: 16px; }
-  .setting-row { align-items: flex-start; }
-  .setting-control { width: 44%; }
+  .settings-card, .personality-card { width: min(440px, 100%); padding: 14px; }
+  .setting-row { align-items: center; gap: 8px; }
+  .setting-copy { flex: 1 1 0; }
+  .setting-control { flex: 0 1 42%; width: 42%; max-width: 42%; }
 }
 
 /* Very narrow phones: let the header wrap instead of clipping controls. */
