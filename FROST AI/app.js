@@ -63,6 +63,12 @@ import {
 
   const authScreen = $("authScreen");
   const authStatus = $("authStatus");
+
+
+  const googleSignInButton = $("googleSignInButton");
+  const appleSignInButton = $("appleSignInButton");
+  const githubSignInButton = $("githubSignInButton");
+
   const turnstileStatus = $("turnstileStatus");
   const turnstileWidget = $("frostTurnstileWidget");
   let turnstileWidgetId = null;
@@ -134,10 +140,6 @@ import {
 
   window.addEventListener("frost-turnstile-ready", initializeTurnstile);
   if (window.turnstile) initializeTurnstile();
-
-  const googleSignInButton = $("googleSignInButton");
-  const appleSignInButton = $("appleSignInButton");
-  const githubSignInButton = $("githubSignInButton");
   const appElement = $("app");
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
