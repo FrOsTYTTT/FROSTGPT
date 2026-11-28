@@ -3614,8 +3614,15 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         if (appElement) appElement.classList.remove("visible");
         if (verificationScreen) verificationScreen.hidden = false;
       }
-      // Show a dedicated full-page provider verification screen.
-      await new Promise(resolve => window.setTimeout(resolve, 5000));
+      // Show the provider verification screen for three seconds with a visible countdown.
+      const verificationTimer = $("providerVerificationTimer");
+      for (let seconds = 3; seconds > 0; seconds--) {
+        if (verificationTimer) {
+          verificationTimer.textContent = `Continuing in ${seconds} second${seconds === 1 ? "" : "s"}…`;
+        }
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+      }
+      if (verificationTimer) verificationTimer.textContent = "Opening your workspace…";
       providerVerificationPending = false;
 
       // Do not rely solely on the auth-state listener to switch the UI.
@@ -3629,29 +3636,13 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       openSettingsAfterSignIn = false;
       console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
 
+      const verificationScreen = $("providerVerificationScreen");
+      if (verificationScreen) verificationScreen.hidden = true;
+      if (authScreen) authScreen.style.display = "";
+      if (appElement) appElement.classList.remove("visible");
       if (authStatus) {
         authStatus.classList.remove("is-verifying");
-        if (error.code === "auth/popup-closed-by-user") {
-          authStatus.textContent = "Sign-in window was closed.";
-        } else if (error.code === "auth/unauthorized-domain") {
-          authStatus.textContent =
-            "This website domain is not authorized in Firebase.";
-        } else if (error.code === "auth/popup-blocked") {
-          authStatus.textContent =
-            "Your browser blocked the sign-in popup. Allow popups for this FROSTGPT website and try again.";
-        } else if (error.code === "auth/network-request-failed") {
-          authStatus.textContent =
-            "A network error interrupted sign-in. Check your connection and try again.";
-        } else if (error.code === "auth/operation-not-allowed") {
-          authStatus.textContent =
-            `${providerName} sign-in is not enabled in Firebase Authentication yet.`;
-        } else if (error.code === "auth/account-exists-with-different-credential") {
-          authStatus.textContent =
-            "An account already exists with this email using another sign-in method.";
-        } else {
-          authStatus.textContent =
-            error.message || `${providerName} sign-in failed.`;
-        }
+        authStatus.textContent = "Authentication Failed, please try again later.";
       }
     } finally {
       button.disabled = false;
