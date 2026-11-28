@@ -171,24 +171,20 @@ import {
 
   let openSettingsAfterSignIn = false;
 
-  // Always register the provider-button handler, even when Firebase setup
-  // fails. This guarantees a click produces a visible status instead of
-  // silently doing nothing.
-  document.addEventListener("click", event => {
-    const target = event.target instanceof Element ? event.target : null;
-    const button = target?.closest("#googleSignInButton, #appleSignInButton, #githubSignInButton");
-    if (!button) return;
+  // Bind each provider button directly so unrelated document-level
+  // listeners cannot swallow its click before authentication starts.
+  googleSignInButton?.addEventListener("click", event => {
     event.preventDefault();
-    event.stopPropagation();
-
-    if (button.id === "googleSignInButton") {
-      void signInWithProvider(googleProvider, button, "Google");
-    } else if (button.id === "appleSignInButton") {
-      void signInWithProvider(appleProvider, button, "Apple");
-    } else if (button.id === "githubSignInButton") {
-      void signInWithProvider(githubProvider, button, "GitHub");
-    }
-  }, true);
+    void signInWithProvider(googleProvider, googleSignInButton, "Google");
+  });
+  appleSignInButton?.addEventListener("click", event => {
+    event.preventDefault();
+    void signInWithProvider(appleProvider, appleSignInButton, "Apple");
+  });
+  githubSignInButton?.addEventListener("click", event => {
+    event.preventDefault();
+    void signInWithProvider(githubProvider, githubSignInButton, "GitHub");
+  });
 
 
   // ==========================================
