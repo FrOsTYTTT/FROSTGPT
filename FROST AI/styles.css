@@ -69,6 +69,7 @@
     #authStatus.is-verifying { color:#e8edf5; }
     .auth-verification-row { display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:28px; }
     .auth-google-mark { width:19px;height:19px;flex:0 0 19px; }
+    .auth-provider-verification-icon { width:19px;height:19px;flex:0 0 19px; }
     .auth-verification-row strong { color:#e8edf5;font-size:14px;font-weight:700; }
     .auth-loading-spinner { width:15px;height:15px;border:2px solid rgba(232,237,245,.25);border-top-color:#8fc5ff;border-radius:50%;animation:authSpinner .75s linear infinite; }
     .auth-verification-caption { display:block;margin-top:6px;color:#9ca8b8;font-size:11px; }
