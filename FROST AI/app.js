@@ -1533,11 +1533,18 @@ import {
   }
 
   function updateChatLimitUI() {
-    const full = conversationMessageCount(getConversation()) >= MAX_CHAT_MESSAGES;
+    // Reserve room for a complete user/assistant turn. Normal chats reach
+    // exactly 80 messages; an incomplete odd-numbered history is safely locked at 79.
+    const full = conversationMessageCount(getConversation()) >= MAX_CHAT_MESSAGES - 1;
     chatFullNotice.hidden = !full;
     messageInput.disabled = full;
     if (attachButton) attachButton.disabled = full;
     if (imageButton) imageButton.disabled = full;
+    if (modeSelect) modeSelect.disabled = full;
+    ["dictateButton", "thinkButton", "openFileAttach", "openImageCreate", "openGifCreate"].forEach(id => {
+      const control = document.getElementById(id);
+      if (control) control.disabled = full;
+    });
     if (full) {
       messageInput.placeholder = "This chat is full. Continue in a new chat.";
       sendButton.disabled = true;
