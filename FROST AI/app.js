@@ -770,6 +770,33 @@ import {
   // ==========================================
 
   let nicknameSettingsElement = null;
+  let newChatFeatureTestSection = null;
+  let featureTestReturnConversationId = null;
+
+  function createNewChatFeatureTestSetting() {
+    const settingsPage = $("settingsGeneralPage");
+    if (!settingsPage) return;
+    if (!newChatFeatureTestSection) {
+      newChatFeatureTestSection = document.createElement("section");
+      newChatFeatureTestSection.id = "frostgptNewChatFeatureTest";
+      newChatFeatureTestSection.style.cssText = "margin:18px 0;padding:16px;border:1px solid var(--border-color,rgba(255,255,255,.12));border-radius:14px;color:inherit;";
+      const heading = document.createElement("h3");
+      heading.textContent = "Feature Testing";
+      heading.style.cssText = "margin:0 0 6px;font-size:16px;";
+      const description = document.createElement("p");
+      description.textContent = "Test the 80-message chat limit and continuation flow with a temporary demo conversation. Test chats are not saved.";
+      description.style.cssText = "margin:0 0 12px;font-size:13px;opacity:.7;";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Test New Chat Feature";
+      button.style.cssText = "padding:10px 14px;border:0;border-radius:10px;background:var(--accent,#3694ff);color:white;font:inherit;font-weight:650;cursor:pointer;";
+      button.addEventListener("click", startNewChatFeatureTest);
+      newChatFeatureTestSection.append(heading, description, button);
+      settingsPage.appendChild(newChatFeatureTestSection);
+    }
+    const allowed = String(currentUser?.email || "").trim().toLowerCase() === "2025ytsonic@gmail.com";
+    newChatFeatureTestSection.hidden = !allowed;
+  }
 
   function createNicknameSettings() {
     if (nicknameSettingsElement) return;
@@ -919,6 +946,7 @@ import {
     }
 
     createNicknameSettings();
+    createNewChatFeatureTestSetting();
     syncSettingsControls();
 
     settingsPanel.hidden = false;
@@ -1591,6 +1619,7 @@ import {
     const continued = {
       id: createId(),
       title: baseTitle + " (" + nextNumber + ")",
+      isFeatureTest: Boolean(previous.isFeatureTest),
       createdAt: now,
       updatedAt: now,
       continuationFrom: oldTitle,
@@ -1607,8 +1636,73 @@ import {
     updateAttachmentPreview();
     renderHistory();
     renderConversation();
-    trackChatWrite(saveConversationMetadata(continued));
+    if (!continued.isFeatureTest) {
+      trackChatWrite(saveConversationMetadata(continued));
+    }
     if (window.innerWidth <= 700 && sidebar) sidebar.classList.remove("open");
+  }
+
+  function startNewChatFeatureTest() {
+    if (String(currentUser?.email || "").trim().toLowerCase() !== "2025ytsonic@gmail.com") return;
+    if (getConversation()?.isFeatureTest) {
+      setStatus("The 80-message feature test is already active.");
+      closeSettings();
+      return;
+    }
+    if (isThinking) stopGenerating();
+    stopSpeaking();
+    stopVoiceInput();
+    featureTestReturnConversationId = activeConversationId;
+    const now = Date.now();
+    const demo = {
+      id: createId(),
+      title: "80-Message Feature Test",
+      isFeatureTest: true,
+      createdAt: now,
+      updatedAt: now,
+      continuationFrom: null,
+      continuationFlash: [],
+      continuationClassic: [],
+      display: Array.from({ length: MAX_CHAT_MESSAGES - 1 }, (_, index) => ({
+        id: createId(),
+        role: index % 2 === 0 ? "user" : "assistant",
+        text: "Demo message " + (index + 1) + " — temporary test content for the 80-message continuation feature.",
+        images: [],
+        generatedImage: null,
+        mode: "flash",
+        contextContent: null,
+        createdAt: now + index
+      })),
+      flash: Array.from({ length: 20 }, (_, index) => ({
+        role: index % 2 === 0 ? "user" : "assistant",
+        content: "Temporary continuation test context " + (index + 1) + "."
+      })),
+      classic: []
+    };
+    conversations.unshift(demo);
+    activeConversationId = demo.id;
+    watchActiveConversationMessages();
+    attachments = [];
+    updateAttachmentPreview();
+    renderHistory();
+    renderConversation();
+    closeSettings();
+    setStatus("Test ready: the 80-message limit is active. Press New Chat to test continuation.");
+  }
+
+  function exitNewChatFeatureTest() {
+    if (!getConversation()?.isFeatureTest) return;
+    conversations = conversations.filter(item => !item.isFeatureTest);
+    const returnConversation = conversations.find(item => item.id === featureTestReturnConversationId);
+    activeConversationId = returnConversation?.id || conversations[0]?.id || null;
+    featureTestReturnConversationId = null;
+    if (activeConversationId) watchActiveConversationMessages();
+    else stopLiveChatSync();
+    attachments = [];
+    updateAttachmentPreview();
+    renderHistory();
+    renderConversation();
+    setStatus("Feature test closed. Your original chat is restored.");
   }
 
   chatFullNewButton.addEventListener("click", () => continueConversation(getConversation()));
@@ -3399,11 +3493,26 @@ import {
   // ==========================================
 
   function appendContinuationHeader(container, conversation) {
-    if (!conversation || !conversation.continuationFrom) return;
-    const banner = document.createElement("div");
-    banner.className = "continued-from-banner";
-    banner.textContent = "Continued From " + conversation.continuationFrom;
-    container.appendChild(banner);
+    if (!conversation) return;
+    if (conversation.continuationFrom) {
+      const banner = document.createElement("div");
+      banner.className = "continued-from-banner";
+      banner.textContent = "Continued From " + conversation.continuationFrom;
+      container.appendChild(banner);
+    }
+    if (conversation.isFeatureTest) {
+      const testBar = document.createElement("div");
+      testBar.style.cssText = "display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:12px auto;padding:10px 14px;border:1px dashed var(--border-color,rgba(255,255,255,.2));border-radius:12px;max-width:560px;font-size:12px;";
+      const label = document.createElement("span");
+      label.textContent = "80-message feature test — temporary, not saved";
+      const exit = document.createElement("button");
+      exit.type = "button";
+      exit.textContent = "Exit Test";
+      exit.style.cssText = "padding:6px 10px;border:0;border-radius:8px;background:var(--accent,#3694ff);color:white;cursor:pointer;";
+      exit.addEventListener("click", exitNewChatFeatureTest);
+      testBar.append(label, exit);
+      container.appendChild(testBar);
+    }
   }
 
   function showWelcome() {
