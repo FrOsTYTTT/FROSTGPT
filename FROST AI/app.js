@@ -311,7 +311,7 @@ import {
     sounds: false,
     animations: true,
     preferredBackupModel: "auto",
-    flashProvider: "frostai"
+    flashProvider: "online"
   };
 
   let settings = { ...DEFAULT_SETTINGS };
@@ -323,16 +323,19 @@ import {
       if (saved) {
         const parsed = JSON.parse(saved);
 
+        const providerDefaultMigrated = localStorage.getItem("frostgpt_provider_default_migrated_v1") === "true";
+        const savedProvider = providerDefaultMigrated ? parsed.flashProvider : "online";
         settings = {
           ...DEFAULT_SETTINGS,
           ...parsed,
           preferredBackupModel: ["auto", "@cf/zai-org/glm-4.7-flash", "@cf/qwen/qwen3.8-27b"].includes(parsed.preferredBackupModel)
             ? parsed.preferredBackupModel
             : "auto",
-          flashProvider: ["online", "frostai"].includes(parsed.flashProvider)
-            ? parsed.flashProvider
-            : "frostai"
+          flashProvider: ["online", "frostai"].includes(savedProvider)
+            ? savedProvider
+            : "online"
         };
+        localStorage.setItem("frostgpt_provider_default_migrated_v1", "true");
       }
     } catch (error) {
       console.warn("FROSTGPT: Could not load settings.", error);
