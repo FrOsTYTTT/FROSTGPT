@@ -7,6 +7,7 @@ import {
   OAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   onAuthStateChanged,
   signOut,
   setPersistence,
@@ -65,6 +66,13 @@ import {
 
   const authScreen = $("authScreen");
   const authStatus = $("authStatus");
+  const authHeading = $("authHeading");
+  const authDescription = $("authDescription");
+  const authExtra = $("authExtra");
+  const tryOutButton = $("tryOutButton");
+  const tryOutNote = $("tryOutNote");
+  const guestAuthBackButton = $("guestAuthBackButton");
+  let authGateMode = false;
 
 
   const googleSignInButton = $("googleSignInButton");
@@ -301,6 +309,31 @@ import {
   });
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
+
+  function showGuestAuthenticationGate() {
+    if (!isGuestSession) return;
+    authGateMode = true;
+    if (authHeading) authHeading.textContent = "Authenticate Before Saving Data";
+    if (authDescription) authDescription.textContent = "Sign in with an account to pin or delete saved conversations.";
+    if (authExtra) authExtra.hidden = true;
+    if (tryOutButton) tryOutButton.hidden = true;
+    if (tryOutNote) tryOutNote.hidden = true;
+    if (guestAuthBackButton) guestAuthBackButton.hidden = false;
+    if (authStatus) authStatus.textContent = "";
+    if (appElement) appElement.classList.remove("visible");
+    if (authScreen) authScreen.style.display = "flex";
+  }
+
+  function restoreGuestAuthenticationScreen() {
+    authGateMode = false;
+    if (authHeading) authHeading.textContent = "Welcome to FROSTGPT™";
+    if (authDescription) authDescription.textContent = "Choose a sign-in provider to continue to your AI workspace.";
+    if (authExtra) authExtra.hidden = false;
+    if (tryOutButton) tryOutButton.hidden = false;
+    if (tryOutNote) tryOutNote.hidden = false;
+    if (guestAuthBackButton) guestAuthBackButton.hidden = true;
+    if (authStatus) authStatus.textContent = "";
+  }
   const accountName = $("accountName");
   const accountPhoto = $("accountPhoto");
 
@@ -313,6 +346,7 @@ import {
   let authInitialization = Promise.resolve();
   let currentUserId = null;
   let currentUser = null;
+  let isGuestSession = false;
   // Declared with the other auth state to avoid temporal-dead-zone errors.
   let handledAuthUid = null;
   let providerVerificationPending = false;
@@ -344,6 +378,7 @@ import {
 
   function getAccountName(user = currentUser) {
     if (!user) return "there";
+    if (user.isAnonymous) return "Guest";
 
     const nickname = getSavedNickname(user.uid).trim();
 
@@ -3009,6 +3044,10 @@ import {
 
   async function deleteConversation(conversationId, options = {}) {
     const safetyDeletion = options.safety === true;
+    if (isGuestSession && !safetyDeletion) {
+      showGuestAuthenticationGate();
+      return;
+    }
     if (!currentUserId || !firebaseReady || (!settings.chatHistory && !safetyDeletion)) return;
     if (deletingChats.has(conversationId)) return;
     const conversation = conversations.find(item => item.id === conversationId);
@@ -3449,9 +3488,10 @@ import {
     container.appendChild(fragment);
   }
 
-  const PINNED_CHATS_KEY = () => `frostgpt_pinned_chats_${currentUserId || "guest"}`;
+  const PINNED_CHATS_KEY = () => currentUserId ? `frostgpt_pinned_chats_${currentUserId}` : null;
 
   function readPinnedChats() {
+    if (isGuestSession || !currentUserId) return [];
     try {
       const saved = JSON.parse(localStorage.getItem(PINNED_CHATS_KEY()) || "[]");
       return Array.isArray(saved) ? [...new Set(saved.filter(id => typeof id === "string"))] : [];
@@ -3459,6 +3499,7 @@ import {
   }
 
   function writePinnedChats(ids) {
+    if (isGuestSession || !currentUserId) return false;
     try {
       localStorage.setItem(PINNED_CHATS_KEY(), JSON.stringify([...new Set(ids)]));
       return true;
@@ -3545,6 +3586,10 @@ import {
 
   function togglePinnedChat(conversationId) {
     if (!conversationId) return;
+    if (isGuestSession) {
+      showGuestAuthenticationGate();
+      return;
+    }
     const pinned = readPinnedChats();
     const index = pinned.indexOf(conversationId);
     if (index >= 0) pinned.splice(index, 1);
@@ -4131,6 +4176,8 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     stopLiveChatSync();
     currentUser = null;
     currentUserId = null;
+    isGuestSession = false;
+    restoreGuestAuthenticationScreen();
 
     // Restore guest voice preferences after signing out.
     loadVoicePreferences();
@@ -4159,7 +4206,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     const verificationScreen = $("providerVerificationScreen");
     if (verificationScreen) verificationScreen.hidden = true;
     currentUser = user;
-    currentUserId = user.uid;
+    isGuestSession = Boolean(user.isAnonymous);
+    currentUserId = isGuestSession ? null : user.uid;
+    authGateMode = false;
+    restoreGuestAuthenticationScreen();
     updateImageGenerationLimitUI();
 
     // Load this account's saved voice preferences.
@@ -5323,6 +5373,42 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
   // EVENTS
   // ==========================================
 
+  tryOutButton?.addEventListener("click", async () => {
+    if (!firebaseReady) {
+      if (authStatus) authStatus.textContent = "Guest access is initializing. Please try again in a moment.";
+      try { await authInitialization; } catch {}
+    }
+    if (!firebaseReady || !auth) {
+      if (authStatus) authStatus.textContent = "Guest access is unavailable right now. Please try again later.";
+      return;
+    }
+    tryOutButton.disabled = true;
+    if (authStatus) authStatus.textContent = "Starting your temporary guest session…";
+    try {
+      const result = await signInAnonymously(auth);
+      await auth.authStateReady();
+      await handleSignedInUser(result.user);
+      if (authStatus) authStatus.textContent = "";
+    } catch (error) {
+      console.error("FROSTGPT: Guest sign-in failed.", error);
+      const messages = {
+        "auth/operation-not-allowed": "Guest access is not enabled in Firebase Authentication yet.",
+        "auth/network-request-failed": "A network error interrupted guest access. Check your connection and try again.",
+        "auth/too-many-requests": "Guest access is temporarily unavailable. Please try again later."
+      };
+      if (authStatus) authStatus.textContent = messages[error?.code] || error?.message || "Could not start a guest session.";
+    } finally {
+      tryOutButton.disabled = false;
+    }
+  });
+
+  guestAuthBackButton?.addEventListener("click", () => {
+    if (!isGuestSession || !currentUser) return;
+    restoreGuestAuthenticationScreen();
+    if (authScreen) authScreen.style.display = "none";
+    if (appElement) appElement.classList.add("visible");
+  });
+
   sendButton.addEventListener("pointerdown", event => event.preventDefault());
   sendButton.addEventListener("click", () => {
     if (isThinking) {
@@ -5568,6 +5654,17 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     try {
       showApp(user);
+
+      if (user.isAnonymous) {
+        stopLiveChatSync();
+        conversations = [];
+        activeConversationId = null;
+        attachments = [];
+        newConversation();
+        setStatus("Guest session · chats are not saved");
+        console.log("FROSTGPT: Temporary guest session started.");
+        return;
+      }
 
       await loadUserConversations(user.uid);
 
