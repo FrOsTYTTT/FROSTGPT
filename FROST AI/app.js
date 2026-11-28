@@ -3049,6 +3049,7 @@ import {
   function endVoiceCall() {
     voiceCallActive = false;
     voiceReplyEnabled = false;
+    window.frostgptStopScreenShareFromCall?.();
     const callScreen = $("voiceCallScreen");
     if (callScreen) callScreen.hidden = true;
     // X closes only the call overlay and returns to the existing conversation.
@@ -5316,10 +5317,17 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       : settings.flashProvider;
     const imageAttachments = attachments.filter(item => item.kind !== "file");
     const fileAttachments = attachments.filter(item => item.kind === "file");
-    let sharedScreenFrame = null;
-    if (mode === "flash" && typeof window.frostgptCaptureSharedScreenFrame === "function") {
+    let sharedScreenFrames = [];
+    if (mode === "flash" && typeof window.frostgptGetSharedScreenFrames === "function") {
       try {
-        sharedScreenFrame = window.frostgptCaptureSharedScreenFrame();
+        sharedScreenFrames = window.frostgptGetSharedScreenFrames().slice(-5);
+      } catch (error) {
+        console.warn("FROSTGPT: Could not read recent live screen frames.", error);
+      }
+    } else if (mode === "flash" && typeof window.frostgptCaptureSharedScreenFrame === "function") {
+      try {
+        const frame = window.frostgptCaptureSharedScreenFrame();
+        if (frame) sharedScreenFrames = [frame];
       } catch (error) {
         console.warn("FROSTGPT: Could not capture the shared screen frame.", error);
       }
@@ -5328,9 +5336,9 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     const visionImageData = imageAttachments.flatMap(item =>
       item.visionImages?.length ? item.visionImages : [item.data]
     );
-    if (sharedScreenFrame) {
-      imageData.push(sharedScreenFrame);
-      visionImageData.push(sharedScreenFrame);
+    if (sharedScreenFrames.length) {
+      imageData.push(...sharedScreenFrames);
+      visionImageData.push(...sharedScreenFrames);
     }
     const hasGif = imageAttachments.some(item => item.isGif);
     const videoAttachments = imageAttachments.filter(item => item.kind === "video");
@@ -5345,10 +5353,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     if (mode === "flash") {
       const parts = [];
 
-      if (sharedScreenFrame) {
+      if (sharedScreenFrames.length) {
         parts.push({
           type: "text",
-          text: "The user is sharing their screen. The next image is a current screenshot captured from the screen they explicitly selected. Use it to answer questions about visible content. This is a still snapshot captured when the user sent this message, not continuous live video."
+          text: `The user has enabled live screen sharing and the following ${sharedScreenFrames.length} images are recent video frames sampled about once per second from the screen they selected, in chronological order. Compare the frames to understand visible changes and motion, and use the newest frame for the current state. This is a live sampled visual feed attached to the user's message or voice turn; it is not a raw continuous video stream.`
         });
       }
 
