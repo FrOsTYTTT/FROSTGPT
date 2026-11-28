@@ -3615,7 +3615,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         if (verificationScreen) verificationScreen.hidden = false;
       }
       // Show a dedicated full-page provider verification screen.
-      await new Promise(resolve => window.setTimeout(resolve, 900));
+      await new Promise(resolve => window.setTimeout(resolve, 5000));
       providerVerificationPending = false;
 
       // Do not rely solely on the auth-state listener to switch the UI.
