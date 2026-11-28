@@ -2016,13 +2016,11 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 
 /* Guest access and the authenticate-before-saving screen. */
 .auth-topbar-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
   pointer-events: auto;
 }
 .try-out-topbar {
