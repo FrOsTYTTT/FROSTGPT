@@ -109,7 +109,25 @@ import {
   async function runTurnstileVerification() {
     if (!turnstileWidget) throw new Error("Cloudflare verification page is unavailable.");
     if (!window.turnstile) {
-      await new Promise(resolve => window.addEventListener("frost-turnstile-ready", resolve, { once: true }));
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        let timeoutId;
+        const finish = (error) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeoutId);
+          window.removeEventListener("frost-turnstile-ready", onReady);
+          window.removeEventListener("frost-turnstile-error", onError);
+          error ? reject(error) : resolve();
+        };
+        const onReady = () => window.turnstile ? finish() : undefined;
+        const onError = () => finish(new Error("Cloudflare verification could not load. Please refresh and try again."));
+        timeoutId = window.setTimeout(() => finish(new Error("Cloudflare verification took too long to load. Please refresh and try again.")), 12000);
+        window.addEventListener("frost-turnstile-ready", onReady);
+        window.addEventListener("frost-turnstile-error", onError);
+        // Re-check after registering listeners to avoid missing a fast script load.
+        if (window.turnstile) finish();
+      });
     }
     if (!window.turnstile) throw new Error("Cloudflare verification could not load. Please refresh and try again.");
     if (turnstileWidgetId !== null) {
