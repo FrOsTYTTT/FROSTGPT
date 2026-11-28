@@ -171,12 +171,12 @@
       <button class="new-chat" id="newChat" type="button">＋ New chat</button>
       <button class="refresh-chats" id="refreshChats" type="button" title="Live sync is enabled" aria-label="Refresh chats">↻ Refresh chats</button>
       <button class="plugins-nav-button" id="openPlugins" type="button"><span aria-hidden="true">🧩</span> Plugins</button>
+      <a class="plugins-nav-button worldwide-page-link" href="/worldwidechat"><span aria-hidden="true">🌎</span> Worldwide Chat</a>
       <input id="searchChats" type="search" placeholder="Search chats...">
 
       <div class="sidebar-tabs" role="tablist" aria-label="Chat navigation">
         <button class="sidebar-tab active" id="chatsTabButton" type="button" role="tab" aria-selected="true">Chats</button>
         <button class="sidebar-tab" id="pinnedTabButton" type="button" role="tab" aria-selected="false">Pinned Chats📌</button>
-        <button class="sidebar-tab" id="worldwideTabButton" type="button" role="tab" aria-selected="false">🌎 Worldwide</button>
       </div>
       <section id="chatsTabPanel" class="sidebar-tab-panel">
         <div class="history-heading">YOUR CHATS</div>
@@ -220,28 +220,6 @@
       </div>
 
       <section id="chat"><div id="chatInner"></div></section>
-
-      <section id="worldwideChatPanel" class="worldwide-chat-panel" aria-label="Worldwide Chat" hidden>
-        <div class="worldwide-chat-heading">
-          <div>
-            <h2>🌎 Worldwide Chat</h2>
-            <p>Talk with the FROSTGPT community. Be respectful and keep personal information private.</p>
-          </div>
-          <span id="worldwideChatStatus" role="status" aria-live="polite">Connecting…</span>
-        </div>
-        <div id="worldwideMessagesList" class="worldwide-messages-list" aria-live="polite"></div>
-        <div class="worldwide-composer">
-          <div id="worldwideReplyPreview" class="worldwide-reply-preview" hidden>
-            <span id="worldwideReplyText"></span>
-            <button id="worldwideCancelReply" type="button" aria-label="Cancel reply">✕</button>
-          </div>
-          <textarea id="worldwideMessageInput" maxlength="500" rows="2" placeholder="Write a message to everyone…" aria-label="Worldwide Chat message"></textarea>
-          <div class="worldwide-composer-footer">
-            <span>500 characters max · No private information</span>
-            <button id="worldwideSendButton" type="button">Send</button>
-          </div>
-        </div>
-      </section>
 
       <div class="composer-area">
       <div id="chatFullNotice" class="chat-full-notice" hidden>
