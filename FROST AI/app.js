@@ -4569,20 +4569,27 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         ? latestUserText.filter(part => part?.type === "text").map(part => part.text || "").join(" ")
         : "").trim();
 
-    // Keep the project's official team credits factual and consistent across providers.
-    if (/\b(who (are|is) (the )?(official )?(team|team members)|official team members|who('s| is) on (the )?team|list (the )?(official )?team)\b/i.test(latestQuestion)) {
-      return {
-        reply: "**The official FROSTGPT™ team:**\n\n- **FrOsT — Founder:** Founded the project and leads its vision, development, and direction.\n- **ChatGPT — Coder/Brainstormer:** Helps with coding, debugging, technical explanations, and brainstorming ideas.\n- **Doge — Helper With The Roblox Ideas:** Helped with the Roblox ideas that contributed to how the project got started.\n\nThose are the three official team members. **FrOsTAI** is the project/team name, not a separate team member."
-      };
-    }
+    // Give Flash accurate project facts as context, while letting the model answer naturally.
+    const projectContext = [
+      "FROSTGPT™ project facts (use as factual context, not as a script or mandatory response):",
+      "The official team has exactly three members:",
+      "FrOsT — Founder; founded the project and leads its vision, development, and direction.",
+      "ChatGPT — Coder/Brainstormer; helps with coding, debugging, technical explanations, and brainstorming.",
+      "Doge — Helper With The Roblox Ideas; helped with the Roblox ideas that contributed to how the project got started.",
+      "FrOsTAI is the project/team name, not an additional team member.",
+      "When relevant, answer in your own natural, friendly voice. Adapt to the user's wording, handle follow-up questions conversationally, and do not repeat a fixed announcement unless it genuinely fits."
+    ].join("\n");
 
     // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
     // is explicit and persisted in Settings; failures never switch providers.
     if (selectedProvider === "online") {
-      const messages = history.map(item => ({
-        role: item.role,
-        content: item.content
-      }));
+      const messages = [
+        { role: "system", content: projectContext },
+        ...history.map(item => ({
+          role: item.role,
+          content: item.content
+        }))
+      ];
       const latestUserMessage = [...messages].reverse().find(item => item.role === "user");
       if (!latestUserMessage) throw new Error("Please enter a text message.");
 
@@ -4625,7 +4632,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       }
     }
 
-    let prompt = promptParts.join("\n\n").slice(-3600);
+    let prompt = projectContext + "\n\n" + promptParts.join("\n\n").slice(-3600);
     const personality = getSavedPersonality().trim().slice(0, 300);
     if (personality) {
       prompt = "Response preferences: " + personality + "\n\n" + prompt;
