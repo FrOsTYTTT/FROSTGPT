@@ -686,7 +686,19 @@
     // screen stream is active. Frames are sent only with the user's next
     // message/voice turn; the raw screen stream is never uploaded.
     window.frostgptCaptureSharedScreenFrame = captureScreenFrame;
-    window.frostgptGetSharedScreenFrames = () => recentScreenFrames.map(frame => frame.data).slice(-5);
+    window.frostgptGetSharedScreenFrames = () => {
+      if (activeScreenStream) {
+        const latest = recentScreenFrames[recentScreenFrames.length - 1];
+        if (!latest || Date.now() - latest.capturedAt > 700) {
+          const currentFrame = captureScreenFrame();
+          if (currentFrame) {
+            recentScreenFrames.push({data:currentFrame,capturedAt:Date.now()});
+            if (recentScreenFrames.length > 5) recentScreenFrames.shift();
+          }
+        }
+      }
+      return recentScreenFrames.map(frame => frame.data).slice(-5);
+    };
     window.frostgptIsScreenSharing = () => !!activeScreenStream;
     window.frostgptStopScreenShareFromCall = stopSharing;
     async function startScreenSharing() {
