@@ -177,8 +177,8 @@ import {
   async function openSupportWithVerification() {
     if (supportVerificationInProgress) return;
     supportVerificationInProgress = true;
-    showTurnstileVerificationPage();
     try {
+      showTurnstileVerificationPage();
       await runTurnstileVerification();
       if (turnstileScreen) turnstileScreen.hidden = true;
       if (supportPage) supportPage.hidden = false;
@@ -190,20 +190,37 @@ import {
     }
   }
 
-  // Capture support clicks before other page scripts can stop propagation.
-  // This also prevents the browser from falling through to the #support hash.
-  document.addEventListener("click", event => {
+  // Handle support and provider buttons at the window capture phase.
+  // This runs before document/target handlers can swallow their clicks.
+  window.addEventListener("click", event => {
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    const supportLink = path.find(node =>
-      node instanceof Element && node.matches("[data-support-verification]")
-    ) || (event.target instanceof Element ? event.target.closest("[data-support-verification]") : null);
-    if (!supportLink) return;
+    const findControl = selector => path.find(node =>
+      node instanceof Element && node.matches(selector)
+    ) || (event.target instanceof Element ? event.target.closest(selector) : null);
+
+    const supportLink = findControl("[data-support-verification]");
+    if (supportLink) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (window.location.hash === "#support") {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+      void openSupportWithVerification();
+      return;
+    }
+
+    const providerButton = findControl("#googleSignInButton, #appleSignInButton, #githubSignInButton");
+    if (!providerButton) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (window.location.hash === "#support") {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+
+    if (providerButton.id === "googleSignInButton") {
+      void signInWithProvider(googleProvider, providerButton, "Google");
+    } else if (providerButton.id === "appleSignInButton") {
+      void signInWithProvider(appleProvider, providerButton, "Apple");
+    } else if (providerButton.id === "githubSignInButton") {
+      void signInWithProvider(githubProvider, providerButton, "GitHub");
     }
-    void openSupportWithVerification();
   }, true);
 
   supportBackButton?.addEventListener("click", () => {
@@ -233,20 +250,8 @@ import {
 
   let openSettingsAfterSignIn = false;
 
-  // Bind each provider button directly so unrelated document-level
-  // listeners cannot swallow its click before authentication starts.
-  googleSignInButton?.addEventListener("click", event => {
-    event.preventDefault();
-    void signInWithProvider(googleProvider, googleSignInButton, "Google");
-  });
-  appleSignInButton?.addEventListener("click", event => {
-    event.preventDefault();
-    void signInWithProvider(appleProvider, appleSignInButton, "Apple");
-  });
-  githubSignInButton?.addEventListener("click", event => {
-    event.preventDefault();
-    void signInWithProvider(githubProvider, githubSignInButton, "GitHub");
-  });
+  // Provider clicks are handled by the window capture listener above so
+  // Firebase popups open directly from the original user click.
 
 
   // ==========================================
