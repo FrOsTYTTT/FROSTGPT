@@ -2307,13 +2307,15 @@ import {
     while (rest.length > maxLength) {
       let splitAt = rest.lastIndexOf(". ", maxLength);
       splitAt = Math.max(splitAt, rest.lastIndexOf("? ", maxLength), rest.lastIndexOf("! ", maxLength));
-      if (splitAt < Math.floor(maxLength * 0.55)) {
-        splitAt = rest.lastIndexOf(" ", maxLength);
-      }
-      if (splitAt < 1) splitAt = maxLength;
+      let splitEnd = splitAt >= Math.floor(maxLength * 0.55) ? splitAt + 1 : -1;
 
-      chunks.push(rest.slice(0, splitAt + (rest[splitAt] === " " ? 0 : 1)).trim());
-      rest = rest.slice(splitAt + (rest[splitAt] === " " ? 1 : 0)).trim();
+      if (splitEnd < 1) {
+        splitAt = rest.lastIndexOf(" ", maxLength);
+        splitEnd = splitAt >= 1 ? splitAt : maxLength;
+      }
+
+      chunks.push(rest.slice(0, splitEnd).trim());
+      rest = rest.slice(splitEnd).trim();
     }
 
     if (rest) chunks.push(rest);
