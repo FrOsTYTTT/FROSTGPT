@@ -404,6 +404,7 @@
 
     #modeSelect[hidden] { display:none !important; }
     .model-picker { position:relative;flex:0 1 auto;min-width:0;z-index:30; }
+    .model-picker[hidden] { display:none !important; }
     .model-picker-trigger {
       display:flex;align-items:center;justify-content:space-between;gap:12px;
       max-width:230px;min-width:0;min-height:40px;padding:10px 14px 10px 16px;
