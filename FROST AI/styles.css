@@ -1819,3 +1819,12 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   .header-support-link { padding:8px 7px;font-size:11px; }
   .support-email-button { padding:8px 9px;font-size:11px; }
 }
+
+
+/* Authentication card must remain completely static. */
+#authScreen .auth-card {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  will-change: auto !important;
+}
