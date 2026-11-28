@@ -26,7 +26,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261128-49">
+  <link rel="stylesheet" href="/styles.css?v=20261128-50">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))" onerror="window.dispatchEvent(new Event('frost-turnstile-error'))"></script>
 </head>
 
@@ -170,6 +170,7 @@
 
       <button class="new-chat" id="newChat" type="button">＋ New chat</button>
       <button class="refresh-chats" id="refreshChats" type="button" title="Live sync is enabled" aria-label="Refresh chats">↻ Refresh chats</button>
+      <button class="plugins-nav-button" id="openPlugins" type="button"><span aria-hidden="true">🧩</span> Plugins</button>
       <input id="searchChats" type="search" placeholder="Search chats...">
 
       <div class="sidebar-tabs" role="tablist" aria-label="Chat navigation">
@@ -461,6 +462,57 @@
     </div>
   </section>
 
+  <section id="pluginsPanel" hidden aria-label="FROSTGPT Plugins" role="dialog" aria-modal="true" aria-labelledby="pluginsTitle">
+    <div class="plugins-shell">
+      <header class="plugins-header">
+        <button id="closePlugins" class="developer-back-button" type="button">← Back to FROSTGPT</button>
+        <div class="plugins-brand"><span aria-hidden="true">🧩</span> FROSTGPT™ <span class="developer-brand-divider">/</span> Plugins</div>
+      </header>
+      <main class="plugins-content">
+        <div class="plugins-heading-row">
+          <div><h2 id="pluginsTitle">Plugins</h2><p>Extend FROSTGPT™ with tools that run inside this website.</p></div>
+          <span class="plugins-count" id="pluginsCount">2 available</span>
+        </div>
+        <div class="plugins-notice">Plugins run within FROSTGPT™. Installing a plugin here does not install software on your computer.</div>
+        <div class="plugin-list" id="pluginList">
+          <article class="plugin-card" data-plugin-id="screen-sharing">
+            <div class="plugin-icon screen-plugin-icon" aria-hidden="true">💻</div>
+            <div class="plugin-info"><div class="plugin-title-row"><h3>Screen Sharing💻</h3><span class="plugin-category">Productivity</span></div>
+              <p>Share a screen, app window, or browser tab during a FROSTGPT™ session. Your browser will ask you what to share. Sharing is available only when FROSTGPT™ is installed as a PWA and supported by your browser.</p>
+              <p class="plugin-status" id="screenPluginStatus" role="status">Not installed</p>
+            </div>
+            <div class="plugin-actions"><button class="plugin-install-button" id="installScreenPlugin" type="button">Install</button><button class="plugin-secondary-button" id="startScreenShare" type="button" disabled>Start sharing</button></div>
+          </article>
+          <article class="plugin-card" data-plugin-id="gmail">
+            <div class="plugin-icon gmail-plugin-icon" aria-label="Gmail"><svg viewBox="0 0 48 36" role="img" aria-label="Gmail icon"><path fill="#4285F4" d="M4 34h8V14L4 8z"/><path fill="#34A853" d="M36 34h8V8l-8 6z"/><path fill="#EA4335" d="M4 8l4-4 16 12L40 4l4 4v6L24 29 4 14z"/><path fill="#C5221F" d="M4 8l8 6v20H4z"/><path fill="#FBBC04" d="M36 14l8-6v26h-8z"/></svg></div>
+            <div class="plugin-info"><div class="plugin-title-row"><h3>Gmail</h3><span class="plugin-category">Communication</span></div>
+              <p>Connect a Gmail account so FROSTGPT™ can prepare email drafts and, with your approval, send messages through Gmail. You choose the account and authorize access.</p>
+              <p class="plugin-status" id="gmailPluginStatus" role="status">Not installed · Account not connected</p>
+            </div>
+            <div class="plugin-actions"><button class="plugin-install-button" id="installGmailPlugin" type="button">Install</button><button class="plugin-secondary-button" id="connectGmailPlugin" type="button" disabled>Connect Gmail</button></div>
+          </article>
+        </div>
+        <section class="custom-plugin-section">
+          <h3>Your custom plugins</h3>
+          <p>Create a plugin listing for a tool or workflow you want to add. Custom listings are saved in this browser; they do not execute uploaded code.</p>
+          <div id="customPluginList" class="custom-plugin-list"></div>
+          <form id="createPluginForm" class="create-plugin-form">
+            <label for="customPluginName">Plugin name</label><input id="customPluginName" maxlength="40" required placeholder="e.g. My Study Helper">
+            <label for="customPluginDescription">Description</label><textarea id="customPluginDescription" maxlength="240" rows="3" required placeholder="Describe what your plugin should do..."></textarea>
+            <button class="plugin-install-button" type="submit">＋ Create plugin</button>
+            <p id="createPluginStatus" class="plugin-status" role="status" aria-live="polite">Custom plugin listings are private to this browser.</p>
+          </form>
+        </section>
+        <section id="screenShareStage" class="screen-share-stage" hidden>
+          <div class="screen-share-stage-heading"><h3>Screen Sharing💻</h3><button id="stopScreenShare" class="plugin-secondary-button" type="button">Stop sharing</button></div>
+          <video id="screenSharePreview" autoplay muted playsinline></video>
+          <p>Only the content you selected in your browser’s sharing prompt is shared. Stop sharing at any time.</p>
+        </section>
+        <div id="gmailConnectNotice" class="plugins-notice" hidden role="status">Gmail installation is ready, but account connection needs FROSTGPT™’s Google OAuth web client configuration. No Gmail account has been connected yet.</div>
+      </main>
+    </div>
+  </section>
+
   <section id="personalityPanel" hidden role="dialog" aria-modal="true" aria-labelledby="personalityTitle">
     <div class="personality-card">
       <div class="settings-header"><h2 id="personalityTitle"><img src="/icon.svg" alt="" width="22" height="22"> FROSTGPT™ Personality</h2><button id="closePersonality" class="settings-close" type="button" aria-label="Close personality editor">✕</button></div>
@@ -530,6 +582,82 @@
         closeDeveloperPortal();
       }
     });
+  })();
+  </script>
+
+  <script>
+  (() => {
+    "use strict";
+    const byId = id => document.getElementById(id);
+    const panel = byId("pluginsPanel");
+    const installedKey = "frostgpt_installed_plugins_v1";
+    const customKey = "frostgpt_custom_plugins_v1";
+    const readList = key => { try { const value = JSON.parse(localStorage.getItem(key) || "[]"); return Array.isArray(value) ? value : []; } catch { return []; } };
+    const writeList = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } };
+    let activeScreenStream = null;
+    const isInstalledPWA = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    const installed = id => readList(installedKey).includes(id);
+    const setInstalled = (id, value) => { const list = readList(installedKey).filter(item => item !== id); if (value) list.push(id); writeList(installedKey, list); renderPlugins(); };
+    function renderPlugins() {
+      const screenInstalled = installed("screen-sharing");
+      const gmailInstalled = installed("gmail");
+      byId("screenPluginStatus").textContent = screenInstalled ? (isInstalledPWA() ? "Installed · Ready in this PWA" : "Installed · Open the installed FROSTGPT™ app to use screen sharing") : "Not installed";
+      byId("gmailPluginStatus").textContent = gmailInstalled ? "Installed · Account not connected" : "Not installed · Account not connected";
+      byId("installScreenPlugin").textContent = screenInstalled ? "Uninstall" : "Install";
+      byId("installGmailPlugin").textContent = gmailInstalled ? "Uninstall" : "Install";
+      byId("startScreenShare").disabled = !screenInstalled || !isInstalledPWA() || !navigator.mediaDevices?.getDisplayMedia || !!activeScreenStream;
+      byId("connectGmailPlugin").disabled = !gmailInstalled;
+      const custom = readList(customKey);
+      byId("pluginsCount").textContent = (2 + custom.length) + " available";
+      const list = byId("customPluginList");
+      list.replaceChildren();
+      custom.forEach((item,index) => {
+        const card = document.createElement("article"); card.className = "custom-plugin-card";
+        const copy = document.createElement("div"); const title = document.createElement("strong"); title.textContent = item.name;
+        const description = document.createElement("p"); description.textContent = item.description;
+        copy.append(title,description);
+        const remove = document.createElement("button"); remove.type = "button"; remove.className = "plugin-secondary-button"; remove.textContent = "Remove";
+        remove.addEventListener("click", () => { const next = readList(customKey); next.splice(index,1); writeList(customKey,next); renderPlugins(); });
+        card.append(copy,remove); list.append(card);
+      });
+    }
+    byId("openPlugins")?.addEventListener("click", () => { panel.hidden = false; renderPlugins(); byId("closePlugins")?.focus(); });
+    byId("closePlugins")?.addEventListener("click", () => { stopSharing(); panel.hidden = true; byId("openPlugins")?.focus(); });
+    panel?.addEventListener("click", event => { if (event.target === panel) { stopSharing(); panel.hidden = true; } });
+    byId("installScreenPlugin")?.addEventListener("click", () => setInstalled("screen-sharing", !installed("screen-sharing")));
+    byId("installGmailPlugin")?.addEventListener("click", () => { setInstalled("gmail", !installed("gmail")); byId("gmailConnectNotice").hidden = true; });
+    byId("connectGmailPlugin")?.addEventListener("click", () => { byId("gmailConnectNotice").hidden = false; byId("gmailConnectNotice").scrollIntoView({behavior:"smooth",block:"nearest"}); });
+    function stopSharing() {
+      if (activeScreenStream) { activeScreenStream.getTracks().forEach(track => track.stop()); activeScreenStream = null; }
+      const video = byId("screenSharePreview"); if (video) video.srcObject = null;
+      byId("screenShareStage").hidden = true; renderPlugins();
+    }
+    byId("startScreenShare")?.addEventListener("click", async () => {
+      if (!isInstalledPWA()) { byId("screenPluginStatus").textContent = "Install FROSTGPT™ as a PWA to use this plugin."; return; }
+      try {
+        activeScreenStream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+        const video = byId("screenSharePreview"); video.srcObject = activeScreenStream;
+        byId("screenShareStage").hidden = false;
+        activeScreenStream.getVideoTracks()[0]?.addEventListener("ended", stopSharing, {once:true});
+        renderPlugins();
+      } catch (error) {
+        byId("screenPluginStatus").textContent = error?.name === "NotAllowedError" ? "Screen sharing was cancelled." : "Screen sharing is unavailable in this browser.";
+      }
+    });
+    byId("stopScreenShare")?.addEventListener("click", stopSharing);
+    byId("createPluginForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      const name = byId("customPluginName").value.trim();
+      const description = byId("customPluginDescription").value.trim();
+      if (!name || !description) return;
+      const list = readList(customKey);
+      if (list.length >= 20) { byId("createPluginStatus").textContent = "You can create up to 20 custom plugin listings."; return; }
+      list.push({name,description,createdAt:Date.now()});
+      if (!writeList(customKey,list)) { byId("createPluginStatus").textContent = "Could not save this plugin in this browser."; return; }
+      event.target.reset(); byId("createPluginStatus").textContent = "Your custom plugin listing was created."; renderPlugins();
+    });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && panel && !panel.hidden) { stopSharing(); panel.hidden = true; } });
+    renderPlugins();
   })();
   </script>
 
