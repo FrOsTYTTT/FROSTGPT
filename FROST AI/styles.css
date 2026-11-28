@@ -1888,7 +1888,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
     radial-gradient(ellipse at 50% 0%, #183452 0%, transparent 58%),
     #101722;
   opacity: 1;
-  animation: frost-intro-exit .7s ease 3.55s forwards;
+  animation: frost-intro-exit .7s ease 13s forwards;
 }
 .frost-intro-stage {
   position: relative;
@@ -1906,7 +1906,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   opacity: 0;
   filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px);
   transform: translate(-50%, -50%) scale(.72) rotate(-8deg);
-  animation: frost-intro-logo-in .9s cubic-bezier(.2, .8, .2, 1) .12s forwards;
+  animation: frost-intro-logo-in 4s cubic-bezier(.2, .8, .2, 1) .12s forwards;
 }
 .frost-intro-word {
   position: absolute;
@@ -1923,13 +1923,13 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .frost-intro-word-left {
   right: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
   transform: translate(54px, -50%);
-  animation: frost-intro-left-in .78s cubic-bezier(.18, .82, .22, 1) 1.12s forwards;
+  animation: frost-intro-left-in 4s cubic-bezier(.18, .82, .22, 1) 4.2s forwards;
 }
 .frost-intro-word-right {
   left: calc(50% + var(--frost-intro-logo-half) + var(--frost-intro-gap));
   color: #8fc5ff;
   transform: translate(-54px, -50%);
-  animation: frost-intro-right-in .78s cubic-bezier(.18, .82, .22, 1) 2.04s forwards;
+  animation: frost-intro-right-in 4s cubic-bezier(.18, .82, .22, 1) 8.4s forwards;
 }
 @keyframes frost-intro-logo-in {
   0% { opacity: 0; filter: drop-shadow(0 0 25px rgba(70, 153, 255, .42)) blur(7px); transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
@@ -1952,3 +1952,13 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   .frost-intro-logo,
   .frost-intro-word { animation: none; }
 }
+
+.pre-verification-status {
+  min-height: 18px;
+  margin-top: 16px;
+  color: #aab7c7;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: .02em;
+}
+.pre-verification-status[hidden] { display: none !important; }
