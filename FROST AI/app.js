@@ -5316,10 +5316,22 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       : settings.flashProvider;
     const imageAttachments = attachments.filter(item => item.kind !== "file");
     const fileAttachments = attachments.filter(item => item.kind === "file");
+    let sharedScreenFrame = null;
+    if (mode === "flash" && typeof window.frostgptCaptureSharedScreenFrame === "function") {
+      try {
+        sharedScreenFrame = window.frostgptCaptureSharedScreenFrame();
+      } catch (error) {
+        console.warn("FROSTGPT: Could not capture the shared screen frame.", error);
+      }
+    }
     const imageData = imageAttachments.map(item => item.data);
     const visionImageData = imageAttachments.flatMap(item =>
       item.visionImages?.length ? item.visionImages : [item.data]
     );
+    if (sharedScreenFrame) {
+      imageData.push(sharedScreenFrame);
+      visionImageData.push(sharedScreenFrame);
+    }
     const hasGif = imageAttachments.some(item => item.isGif);
     const videoAttachments = imageAttachments.filter(item => item.kind === "video");
     pendingVideoAudioContext = videoAttachments
@@ -5332,6 +5344,13 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     if (mode === "flash") {
       const parts = [];
+
+      if (sharedScreenFrame) {
+        parts.push({
+          type: "text",
+          text: "The user is sharing their screen. The next image is a current screenshot captured from the screen they explicitly selected. Use it to answer questions about visible content. This is a still snapshot captured when the user sent this message, not continuous live video."
+        });
+      }
 
       if (hasGif) {
         parts.push({
