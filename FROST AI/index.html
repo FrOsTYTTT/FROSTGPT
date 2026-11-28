@@ -26,11 +26,19 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-32">
+  <link rel="stylesheet" href="/styles.css?v=20261127-33">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))" onerror="window.dispatchEvent(new Event('frost-turnstile-error'))"></script>
 </head>
 
 <body>
+  <section id="frostIntroAnimation" class="frost-intro" role="img" aria-label="FrOsT AI">
+    <div class="frost-intro-stage">
+      <span class="frost-intro-word frost-intro-word-left">FrOsT</span>
+      <img class="frost-intro-logo" src="/icon.svg" alt="">
+      <span class="frost-intro-word frost-intro-word-right">AI</span>
+    </div>
+  </section>
+
   <section id="authScreen">
     <div class="auth-topbar">
       <a class="auth-topbar-brand" href="/" aria-label="FROSTGPT home">
