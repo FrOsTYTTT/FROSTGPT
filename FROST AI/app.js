@@ -4711,15 +4711,27 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
     // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
     // is explicit and persisted in Settings; failures never switch providers.
     if (selectedProvider === "online") {
-      const messages = [
-        { role: "system", content: projectContext },
-        ...history.map(item => ({
-          role: item.role,
-          content: item.content
-        }))
-      ];
-      const latestUserMessage = [...messages].reverse().find(item => item.role === "user");
-      if (!latestUserMessage) throw new Error("Please enter a text message.");
+      const messages = history.map(item => ({
+        role: item.role,
+        content: item.content
+      }));
+      const latestUserIndex = messages.map(item => item.role).lastIndexOf("user");
+      if (latestUserIndex < 0) throw new Error("Please enter a text message.");
+
+      // Keep the API message roles compatible with backends that accept only
+      // user/assistant. Put project facts into the latest user turn rather
+      // than sending a separate system-role message that may fail validation.
+      const latestUserContent = messages[latestUserIndex].content;
+      if (typeof latestUserContent === "string") {
+        messages[latestUserIndex].content = projectContext + "\n\n" + latestUserContent;
+      } else if (Array.isArray(latestUserContent)) {
+        messages[latestUserIndex].content = [
+          { type: "text", text: projectContext },
+          ...latestUserContent
+        ];
+      } else {
+        throw new Error("The latest message has an unsupported content format.");
+      }
 
       const response = await postWithFreshAuth("/api/chat", {
         conversationId: conversation.id,
