@@ -1548,21 +1548,78 @@ import {
     ) || null;
   }
 
-  function cleanTextForSpeech(text) {
-    return String(text || "")
-      .replace(/```[\s\S]*?```/g, " Code block omitted. ")
+  function detectSpeechLanguage(text) {
+    const sample = String(text || "").slice(0, 5000).toLowerCase();
+    if (!sample.trim()) return "";
+    if (/[\\u3040-\\u30ff]/.test(sample)) return "ja";
+    if (/[\\uac00-\\ud7af]/.test(sample)) return "ko";
+    if (/[\\u4e00-\\u9fff]/.test(sample)) return "zh";
+    if (/[\\u0e00-\\u0e7f]/.test(sample)) return "th";
+    if (/[\\u0590-\\u05ff]/.test(sample)) return "he";
+    if (/[\\u0600-\\u06ff]/.test(sample)) return /[پچژگکی]/.test(sample) ? "fa" : "ar";
+    if (/[\\u0900-\\u097f]/.test(sample)) return "hi";
+    if (/[\\u0370-\\u03ff]/.test(sample)) return "el";
+    if (/[\\u0400-\\u04ff]/.test(sample)) {
+      if (/\\b(і|ї|є|ґ|що|це|як|дякую)\\b/.test(sample)) return "uk";
+      if (/\\b(jest|nie|że|jak|dziękuję)\\b/.test(sample)) return "pl";
+      return "ru";
+    }
+    const vocab = {
+      en: "the and is are you your that this with for have what how hello thanks please from",
+      es: "el la los las y es son para que como cómo hola gracias por una un del estoy",
+      fr: "le la les des et est sont vous votre pour avec que qui bonjour merci une je",
+      de: "der die das und ist sind sie ihr für mit auf ich nicht danke hallo bitte",
+      it: "il lo la gli le e è sono per che come ciao grazie una un buongiorno",
+      pt: "o a os as e é são você para com que como olá obrigado obrigada uma não",
+      nl: "de het een en is zijn u je voor met dankjewel hallo niet",
+      tr: "ve bir bu şu için değil merhaba teşekkürler nasılsın",
+      id: "dan yang ini itu untuk dengan adalah tidak halo terima kasih",
+      vi: "và là của bạn tôi không trong những xin chào cảm ơn",
+      pl: "i jest nie to że się dla jak dzień dobry dziękuję",
+      ro: "și este sunt pentru care bună mulțumesc salut",
+      sv: "och det är du för med tack hej inte",
+      da: "og det er du for med tak hej ikke",
+      no: "og det er du for med takk hei ikke",
+      fi: "ja on se että kanssa kiitos hei",
+      sw: "na ya kwa ni asante habari karibu",
+      cs: "a je se že pro děkuji dobrý den"
+    };
+    const words = sample.match(/[\\p{L}]+/gu) || [];
+    const scores = Object.entries(vocab).map(([lang, terms]) => {
+      const known = new Set(terms.split(" "));
+      return [lang, words.reduce((score, word) => score + (known.has(word) ? 1 : 0), 0)];
+    }).sort((x, y) => y[1] - x[1]);
+    return scores[0]?.[1] >= 2 ? scores[0][0] : "";
+  }
+
+  function cleanTextForSpeech(text, language = "") {
+    const spoken = String(text || "")
+      .replace(/```[\\s\\S]*?```/g, " Code block omitted. ")
       .replace(/`([^`]+)`/g, "$1")
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/!\\[([^\\]]*)\\]\\([^)]+\\)/g, "$1")
+      .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, "$1")
+      .replace(/^#{1,6}\\s+/gm, "")
       .replace(/[*_~]/g, "")
-      .replace(/^\s*>\s?/gm, "")
-      .replace(/^\s*[-+]\s+/gm, "")
-      .replace(/^\s*\d+\.\s+/gm, "")
-      // Spell out each letter; Google voices can blend "G P T" into a different word.
-      .replace(/FROSTGPT(?:™)?/gi, "Frost Gee Pee Tee")
-      .replace(/\s+/g, " ")
+      .replace(/^\\s*>\\s?/gm, "")
+      .replace(/^\\s*[-+]\\s+/gm, "")
+      .replace(/^\\s*\\d+\\.\\s+/gm, "");
+    return spoken
+      .replace(/FROSTGPT(?:™)?/gi, language.startsWith("en") || !language ? "Frost Gee Pee Tee" : "FROST G P T")
+      .replace(/\\s+/g, " ")
       .trim();
+  }
+
+  function getVoiceForLanguage(language) {
+    const voices = getAvailableVoices();
+    const selectedVoice = getSelectedVoice();
+    if (!language) return selectedVoice;
+    const code = language.toLowerCase().split("-")[0];
+    const matches = voices.filter(voice =>
+      String(voice.lang || "").toLowerCase().split("-")[0] === code
+    );
+    if (!matches.length) return null;
+    if (selectedVoice && String(selectedVoice.lang || "").toLowerCase().split("-")[0] === code) return selectedVoice;
+    return matches.find(voice => voice.default) || matches[0];
   }
 
   function stopSpeaking() {
@@ -1962,7 +2019,10 @@ import {
       return;
     }
 
-    const spokenText = cleanTextForSpeech(text);
+    const detectedLanguage = detectSpeechLanguage(text);
+    const selectedVoice = getSelectedVoice();
+    const targetLanguage = detectedLanguage || selectedVoice?.lang || navigator.language || "en-US";
+    const spokenText = cleanTextForSpeech(text, targetLanguage.toLowerCase());
 
     if (!spokenText) return;
 
@@ -1975,13 +2035,14 @@ import {
     }
 
     const utterance = new SpeechSynthesisUtterance(spokenText);
-    const selectedVoice = getSelectedVoice();
+    const matchingVoice = detectedLanguage ? getVoiceForLanguage(detectedLanguage) : selectedVoice;
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      utterance.lang = selectedVoice.lang;
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
+      utterance.lang = matchingVoice.lang;
     } else {
-      utterance.lang = "en-US";
+      // Let the browser choose a voice for the reply's actual language.
+      utterance.lang = targetLanguage;
     }
 
     utterance.rate = voicePreferences.rate;
