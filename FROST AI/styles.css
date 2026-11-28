@@ -66,6 +66,14 @@
     #githubSignInButton { background:#24292f;color:#fff;border-color:#424950; }
 
     #authStatus { min-height:22px;margin-top:18px;color:#ff8585;font-size:13px; }
+    #authStatus.is-verifying { color:#e8edf5; }
+    .auth-verification-row { display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:28px; }
+    .auth-google-mark { width:19px;height:19px;flex:0 0 19px; }
+    .auth-verification-row strong { color:#e8edf5;font-size:14px;font-weight:700; }
+    .auth-loading-spinner { width:15px;height:15px;border:2px solid rgba(232,237,245,.25);border-top-color:#8fc5ff;border-radius:50%;animation:authSpinner .75s linear infinite; }
+    .auth-verification-caption { display:block;margin-top:6px;color:#9ca8b8;font-size:11px; }
+    @keyframes authSpinner { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce) { .auth-loading-spinner { animation:none;border-top-color:#8fc5ff; } }
     .auth-small { margin-top:20px;color:#777;font-size:11px; }
 
     .app { display:none;width:100%;height:100vh;height:100dvh; }
