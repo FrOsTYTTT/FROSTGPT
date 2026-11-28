@@ -937,6 +937,7 @@ import {
 
     input.value = getSavedNickname();
     input.disabled = !currentUserId;
+    updateUserMemorySettings();
   }
 
   // ==========================================
