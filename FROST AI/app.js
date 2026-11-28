@@ -71,8 +71,10 @@ import {
 
   const turnstileStatus = $("turnstileStatus");
   const turnstileWidget = $("frostTurnstileWidget");
+  const turnstileScreen = $("turnstileVerificationScreen");
   let turnstileWidgetId = null;
-  let turnstileVerified = false;
+  let turnstileVerificationResolver = null;
+  let turnstileVerificationInProgress = false;
 
   function setProviderButtonsEnabled(enabled) {
     [googleSignInButton, appleSignInButton, githubSignInButton].forEach(button => {
@@ -97,49 +99,63 @@ import {
     }
   }
 
-  function initializeTurnstile() {
-    if (!turnstileWidget || !window.turnstile || turnstileWidgetId !== null) return;
-    try {
-      turnstileWidgetId = window.turnstile.render(turnstileWidget, {
-        sitekey: "0x4AAAAAAGWcQUNK6tmofMMw",
-        theme: "dark",
-        callback: async token => {
-          if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
-          setProviderButtonsEnabled(false);
-          try {
-            await verifyTurnstileToken(token);
-            turnstileVerified = true;
-            if (turnstileStatus) turnstileStatus.textContent = "✓ Security check complete. Choose a sign-in provider.";
-            setProviderButtonsEnabled(true);
-          } catch (error) {
-            turnstileVerified = false;
-            if (turnstileStatus) turnstileStatus.textContent = "Security check failed. Please try again.";
-            console.warn("FROSTGPT: Turnstile verification failed.", error);
-            setProviderButtonsEnabled(false);
-            if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
-          }
-        },
-        "expired-callback": () => {
-          turnstileVerified = false;
-          if (turnstileStatus) turnstileStatus.textContent = "Security check expired. Please complete it again.";
-          setProviderButtonsEnabled(false);
-        },
-        "error-callback": () => {
-          turnstileVerified = false;
-          if (turnstileStatus) turnstileStatus.textContent = "Security check could not load. Please refresh and try again.";
-          setProviderButtonsEnabled(false);
-          return true;
-        }
-      });
-    } catch (error) {
-      console.error("FROSTGPT: Turnstile could not initialize.", error);
-      if (turnstileStatus) turnstileStatus.textContent = "Security check could not load. Please refresh and try again.";
-      setProviderButtonsEnabled(false);
-    }
+  function showTurnstileVerificationPage() {
+    if (authScreen) authScreen.style.display = "none";
+    if (appElement) appElement.classList.remove("visible");
+    if (turnstileScreen) turnstileScreen.hidden = false;
+    if (turnstileStatus) turnstileStatus.textContent = "Please click the Cloudflare checkbox to continue.";
   }
 
-  window.addEventListener("frost-turnstile-ready", initializeTurnstile);
-  if (window.turnstile) initializeTurnstile();
+  function runTurnstileVerification() {
+    if (!turnstileWidget || !window.turnstile) {
+      return Promise.reject(new Error("Cloudflare verification could not load. Please refresh and try again."));
+    }
+    if (turnstileWidgetId !== null) {
+      try { window.turnstile.remove(turnstileWidgetId); } catch {}
+      turnstileWidgetId = null;
+    }
+    turnstileWidget.replaceChildren();
+    return new Promise((resolve, reject) => {
+      turnstileVerificationResolver = { resolve, reject };
+      try {
+        turnstileWidgetId = window.turnstile.render(turnstileWidget, {
+          sitekey: "0x4AAAAAAGWcQUNK6tmofMMw",
+          theme: "dark",
+          callback: async token => {
+            if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
+            try {
+              await verifyTurnstileToken(token);
+              const pending = turnstileVerificationResolver;
+              turnstileVerificationResolver = null;
+              if (pending) pending.resolve(true);
+            } catch (error) {
+              console.warn("FROSTGPT: Turnstile verification failed.", error);
+              if (turnstileStatus) turnstileStatus.textContent = "Verification failed. Please complete the checkbox again.";
+              if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+            }
+          },
+          "expired-callback": () => {
+            if (turnstileStatus) turnstileStatus.textContent = "Verification expired. Please click the checkbox again.";
+          },
+          "error-callback": () => {
+            if (turnstileStatus) turnstileStatus.textContent = "Cloudflare verification could not load. Please refresh and try again.";
+            return true;
+          }
+        });
+      } catch (error) {
+        turnstileVerificationResolver = null;
+        reject(error);
+      }
+    });
+  }
+
+  window.addEventListener("frost-turnstile-ready", () => {
+    if (turnstileVerificationInProgress && turnstileWidgetId === null) {
+      runTurnstileVerification().catch(error => {
+        if (turnstileStatus) turnstileStatus.textContent = error.message;
+      });
+    }
+  });
   const appElement = $("app");
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
@@ -3632,17 +3648,6 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     if (!button || button.disabled) return;
 
-    if (!turnstileVerified) {
-      if (turnstileStatus) turnstileStatus.textContent = "Please complete the security check first.";
-      return;
-    }
-
-    // Consume the server-verified one-time approval before opening the provider popup.
-    turnstileVerified = false;
-    setProviderButtonsEnabled(false);
-    if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
-    if (turnstileStatus) turnstileStatus.textContent = "Security check used. Complete it again before another sign-in.";
-
     button.disabled = true;
     button.style.opacity = ".6";
     providerVerificationPending = true;
@@ -3676,6 +3681,13 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         uid: auth.currentUser.uid,
         emailVerified: auth.currentUser.emailVerified
       });
+
+      // The CAPTCHA is a separate page shown only after provider authentication succeeds.
+      turnstileVerificationInProgress = true;
+      showTurnstileVerificationPage();
+      await runTurnstileVerification();
+      turnstileVerificationInProgress = false;
+      if (turnstileScreen) turnstileScreen.hidden = true;
 
       {
         const providerIcons = {
@@ -3718,9 +3730,15 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       if (authStatus) authStatus.textContent = "";
     } catch (error) {
       providerVerificationPending = false;
+      turnstileVerificationInProgress = false;
+      if (turnstileVerificationResolver) {
+        turnstileVerificationResolver.reject(error);
+        turnstileVerificationResolver = null;
+      }
       openSettingsAfterSignIn = false;
       console.error(`FROSTGPT: ${providerName} sign-in error.`, error);
 
+      if (turnstileScreen) turnstileScreen.hidden = true;
       const verificationScreen = $("providerVerificationScreen");
       if (verificationScreen) verificationScreen.hidden = true;
       if (authScreen) authScreen.style.display = "";
@@ -3730,7 +3748,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         authStatus.textContent = "Authentication Failed, please try again later.";
       }
     } finally {
-      button.disabled = !turnstileVerified;
+      button.disabled = false;
       button.style.opacity = "1";
     }
   }
