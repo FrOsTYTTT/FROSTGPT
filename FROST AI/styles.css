@@ -1828,3 +1828,17 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   transform: none !important;
   will-change: auto !important;
 }
+
+
+/* Support information screen, shown only after successful Cloudflare verification. */
+.support-page{position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:24px;background:radial-gradient(ellipse at 50% 0%,#183452 0%,transparent 58%),#171717;color:#f5f7fb}
+.support-page[hidden]{display:none!important}
+.support-page-card{position:relative;width:min(100%,520px);padding:42px 32px;border:1px solid rgba(133,177,255,.24);border-radius:22px;background:#101a2b;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.support-page-logo{display:block;width:76px;height:76px;object-fit:contain;margin:0 auto 18px;border-radius:18px}
+.support-page-card h1{margin:0 0 18px;font-size:25px}
+.support-page-card p{margin:0 auto 22px;max-width:430px;color:#c3cfdf;font-size:15px;line-height:1.7}
+.support-page-email{display:inline-block;color:#8fc5ff;font-size:17px;font-weight:750;text-decoration:none;overflow-wrap:anywhere}
+.support-page-email:hover{text-decoration:underline}
+.support-back-button{position:absolute;top:16px;left:16px;padding:8px 12px;border:1px solid rgba(143,196,255,.24);border-radius:10px;background:rgba(12,24,43,.7);color:#dceaff;cursor:pointer}
+@media(max-width:480px){.support-page-card{padding:58px 22px 30px}.support-page-card p{font-size:14px}.support-page-card h1{font-size:22px}}
+
