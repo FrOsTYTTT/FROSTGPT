@@ -25,12 +25,22 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-25">
+  <link rel="stylesheet" href="/styles.css?v=20261127-26">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))"></script>
 </head>
 
 <body>
   <section id="authScreen">
+    <div class="auth-topbar">
+      <a class="auth-topbar-brand" href="/" aria-label="FROSTGPT home">
+        <img src="/icon.svg" alt="" width="30" height="30">
+        <span>FROSTGPT™</span>
+      </a>
+      <a class="support-mail-link" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support" aria-label="Email FROSTGPT support">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 6.75A2.75 2.75 0 0 1 5.25 4h13.5a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 18.75 20H5.25a2.75 2.75 0 0 1-2.75-2.75V6.75Zm2.1-.4 7.4 5.8 7.4-5.8a.75.75 0 0 0-.65-.35H5.25a.75.75 0 0 0-.65.35Zm14.9 2.5-7.04 5.51a.75.75 0 0 1-.92 0L4.5 8.85v8.4c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75v-8.4Z"/></svg>
+        <span>Gmail Support</span>
+      </a>
+    </div>
     <div class="auth-capabilities" aria-hidden="true">
       <div class="auth-capability"><span>✦</span> Smart AI Chat</div>
       <div class="auth-capability"><span>⌘</span> Coding Assistance</div>
@@ -47,7 +57,7 @@
       <span class="auth-credit-line auth-credit-tagline">Built with creativity and curiosity</span>
     </div>
     <div class="auth-card">
-      <div class="auth-logo">❄️</div>
+      <div class="auth-logo"><img class="auth-logo-image" src="/icon.svg" alt="FROSTGPT icon"></div>
       <h1>Welcome to FROSTGPT™</h1>
       <p>Choose a sign-in provider to continue to your AI workspace.</p>
       <p>We’re all very glad you can use this AI. We even have emotional support messages for people who feel down some days!</p>
@@ -146,6 +156,7 @@
         <span id="statusText">Ready</span>
 
         <button id="openSettings" type="button">⚙ Settings</button>
+        <a class="header-support-link" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support" aria-label="Email FROSTGPT support">✉ Support</a>
         <button id="installButton" type="button" hidden>↓ Install app</button>
 
         <div id="accountArea" title="Signed-in account">
@@ -333,6 +344,15 @@
       <div class="setting-row developer-entry-row">
         <div class="setting-copy"><strong>Developer</strong><small>Manage your FROSTGPT™ API keys and developer documentation.</small></div>
         <button id="openDeveloperPortal" class="developer-entry-button" type="button">Open Developer</button>
+      </div>
+
+      <div class="setting-row support-account-row">
+        <div class="setting-copy">
+          <strong>My support account</strong>
+          <small>Official FROSTGPT support email address.</small>
+          <a class="support-account-email" href="mailto:noreplyfrostai@gmail.com">noreplyfrostai@gmail.com</a>
+        </div>
+        <a class="support-email-button" href="mailto:noreplyfrostai@gmail.com?subject=FROSTGPT%20Support">Email support</a>
       </div>
 
       <div class="settings-footer">
