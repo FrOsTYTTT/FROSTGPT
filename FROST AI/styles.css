@@ -33,8 +33,9 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      overflow:hidden;
-      padding:20px;
+      overflow-x:hidden;
+      overflow-y:auto;
+      padding:142px 20px 158px;
       background:
         radial-gradient(ellipse at 14% 18%,rgba(42,125,255,.34) 0%,transparent 42%),
         radial-gradient(ellipse at 86% 78%,rgba(135,64,255,.28) 0%,transparent 43%),
@@ -69,7 +70,8 @@
 
     .auth-card {
       position:relative;
-      z-index:2;
+      z-index:3;
+      flex:0 0 auto;
       width:100%;
       max-width:420px;
       padding:38px 30px;
@@ -107,12 +109,13 @@
     }
 
     .auth-capability span { color:#75caff;font-size:16px; }
-    .auth-capability:nth-child(1) { top:17%;left:9%; }
-    .auth-capability:nth-child(2) { top:27%;right:9%;animation-delay:-1.5s,-2s; }
-    .auth-capability:nth-child(3) { bottom:25%;left:12%;animation-delay:-3s,-1s; }
-    .auth-capability:nth-child(4) { bottom:16%;right:10%;animation-delay:-4.5s,-3s; }
-    .auth-capability:nth-child(5) { top:9%;right:29%;animation-delay:-2s,-4s; }
-    .auth-capability:nth-child(6) { bottom:8%;left:34%;animation-delay:-5s,-2.5s; }
+    /* Keep the floating labels in dedicated top and bottom bands, never behind the card. */
+    .auth-capability:nth-child(1) { top:30px;left:clamp(18px,8vw,120px); }
+    .auth-capability:nth-child(2) { top:30px;right:clamp(18px,8vw,120px);animation-delay:-1.5s,-2s; }
+    .auth-capability:nth-child(3) { bottom:116px;left:clamp(18px,8vw,120px);animation-delay:-3s,-1s; }
+    .auth-capability:nth-child(4) { bottom:116px;right:clamp(18px,8vw,120px);animation-delay:-4.5s,-3s; }
+    .auth-capability:nth-child(5) { top:78px;left:50%;transform:translateX(-50%);animation-delay:-2s,-4s; }
+    .auth-capability:nth-child(6) { bottom:72px;left:50%;transform:translateX(-50%);animation-delay:-5s,-2.5s; }
 
     @keyframes authFloat {
       0%,100% { transform:translate3d(0,0,0) rotate(-1deg); }
@@ -127,7 +130,7 @@
       position:absolute;
       z-index:1;
       left:50%;
-      bottom:3.5%;
+      bottom:8px;
       width:min(560px,88vw);
       min-height:108px;
       transform:translateX(-50%);
@@ -171,16 +174,23 @@
     }
 
     @media (max-width:760px) {
-      .auth-capability:nth-child(1) { top:5%;left:5%; }
-      .auth-capability:nth-child(2) { top:5%;right:5%; }
+      #authScreen { align-items:flex-start;padding:112px 14px 150px; }
+      .auth-capability:nth-child(1) { top:22px;left:12px; }
+      .auth-capability:nth-child(2) { top:22px;right:12px; }
       .auth-capability:nth-child(3),
       .auth-capability:nth-child(4),
       .auth-capability:nth-child(5),
       .auth-capability:nth-child(6) { display:none; }
       .auth-capability { padding:8px 10px;font-size:11px; }
-      .auth-card { margin-top:35px; }
-      .auth-team-credit-background { bottom:1.5%;width:94vw;min-height:90px;padding:17px 12px 8px;column-gap:10px;row-gap:3px;font-size:10px; }
+      .auth-card { margin:0 auto; }
+      .auth-team-credit-background { bottom:8px;width:94vw;min-height:90px;padding:17px 12px 8px;column-gap:10px;row-gap:3px;font-size:10px; }
       .auth-credit-note,.auth-credit-tagline { font-size:9px; }
+    }
+    @media (max-height:680px) and (min-width:761px) {
+      #authScreen { align-items:flex-start;padding-top:112px;padding-bottom:132px; }
+      .auth-capability:nth-child(5) { display:none; }
+      .auth-capability:nth-child(3),.auth-capability:nth-child(4) { bottom:96px; }
+      .auth-team-credit-background { bottom:2px; }
     }
 
     @media (prefers-reduced-motion:reduce) {
