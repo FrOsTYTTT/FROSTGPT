@@ -4562,13 +4562,6 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       throw new Error("Think mode requires the Online Gemma 4 model. Switch providers or turn Think off.");
     }
     const history = conversation.flash.slice(-80);
-    const latestUserText = [...history].reverse().find(item => item.role === "user")?.content;
-    const latestQuestion = (typeof latestUserText === "string"
-      ? latestUserText
-      : Array.isArray(latestUserText)
-        ? latestUserText.filter(part => part?.type === "text").map(part => part.text || "").join(" ")
-        : "").trim();
-
     // Give Flash accurate project facts as context, while letting the model answer naturally.
     const projectContext = [
       "FROSTGPT™ project facts (use as factual context, not as a script or mandatory response):",
