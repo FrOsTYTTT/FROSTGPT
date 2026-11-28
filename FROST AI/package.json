@@ -6,9 +6,9 @@
   "main": "desktop.js",
   "scripts": {
     "test": "node --test",
-    "check": "node --check app.js && node --check classic.js && node --check functions/_shared/safety.js && node --check functions/_shared/video-links.js && node --check functions/api/chat.js && node --check functions/api/gifs.js && node --check functions/api/health.js && node --check functions/api/image.js && node --check functions/api/safety.js && node --check functions/api/transcribe.js && node --check functions/api/video-link.js && node --check desktop.js",
+    "check": "node --check app.js && node --check classic.js && node --check functions/_shared/safety.js && node --check functions/_shared/video-links.js && node --check functions/api/chat.js && node --check functions/api/gifs.js && node --check functions/api/health.js && node --check functions/api/image.js && node --check functions/api/safety.js && node --check functions/api/transcribe.js && node --check functions/api/video-link.js && node --check desktop.js && node --check desktop-preload.cjs && node --check make-icon.js",
     "desktop": "electron .",
-    "build:win": "electron-builder --win"
+    "build:win": "node make-icon.js && electron-builder --win"
   },
   "devDependencies": {
     "electron": "^45.5.0",
@@ -28,7 +28,12 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "frostgpt.ico"
+    },
+    "nsis": {
+      "installerIcon": "frostgpt.ico",
+      "uninstallerIcon": "frostgpt.ico"
     }
   }
 }
