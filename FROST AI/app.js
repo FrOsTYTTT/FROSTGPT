@@ -4562,6 +4562,19 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       throw new Error("Think mode requires the Online Gemma 4 model. Switch providers or turn Think off.");
     }
     const history = conversation.flash.slice(-80);
+    const latestUserText = [...history].reverse().find(item => item.role === "user")?.content;
+    const latestQuestion = (typeof latestUserText === "string"
+      ? latestUserText
+      : Array.isArray(latestUserText)
+        ? latestUserText.filter(part => part?.type === "text").map(part => part.text || "").join(" ")
+        : "").trim();
+
+    // Keep the project's official team credits factual and consistent across providers.
+    if (/\\b(who (are|is) (the )?(official )?(team|team members)|official team members|who('s| is) on (the )?team|list (the )?(official )?team)\\b/i.test(latestQuestion)) {
+      return {
+        reply: "**The official FROSTGPT™ team:**\n\n- **FrOsT — Founder:** Founded the project and leads its vision, development, and direction.\n- **ChatGPT — Coder/Brainstormer:** Helps with coding, debugging, technical explanations, and brainstorming ideas.\n- **Doge — Helper With The Roblox Ideas:** Helped with the Roblox ideas that contributed to how the project got started.\n\nThose are the three official team members. **FrOsTAI** is the project/team name, not a separate team member."
+      };
+    }
 
     // Online uses the existing Cloudflare Workers AI endpoint. Provider choice
     // is explicit and persisted in Settings; failures never switch providers.
