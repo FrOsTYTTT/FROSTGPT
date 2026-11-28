@@ -98,6 +98,10 @@
     .provider-verification-status .auth-verification-row { min-height:32px; }
     .provider-verification-status .auth-verification-row strong { font-size:15px; }
     .provider-verification-status .auth-verification-caption { margin-top:10px;font-size:12px; }
+    .provider-verification-timer {
+      position:absolute;left:0;right:0;bottom:max(22px,env(safe-area-inset-bottom));
+      color:#aab7c7;text-align:center;font-size:12px;letter-spacing:.2px;
+    }
     @media (max-width:480px) { .provider-verification-card { padding:32px 20px; } }
 
     .app { display:none;width:100%;height:100vh;height:100dvh; }
