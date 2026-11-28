@@ -1376,6 +1376,8 @@ import {
   let thinkModeEnabled = false;
   let applyingVoiceTranscript = false;
   let voiceFinalTranscript = "";
+  let speechRecognitionDisabled = false;
+  let speechRecognitionFailure = null;
 
   let voiceMicButton = null;
   let voiceToggleButton = null;
@@ -2146,7 +2148,7 @@ import {
 
     // Prefer the browser's built-in speech recognition when available.
     // This avoids depending on a server transcription request for every turn.
-    if (SpeechRecognition) {
+    if (SpeechRecognition && !speechRecognitionDisabled) {
       if (mode !== "call" || !voiceCallActive) stopSpeaking();
       voiceSessionActive = true;
       voiceListening = true;
@@ -2181,6 +2183,7 @@ import {
         };
 
         recognition.onerror = event => {
+          speechRecognitionFailure = event.error || "unknown";
           console.warn("FROSTGPT: Browser speech recognition error.", event.error);
           if (event.error === "not-allowed" || event.error === "service-not-allowed") {
             voiceSessionActive = false;
@@ -2204,8 +2207,15 @@ import {
           voiceListening = false;
           if (mode === "dictate") dictateActive = false;
           updateVoiceButtons();
-          if (!shouldProcess) return;
-
+          if (!shouldProcess) { speechRecognitionFailure = null; return; }
+          const recognitionFailure = speechRecognitionFailure;
+          speechRecognitionFailure = null;
+          if (recognitionFailure && recognitionFailure !== "not-allowed" && recognitionFailure !== "service-not-allowed") {
+            speechRecognitionDisabled = true;
+            setStatus("Browser speech recognition is unavailable. Switching to microphone transcription...");
+            void startVoiceInput(mode);
+            return;
+          }
           const transcript = voiceFinalTranscript.trim();
           voiceFinalTranscript = "";
           if (transcript) {
@@ -3827,6 +3837,10 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       return;
     }
 
+    if (!provider) {
+      if (authStatus) authStatus.textContent = providerName + " sign-in is not configured in Firebase yet.";
+      return;
+    }
     if (!button || button.disabled) return;
 
     button.disabled = true;
@@ -3926,7 +3940,17 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       if (appElement) appElement.classList.remove("visible");
       if (authStatus) {
         authStatus.classList.remove("is-verifying");
-        authStatus.textContent = "Authentication Failed, please try again later.";
+        const code = error && error.code;
+        const messages = {
+          "auth/unauthorized-domain": "This website domain is not authorized for sign-in in Firebase.",
+          "auth/operation-not-allowed": providerName + " sign-in is disabled in Firebase Authentication.",
+          "auth/popup-blocked": "Your browser blocked the sign-in popup. Allow popups for this website and try again.",
+          "auth/popup-closed-by-user": "The sign-in window was closed before authentication finished.",
+          "auth/cancelled-popup-request": "Another sign-in window is already opening. Please try again.",
+          "auth/network-request-failed": "A network error interrupted sign-in. Check your connection and try again.",
+          "auth/invalid-api-key": "Firebase rejected the project API key. Check the Firebase web app configuration."
+        };
+        authStatus.textContent = messages[code] || (error && error.message ? "Sign-in failed: " + error.message : "Authentication Failed, please try again later.");
       }
     } finally {
       button.disabled = false;
