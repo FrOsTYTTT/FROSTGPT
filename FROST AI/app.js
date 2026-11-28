@@ -7,6 +7,7 @@ import {
   OAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   signInAnonymously,
   onAuthStateChanged,
   signOut,
@@ -66,6 +67,10 @@ import {
   const closeGifPicker = $("closeGifPicker");
 
   const authScreen = $("authScreen");
+  const desktopInfoNotice = $("desktopInfoNotice");
+  if (desktopInfoNotice && window.frostDesktop?.isDesktop) {
+    desktopInfoNotice.hidden = false;
+  }
   const authStatus = $("authStatus");
   const authHeading = $("authHeading");
   const authDescription = $("authDescription");
@@ -4669,7 +4674,25 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
       // Keep the app unobstructed after sign-in; settings should open only
       // when the user chooses the Settings button.
 
-      const signInResult = await signInWithPopup(auth, provider);
+      let signInResult;
+
+      // Electron uses the system browser for Google OAuth. Regular web sign-in
+      // continues using Firebase's existing popup flow.
+      if (providerName === "Google" && window.frostDesktop?.googleSignIn) {
+        const desktopGoogleResult = await window.frostDesktop.googleSignIn();
+
+        if (!desktopGoogleResult?.idToken) {
+          throw new Error("Google sign-in did not return a valid identity token. Please try again.");
+        }
+
+        const desktopCredential = GoogleAuthProvider.credential(
+          desktopGoogleResult.idToken
+        );
+
+        signInResult = await signInWithCredential(auth, desktopCredential);
+      } else {
+        signInResult = await signInWithPopup(auth, provider);
+      }
 
       // Wait until Firebase has finished updating its local auth state.
       // This prevents the UI from appearing stuck after the provider popup

@@ -2303,3 +2303,48 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 
 
 .worldwide-page-link{text-decoration:none;display:flex;align-items:center;gap:8px}
+
+
+/* Desktop-only authentication notice; hidden on the regular website. */
+#authScreen .desktop-info-notice {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  width: min(560px, calc(100% - 36px));
+  padding: 10px 16px;
+  border: 1px solid rgba(135, 197, 255, .28);
+  border-radius: 12px;
+  background: rgba(8, 20, 38, .88);
+  color: #dceaff;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  transform: translateX(-50%);
+}
+#authScreen .desktop-info-notice[hidden] {
+  display: none !important;
+}
+#authScreen .desktop-info-notice a {
+  color: #8fd5ff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#authScreen .desktop-info-notice a:hover {
+  color: #d5f1ff;
+}
+@media (max-height: 650px) {
+  #authScreen .desktop-info-notice {
+    top: 76px;
+    max-width: calc(100% - 24px);
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}
