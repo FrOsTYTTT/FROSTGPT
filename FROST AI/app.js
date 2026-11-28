@@ -1968,6 +1968,7 @@ import {
     if (message && detail) {
       message.textContent = detail;
       message.hidden = false;
+      message.scrollTop = message.scrollHeight;
     } else if (message && state === "connecting") {
       message.textContent = "Say something when the microphone is ready.";
       message.hidden = false;
@@ -2296,75 +2297,133 @@ import {
     updateVoiceButtons();
   }
 
+  function splitSpeechIntoChunks(text, maxLength = 1800) {
+    const remaining = String(text || "").trim();
+    if (!remaining) return [];
+
+    const chunks = [];
+    let rest = remaining;
+
+    while (rest.length > maxLength) {
+      let splitAt = rest.lastIndexOf(". ", maxLength);
+      splitAt = Math.max(splitAt, rest.lastIndexOf("? ", maxLength), rest.lastIndexOf("! ", maxLength));
+      if (splitAt < Math.floor(maxLength * 0.55)) {
+        splitAt = rest.lastIndexOf(" ", maxLength);
+      }
+      if (splitAt < 1) splitAt = maxLength;
+
+      chunks.push(rest.slice(0, splitAt + (rest[splitAt] === " " ? 0 : 1)).trim());
+      rest = rest.slice(splitAt + (rest[splitAt] === " " ? 1 : 0)).trim();
+    }
+
+    if (rest) chunks.push(rest);
+    return chunks;
+  }
+
   function speakReply(text) {
     if (!voiceReplyEnabled) return;
 
-    if (!("speechSynthesis" in window)) {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
       console.warn("FROSTGPT: Speech synthesis is unavailable.");
+      if (voiceCallActive) {
+        updateVoiceCallVisualState("error", "Your text reply is ready in chat, but this browser cannot play spoken replies.");
+      }
       return;
     }
 
+    const inVoiceCall = voiceCallActive;
     const detectedLanguage = detectSpeechLanguage(text);
     const selectedVoice = getSelectedVoice();
     const targetLanguage = detectedLanguage || selectedVoice?.lang || navigator.language || "en-US";
     const spokenText = cleanTextForSpeech(text, targetLanguage.toLowerCase());
+    const speechChunks = splitSpeechIntoChunks(spokenText);
 
-    if (!spokenText) return;
+    if (!speechChunks.length) return;
 
-    // During Voice Call, preserve the silent utterance queued by the
-    // call button. Cancelling it here can make Chrome block delayed speech.
-    if (!voiceCallActive) {
-      stopSpeaking();
-    } else {
+    // Do not cancel the speech engine during a call: the initial user-gesture
+    // unlock is queued from the Call button and must remain available.
+    if (inVoiceCall) {
       window.speechSynthesis.resume();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(spokenText);
-    const matchingVoice = detectedLanguage ? getVoiceForLanguage(detectedLanguage) : selectedVoice;
-
-    if (matchingVoice) {
-      utterance.voice = matchingVoice;
-      utterance.lang = matchingVoice.lang;
     } else {
-      // Let the browser choose a voice for the reply's actual language.
-      utterance.lang = targetLanguage;
+      stopSpeaking();
     }
 
-    utterance.rate = voicePreferences.rate;
-    utterance.pitch = voicePreferences.pitch;
-    utterance.volume = voicePreferences.volume;
+    const matchingVoice = detectedLanguage ? getVoiceForLanguage(detectedLanguage) : selectedVoice;
+    let chunkIndex = 0;
+    let playbackFinished = false;
 
-    utterance.onstart = () => {
-      updateVoiceCallVisualState("speaking");
-      updateVoiceButtons();
-    };
-    utterance.onend = () => {
-      updateVoiceCallVisualState("listening");
-      updateVoiceButtons();
-      if (voiceCallActive && !isThinking && !voiceListening) {
-        void startVoiceInput("call");
+    const resumeListeningAfterReply = () => {
+      if (playbackFinished) return;
+      playbackFinished = true;
+      if (!inVoiceCall) {
+        updateVoiceButtons();
+        return;
       }
-    };
 
-    utterance.onerror = event => {
-      console.warn(
-        "FROSTGPT: Speech playback error.",
-        event.error
-      );
-
-      if (voiceCallActive) {
-        updateVoiceCallVisualState("error", `Text reply received, but your browser couldn't play the voice: ${event.error || "speech playback error"}.`);
-      }
+      updateVoiceCallVisualState("listening", voiceCallTranscript || "Your reply is complete. I'm listening.");
       updateVoiceButtons();
-      if (voiceCallActive && !isThinking && !voiceListening) {
-        void startVoiceInput("call");
-      }
+
+      window.setTimeout(() => {
+        if (voiceCallActive && voiceReplyEnabled && !isThinking && !voiceListening) {
+          void startVoiceInput("call");
+        }
+      }, 350);
     };
 
-    window.speechSynthesis.speak(utterance);
-    // Some browsers leave speechSynthesis paused after an interrupted utterance.
-    window.speechSynthesis.resume();
-    updateVoiceButtons();
+    const speakNextChunk = () => {
+      if (inVoiceCall && (!voiceCallActive || !voiceReplyEnabled)) return;
+      if (chunkIndex >= speechChunks.length) {
+        resumeListeningAfterReply();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(speechChunks[chunkIndex++]);
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+        utterance.lang = matchingVoice.lang;
+      } else {
+        utterance.lang = targetLanguage;
+      }
+
+      utterance.rate = voicePreferences.rate;
+      utterance.pitch = voicePreferences.pitch;
+      utterance.volume = voicePreferences.volume;
+
+      utterance.onstart = () => {
+        if (inVoiceCall) updateVoiceCallVisualState("speaking", voiceCallTranscript);
+        updateVoiceButtons();
+      };
+
+      utterance.onend = () => {
+        if (inVoiceCall && voiceCallActive && voiceReplyEnabled) {
+          window.setTimeout(speakNextChunk, 80);
+        } else if (!inVoiceCall) {
+          updateVoiceButtons();
+        }
+      };
+
+      utterance.onerror = event => {
+        console.warn("FROSTGPT: Speech playback error.", event.error);
+        if (inVoiceCall && voiceCallActive) {
+          updateVoiceCallVisualState(
+            "error",
+            `Your text reply is in chat, but speech playback failed: ${event.error || "audio unavailable"}. I'll keep the call open.`
+          );
+          resumeListeningAfterReply();
+        } else {
+          updateVoiceButtons();
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.resume();
+      updateVoiceButtons();
+    };
+
+    if (inVoiceCall) {
+      updateVoiceCallVisualState("speaking", voiceCallTranscript);
+    }
+    speakNextChunk();
   }
 
   function clearMicSilenceDetection() {
@@ -5113,14 +5172,6 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         ? window.FROSTGPTSupport.formatReply(message, modelReply)
         : modelReply;
 
-      if (voiceCallActive) {
-        voiceCallTranscript = [
-          voiceCallTranscript.replace(/FROSTGPT: Thinking\.\.\.$/, "").trim(),
-          `FROSTGPT: ${displayReply}`
-        ].filter(Boolean).join("\n\n");
-        updateVoiceCallVisualState("reply", voiceCallTranscript);
-      }
-
       if (mode === "flash") {
         conversation.flash.push({
           role: "assistant",
@@ -5138,9 +5189,18 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         contextContent: modelReply
       });
 
+      // Show the assistant response in the call panel after it is in the chat.
+      if (voiceCallActive) {
+        voiceCallTranscript = [
+          voiceCallTranscript.replace(/FROSTGPT: Thinking\.\.\.$/, "").trim(),
+          `FROSTGPT: ${displayReply}`
+        ].filter(Boolean).join("\n\n");
+        updateVoiceCallVisualState("speaking", voiceCallTranscript);
+      }
+
       playSound(760);
 
-      // Use the currently selected voice and saved settings.
+      // Speak the same user-facing text that was just added to the chat.
       speakReply(displayReply);
 
     } catch (error) {
