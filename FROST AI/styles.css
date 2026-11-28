@@ -1689,28 +1689,6 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 
 
-/* Keep live transcript, assistant reply, and errors visible during calls. */
-.voice-call-message {
-  width: min(86vw, 560px);
-  max-height: min(34vh, 300px);
-  overflow-y: auto;
-  box-sizing: border-box;
-  margin: 14px auto 4px;
-  padding: 12px 15px;
-  border: 1px solid var(--border-color, rgba(255,255,255,.16));
-  border-radius: 14px;
-  background: var(--panel-background, rgba(32,35,43,.72));
-  color: var(--text-color, inherit);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: left;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.voice-call-message[hidden] { display: none; }
-@media (max-width: 560px) { .voice-call-message { max-height: 38vh; } }
-
-
 /* Standalone Cloudflare verification page, shown after provider sign-in. */
 .turnstile-verification-screen{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:24px;background:radial-gradient(ellipse at 50% 0%,#183452 0%,transparent 58%),#171717;color:#f5f7fb}
 .turnstile-verification-screen[hidden]{display:none!important}
