@@ -1821,8 +1821,11 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 
 
-/* Authentication card and every visual layer inside it are completely static. */
+/* Keep the entire authentication presentation still: card, floating capability tiles, and decorative credits. */
 #authScreen .auth-card,
+#authScreen .auth-capability,
+#authScreen .auth-team-credit-background,
+#authScreen .auth-credit-arc,
 #authScreen .auth-card *,
 #authScreen .auth-card::before,
 #authScreen .auth-card::after,
