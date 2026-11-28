@@ -282,6 +282,7 @@
       <h2 id="voiceCallTitle">FROSTGPT Voice</h2>
       <p id="voiceCallStatus" aria-live="polite">Connecting...</p>
       <video id="voiceCallScreenPreview" class="voice-call-screen-preview" autoplay muted playsinline aria-label="Live screen-share preview" hidden></video>
+      <p id="voiceCallScreenShareStatus" class="voice-call-screen-share-status" role="status" aria-live="polite" hidden></p>
       <div class="voice-call-controls">
         <button id="voiceCallScreenShareButton" type="button" class="voice-call-screen-share-button" aria-label="Share your screen live" aria-pressed="false" title="Share your screen live">💻</button>
         <button id="endVoiceCallButton" type="button" class="voice-call-end-button" aria-label="End voice call">✕</button>
@@ -661,14 +662,21 @@
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       return canvas.toDataURL("image/jpeg", 0.62);
     }
+    function setCallScreenShareStatus(message) {
+      const status = byId("voiceCallScreenShareStatus");
+      if (status) { status.textContent = message; status.hidden = !message; }
+    }
     function updateCallShareButton() {
       const button = byId("voiceCallScreenShareButton");
       if (!button) return;
-      button.textContent = activeScreenStream ? "💻" : "💻";
+      button.textContent = "💻";
       button.classList.toggle("is-sharing", !!activeScreenStream);
       button.setAttribute("aria-pressed", String(!!activeScreenStream));
       button.title = activeScreenStream ? "Stop live screen sharing" : "Share your screen live";
       button.setAttribute("aria-label", button.title);
+      setCallScreenShareStatus(activeScreenStream
+        ? "LIVE · Recent screen frames are sent with your next voice turn."
+        : "Screen sharing is off.");
     }
     function stopSharing() {
       if (screenFrameTimer) { clearInterval(screenFrameTimer); screenFrameTimer = null; }
@@ -705,14 +713,17 @@
       if (activeScreenStream) return true;
       if (!installed("screen-sharing")) {
         byId("screenPluginStatus").textContent = "Install the Screen Sharing plugin first.";
+        setCallScreenShareStatus("Install the Screen Sharing plugin first to share your screen.");
         return false;
       }
       if (!isInstalledPWA()) {
         byId("screenPluginStatus").textContent = "Install FROSTGPT™ as a PWA to use this plugin.";
+        setCallScreenShareStatus("Open the installed FROSTGPT™ app to share your screen.");
         return false;
       }
       if (!navigator.mediaDevices?.getDisplayMedia) {
         byId("screenPluginStatus").textContent = "Live screen sharing is unavailable in this browser.";
+        setCallScreenShareStatus("This browser does not support live screen sharing.");
         return false;
       }
       try {
@@ -734,7 +745,9 @@
         renderPlugins();
         return true;
       } catch (error) {
-        byId("screenPluginStatus").textContent = error?.name === "NotAllowedError" ? "Screen sharing was cancelled." : "Screen sharing is unavailable in this browser.";
+        const message = error?.name === "NotAllowedError" ? "Screen sharing was cancelled." : "Screen sharing is unavailable in this browser.";
+        byId("screenPluginStatus").textContent = message;
+        setCallScreenShareStatus(message);
         return false;
       }
     }
