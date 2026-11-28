@@ -1821,13 +1821,24 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 
 
-/* Authentication card must remain completely static. */
-#authScreen > .auth-card,
-#authScreen > .auth-card * {
+/* Authentication card and every visual layer inside it are completely static. */
+#authScreen .auth-card,
+#authScreen .auth-card *,
+#authScreen .auth-card::before,
+#authScreen .auth-card::after,
+#authScreen .auth-card *::before,
+#authScreen .auth-card *::after {
   animation: none !important;
   animation-name: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
   transition: none !important;
+  transition-duration: 0s !important;
   transform: none !important;
+  translate: none !important;
+  rotate: none !important;
+  scale: none !important;
   will-change: auto !important;
 }
 
