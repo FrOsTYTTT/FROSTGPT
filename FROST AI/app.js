@@ -152,6 +152,41 @@ import {
   }
 
   const appElement = $("app");
+  const supportPage = $("supportPage");
+  const supportBackButton = $("supportBackButton");
+  let supportVerificationInProgress = false;
+
+  async function openSupportWithVerification() {
+    if (supportVerificationInProgress) return;
+    supportVerificationInProgress = true;
+    showTurnstileVerificationPage();
+    try {
+      await runTurnstileVerification();
+      if (turnstileScreen) turnstileScreen.hidden = true;
+      if (supportPage) supportPage.hidden = false;
+    } catch (error) {
+      console.error("FROSTGPT: Support verification could not start.", error);
+      if (turnstileStatus) turnstileStatus.textContent = error?.message || "Cloudflare verification could not load. Please refresh and try again.";
+    } finally {
+      supportVerificationInProgress = false;
+    }
+  }
+
+  document.addEventListener("click", event => {
+    const supportLink = event.target.closest("[data-support-verification]");
+    if (!supportLink) return;
+    event.preventDefault();
+    openSupportWithVerification();
+  });
+
+  supportBackButton?.addEventListener("click", () => {
+    if (supportPage) supportPage.hidden = true;
+    if (auth?.currentUser) {
+      if (appElement) appElement.classList.add("visible");
+    } else if (authScreen) {
+      authScreen.style.display = "flex";
+    }
+  });
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
   const accountName = $("accountName");
