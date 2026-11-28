@@ -26,7 +26,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-41">
+  <link rel="stylesheet" href="/styles.css?v=20261127-42">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))" onerror="window.dispatchEvent(new Event('frost-turnstile-error'))"></script>
 </head>
 
@@ -71,9 +71,9 @@
         <img class="auth-logo-image" src="/icon.svg" alt="FROSTGPT icon">
         <span class="auth-logo-word auth-logo-word-right">AI</span>
       </div>
-      <h1>Welcome to FROSTGPT™</h1>
-      <p>Choose a sign-in provider to continue to your AI workspace.</p>
-      <p>We’re all very glad you can use this AI. We even have emotional support messages for people who feel down some days!</p>
+      <h1 id="authHeading">Welcome to FROSTGPT™</h1>
+      <p id="authDescription">Choose a sign-in provider to continue to your AI workspace.</p>
+      <p id="authExtra">We’re all very glad you can use this AI. We even have emotional support messages for people who feel down some days!</p>
 
       <button class="auth-provider-button" id="googleSignInButton" type="button">
         <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -100,6 +100,9 @@
       </button>
 
       <div id="authStatus" role="status"></div>
+      <button id="guestAuthBackButton" class="guest-auth-back-button" type="button" hidden>← Back to guest chat</button>
+      <button id="tryOutButton" class="try-out-button" type="button">Try Out</button>
+      <p id="tryOutNote" class="try-out-note">This is only for guests that don't have Gmail accounts.</p>
     </div>
   </section>
 
@@ -632,6 +635,6 @@
 
   <script src="/chat.js?v=20261126-1"></script>
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261127-46"></script>
+  <script type="module" src="/app.js?v=20261127-47"></script>
 </body>
 </html>
