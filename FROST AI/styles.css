@@ -2012,3 +2012,46 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   .auth-logo-lockup .auth-logo-image { width: 56px; height: 56px; }
   .auth-logo-word { font-size: clamp(23px, 6.5vw, 29px); }
 }
+
+
+/* Guest access and the authenticate-before-saving screen. */
+.try-out-button {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin: 18px auto 0;
+  border: 1px solid rgba(143,196,255,.34);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #287bd1, #4855c8);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(45,111,210,.2);
+}
+.try-out-button:hover { filter: brightness(1.08); }
+.try-out-button:disabled { opacity: .6; cursor: wait; }
+.try-out-note {
+  margin: 9px auto 0 !important;
+  color: #aab7c7 !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  text-align: center !important;
+}
+.guest-auth-back-button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin: 16px auto 0;
+  border: 1px solid rgba(143,196,255,.26);
+  border-radius: 11px;
+  background: rgba(10,22,40,.68);
+  color: #dceaff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.guest-auth-back-button:hover { background: rgba(44,91,145,.42); }
+#authScreen [hidden] { display: none !important; }
