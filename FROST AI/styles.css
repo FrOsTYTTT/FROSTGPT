@@ -62,6 +62,10 @@
     }
 
     .auth-provider-button svg { width:21px;height:21px; }
+    .auth-provider-button:disabled { cursor:not-allowed;opacity:.48; }
+    .turnstile-section { display:flex;flex-direction:column;align-items:center;gap:8px;margin:18px 0 20px;min-height:76px; }
+    #frostTurnstileWidget { min-height:65px; }
+    #turnstileStatus { min-height:16px;color:#aab6c5;font-size:11px;line-height:1.4;text-align:center; }
     #googleSignInButton,#appleSignInButton { background:#fff;color:#000;border-color:#dadce0; }
     #githubSignInButton { background:#24292f;color:#fff;border-color:#424950; }
 
