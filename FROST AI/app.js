@@ -25,7 +25,9 @@ import {
   setDoc,
   writeBatch,
   deleteDoc,
-  onSnapshot
+  onSnapshot,
+  serverTimestamp,
+  limit
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 (() => {
@@ -55,6 +57,17 @@ import {
   const openGifCreateButton = $("openGifCreate");
   const pinnedTabButton = $("pinnedTabButton");
   const chatsTabButton = $("chatsTabButton");
+  const worldwideTabButton = $("worldwideTabButton");
+  const worldwideChatPanel = $("worldwideChatPanel");
+  const worldwideMessagesList = $("worldwideMessagesList");
+  const worldwideChatStatus = $("worldwideChatStatus");
+  const worldwideMessageInput = $("worldwideMessageInput");
+  const worldwideSendButton = $("worldwideSendButton");
+  const worldwideReplyPreview = $("worldwideReplyPreview");
+  const worldwideReplyText = $("worldwideReplyText");
+  const worldwideCancelReply = $("worldwideCancelReply");
+  let worldwideUnsubscribe = null;
+  let worldwideReplyTarget = null;
   const pinnedMessagesList = $("pinnedMessagesList");
   const chatsTabPanel = $("chatsTabPanel");
   const pinnedTabPanel = $("pinnedTabPanel");
@@ -3905,14 +3918,166 @@ import {
   }
 
   function setSidebarTab(tab) {
+    const showWorld = tab === "worldwide";
     const showPinned = tab === "pinned";
-    if (chatsTabPanel) chatsTabPanel.hidden = showPinned;
-    if (pinnedTabPanel) pinnedTabPanel.hidden = !showPinned;
-    chatsTabButton?.classList.toggle("active", !showPinned);
+    if (chatsTabPanel) chatsTabPanel.hidden = showPinned || showWorld;
+    if (pinnedTabPanel) pinnedTabPanel.hidden = !showPinned || showWorld;
+    if (worldwideChatPanel) worldwideChatPanel.hidden = !showWorld;
+    document.querySelector(".main")?.classList.toggle("worldwide-mode", showWorld);
+    chatsTabButton?.classList.toggle("active", !showPinned && !showWorld);
     pinnedTabButton?.classList.toggle("active", showPinned);
-    chatsTabButton?.setAttribute("aria-selected", String(!showPinned));
+    worldwideTabButton?.classList.toggle("active", showWorld);
+    chatsTabButton?.setAttribute("aria-selected", String(!showPinned && !showWorld));
     pinnedTabButton?.setAttribute("aria-selected", String(showPinned));
+    worldwideTabButton?.setAttribute("aria-selected", String(showWorld));
     if (showPinned) renderPinnedChats();
+    if (showWorld) startWorldwideChat();
+    else stopWorldwideChat();
+  }
+
+  function stopWorldwideChat() {
+    if (worldwideUnsubscribe) {
+      worldwideUnsubscribe();
+      worldwideUnsubscribe = null;
+    }
+  }
+
+  function clearWorldwideReply() {
+    worldwideReplyTarget = null;
+    if (worldwideReplyPreview) worldwideReplyPreview.hidden = true;
+    if (worldwideReplyText) worldwideReplyText.textContent = "";
+  }
+
+  function startWorldwideChat() {
+    if (!firebaseReady || !db || !currentUser || currentUser.isAnonymous || !currentUserId) {
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Sign in with an account to use Worldwide Chat.";
+      return;
+    }
+    if (worldwideUnsubscribe) return;
+    if (worldwideChatStatus) worldwideChatStatus.textContent = "Connecting…";
+    const messagesQuery = query(
+      collection(db, "worldwideMessages"),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+    worldwideUnsubscribe = onSnapshot(messagesQuery, snapshot => {
+      if (!worldwideMessagesList) return;
+      worldwideMessagesList.replaceChildren();
+      const messages = [...snapshot.docs].reverse();
+      const messageById = new Map(messages.map(item => [item.id, item.data()]));
+      for (const messageDoc of messages) {
+        const data = messageDoc.data();
+        const card = document.createElement("article");
+        card.className = "worldwide-message";
+        card.dataset.messageId = messageDoc.id;
+
+        const top = document.createElement("div");
+        top.className = "worldwide-message-top";
+        const author = document.createElement("strong");
+        author.textContent = String(data.displayName || "User").slice(0, 30);
+        const time = document.createElement("time");
+        if (data.createdAt?.toDate) {
+          const date = data.createdAt.toDate();
+          time.dateTime = date.toISOString();
+          time.textContent = date.toLocaleString();
+        } else {
+          time.textContent = "Just now";
+        }
+        top.append(author, time);
+
+        if (data.replyToId) {
+          const reply = document.createElement("div");
+          reply.className = "worldwide-reply-reference";
+          const original = messageById.get(data.replyToId);
+          reply.textContent = original
+            ? `↪ Replying to ${String(data.replyToName || "user").slice(0, 30)}: ${String(original.text || "").slice(0, 100)}`
+            : `↪ Replying to ${String(data.replyToName || "a message").slice(0, 30)}`;
+          card.appendChild(reply);
+        }
+
+        const body = document.createElement("p");
+        body.className = "worldwide-message-text";
+        body.textContent = String(data.text || "").slice(0, 500);
+
+        const actions = document.createElement("div");
+        actions.className = "worldwide-message-actions";
+        const replyButton = document.createElement("button");
+        replyButton.type = "button";
+        replyButton.textContent = "↩ Reply";
+        replyButton.addEventListener("click", () => {
+          worldwideReplyTarget = {
+            id: messageDoc.id,
+            name: String(data.displayName || "User").slice(0, 30)
+          };
+          if (worldwideReplyText) worldwideReplyText.textContent = `Replying to ${worldwideReplyTarget.name}`;
+          if (worldwideReplyPreview) worldwideReplyPreview.hidden = false;
+          worldwideMessageInput?.focus();
+        });
+        const reportButton = document.createElement("button");
+        reportButton.type = "button";
+        reportButton.textContent = "Report";
+        reportButton.addEventListener("click", async () => {
+          const reason = window.prompt("Why are you reporting this message? (Maximum 300 characters)");
+          if (!reason || !reason.trim()) return;
+          try {
+            await setDoc(doc(collection(db, "worldwideReports")), {
+              reporterUid: currentUser.uid,
+              messageId: messageDoc.id,
+              reason: reason.trim().slice(0, 300),
+              createdAt: serverTimestamp()
+            });
+            if (worldwideChatStatus) worldwideChatStatus.textContent = "Report submitted.";
+          } catch (error) {
+            console.error("FROSTGPT: Worldwide report failed.", error);
+            if (worldwideChatStatus) worldwideChatStatus.textContent = "Report could not be submitted.";
+          }
+        });
+        actions.append(replyButton, reportButton);
+        card.append(top, body, actions);
+        worldwideMessagesList.appendChild(card);
+      }
+      if (worldwideChatStatus) worldwideChatStatus.textContent = `${messages.length} recent messages · Live`;
+      worldwideMessagesList.scrollTop = worldwideMessagesList.scrollHeight;
+    }, error => {
+      console.error("FROSTGPT: Worldwide Chat listener failed.", error);
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Could not load messages. Check Firestore Rules.";
+      stopWorldwideChat();
+    });
+  }
+
+  async function sendWorldwideMessage() {
+    if (!currentUser || currentUser.isAnonymous || !currentUserId) {
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Sign in with Google, Apple, or GitHub to post.";
+      return;
+    }
+    const textValue = String(worldwideMessageInput?.value || "").trim();
+    if (!textValue) return;
+    if (textValue.length > 500) {
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Messages are limited to 500 characters.";
+      return;
+    }
+    if (worldwideSendButton) worldwideSendButton.disabled = true;
+    try {
+      const payload = {
+        uid: currentUser.uid,
+        displayName: getAccountName(currentUser).slice(0, 30) || "User",
+        text: textValue,
+        createdAt: serverTimestamp()
+      };
+      if (worldwideReplyTarget) {
+        payload.replyToId = worldwideReplyTarget.id;
+        payload.replyToName = worldwideReplyTarget.name;
+      }
+      await setDoc(doc(collection(db, "worldwideMessages")), payload);
+      if (worldwideMessageInput) worldwideMessageInput.value = "";
+      clearWorldwideReply();
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Message sent.";
+    } catch (error) {
+      console.error("FROSTGPT: Worldwide Chat send failed.", error);
+      if (worldwideChatStatus) worldwideChatStatus.textContent = "Message could not be sent. Check Firestore Rules.";
+    } finally {
+      if (worldwideSendButton) worldwideSendButton.disabled = false;
+    }
   }
 
   function openConversationById(conversationId) {
@@ -3992,6 +4157,15 @@ import {
 
   chatsTabButton?.addEventListener("click", () => setSidebarTab("chats"));
   pinnedTabButton?.addEventListener("click", () => setSidebarTab("pinned"));
+  worldwideTabButton?.addEventListener("click", () => setSidebarTab("worldwide"));
+  worldwideSendButton?.addEventListener("click", sendWorldwideMessage);
+  worldwideMessageInput?.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendWorldwideMessage();
+    }
+  });
+  worldwideCancelReply?.addEventListener("click", clearWorldwideReply);
 
   function renderMessage(message, shouldScroll = true) {
     const row = document.createElement("div");
