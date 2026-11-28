@@ -2181,3 +2181,9 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
     opacity: 1;
   }
 }
+
+
+/* Official Rulebook link beside the chat information note. */
+.official-handbook-link{display:inline-flex;align-items:center;justify-content:center;margin:5px 6px;padding:5px 11px;border:1px solid var(--border-color,rgba(255,255,255,.22));border-radius:999px;color:var(--text-color,#e8eef8);font-size:11px;font-weight:700;text-decoration:none;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.official-handbook-link:hover{background:rgba(120,180,255,.12);border-color:rgba(120,180,255,.55);transform:translateY(-1px)}
+.official-handbook-link:focus-visible{outline:2px solid currentColor;outline-offset:3px}
