@@ -2666,8 +2666,15 @@ import {
               setStatus("Dictation added to your message. Review it before sending.");
               messageInput.focus();
             } else if (voiceCallActive) {
-              messageInput.value = transcript;
-              messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+              // Speech-recognition text is programmatic, not manual typing.
+              // Keep the call active so the AI can speak its reply.
+              applyingVoiceTranscript = true;
+              try {
+                messageInput.value = transcript;
+                messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+              } finally {
+                applyingVoiceTranscript = false;
+              }
               const selectedProvider = settings.flashProvider;
               voiceCallTranscript = [voiceCallTranscript, `You: ${transcript}`, "FROSTGPT: Thinking..."].filter(Boolean).join("\\n\\n");
               updateVoiceCallVisualState("thinking", voiceCallTranscript);
