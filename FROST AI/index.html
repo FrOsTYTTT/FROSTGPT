@@ -26,7 +26,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-42">
+  <link rel="stylesheet" href="/styles.css?v=20261127-43">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))" onerror="window.dispatchEvent(new Event('frost-turnstile-error'))"></script>
 </head>
 
@@ -45,10 +45,16 @@
         <img src="/icon.svg" alt="" width="30" height="30">
         <span>FROSTGPT™</span>
       </a>
-      <button class="support-mail-link" type="button" data-support-verification="true" aria-label="Open Gmail support">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 6.75A2.75 2.75 0 0 1 5.25 4h13.5a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 18.75 20H5.25a2.75 2.75 0 0 1-2.75-2.75V6.75Zm2.1-.4 7.4 5.8 7.4-5.8a.75.75 0 0 0-.65-.35H5.25a.75.75 0 0 0-.65.35Zm14.9 2.5-7.04 5.51a.75.75 0 0 1-.92 0L4.5 8.85v8.4c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75v-8.4Z"/></svg>
-        <span>Gmail Support</span>
-      </button>
+      <div class="auth-topbar-actions">
+        <button class="support-mail-link" type="button" data-support-verification="true" aria-label="Open Gmail support">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 6.75A2.75 2.75 0 0 1 5.25 4h13.5a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 18.75 20H5.25a2.75 2.75 0 0 1-2.75-2.75V6.75Zm2.1-.4 7.4 5.8 7.4-5.8a.75.75 0 0 0-.65-.35H5.25a.75.75 0 0 0-.65.35Zm14.9 2.5-7.04 5.51a.75.75 0 0 1-.92 0L4.5 8.85v8.4c0 .41.34.75.75.75h13.5c.41 0 .75-.34.75-.75v-8.4Z"/></svg>
+          <span>Gmail Support</span>
+        </button>
+        <div class="try-out-topbar">
+          <button id="tryOutButton" class="try-out-button" type="button">Try Out</button>
+          <p id="tryOutNote" class="try-out-note">This is only for guests that don't have Gmail accounts.</p>
+        </div>
+      </div>
     </div>
     <div class="auth-capabilities" aria-hidden="true">
       <div class="auth-capability"><span>✦</span> Smart AI Chat</div>
@@ -101,8 +107,6 @@
 
       <div id="authStatus" role="status"></div>
       <button id="guestAuthBackButton" class="guest-auth-back-button" type="button" hidden>← Back to guest chat</button>
-      <button id="tryOutButton" class="try-out-button" type="button">Try Out</button>
-      <p id="tryOutNote" class="try-out-note">This is only for guests that don't have Gmail accounts.</p>
     </div>
   </section>
 
