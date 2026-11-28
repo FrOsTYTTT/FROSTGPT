@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-14">
+  <link rel="stylesheet" href="/styles.css?v=20261127-15">
 </head>
 
 <body>
@@ -67,14 +67,16 @@
 
   <section id="providerVerificationScreen" class="provider-verification-screen" hidden aria-live="polite" aria-label="Sign-in verification">
     <div class="provider-verification-card">
-      <div class="provider-verification-brand">❄ FROSTGPT™</div>
       <div class="provider-verification-mark">✓</div>
       <h1>Authentication successful</h1>
       <div id="providerVerificationStatus" class="provider-verification-status">
         <span class="auth-verification-row"><span class="auth-loading-spinner" aria-label="Loading"></span><strong>Verifying sign-in…</strong></span>
         <span class="auth-verification-caption">Preparing your FROSTGPT™ workspace…</span>
       </div>
-      <div id="providerVerificationTimer" class="provider-verification-timer" role="status" aria-live="polite">Continuing in 3 seconds…</div>
+      <div class="provider-verification-footer">
+        <div class="provider-verification-brand">❄ FROSTGPT™</div>
+        <div id="providerVerificationTimer" class="provider-verification-timer" role="status" aria-live="polite">Continuing in 3 seconds…</div>
+      </div>
     </div>
   </section>
 
