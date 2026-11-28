@@ -138,63 +138,38 @@ import {
       turnstileWidgetId = null;
     }
     turnstileWidget.replaceChildren();
-    const startButton = $("turnstileStartButton");
-    if (!startButton) throw new Error("The manual security-check button is unavailable.");
-    startButton.hidden = false;
-    startButton.disabled = false;
-    startButton.textContent = "Continue to Cloudflare check";
     return new Promise((resolve, reject) => {
       turnstileVerificationResolver = { resolve, reject };
-      const enableStartButton = message => {
-        startButton.hidden = false;
-        startButton.disabled = false;
-        startButton.textContent = "Try security check again";
-        if (turnstileStatus && message) turnstileStatus.textContent = message;
-      };
-      startButton.onclick = () => {
-        if (startButton.disabled || turnstileWidgetId === null) return;
-        startButton.disabled = true;
-        startButton.textContent = "Checking…";
-        if (turnstileStatus) turnstileStatus.textContent = "Cloudflare is checking your browser. Complete any challenge it displays.";
-        try {
-          window.turnstile.execute(turnstileWidgetId);
-        } catch (error) {
-          enableStartButton("Could not start the Cloudflare check. Please try again.");
-          console.warn("FROSTGPT: Could not execute Turnstile.", error);
-        }
-      };
       try {
         turnstileWidgetId = window.turnstile.render(turnstileWidget, {
           sitekey: "0x4AAAAAAGWcQUNK6tmofMMw",
           theme: "dark",
           size: "normal",
           appearance: "always",
-          execution: "execute",
+          execution: "render",
           callback: async token => {
             if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
             try {
               await verifyTurnstileToken(token);
-              startButton.hidden = true;
               const pending = turnstileVerificationResolver;
               turnstileVerificationResolver = null;
               if (pending) pending.resolve(true);
             } catch (error) {
               console.warn("FROSTGPT: Turnstile verification failed.", error);
+              if (turnstileStatus) turnstileStatus.textContent = "Verification failed. Please complete the checkbox again.";
               if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
-              enableStartButton("Verification failed. Start the security check again.");
             }
           },
           "expired-callback": () => {
-            enableStartButton("Verification expired. Start the security check again.");
+            if (turnstileStatus) turnstileStatus.textContent = "Verification expired. Please click the checkbox again.";
           },
           "error-callback": () => {
-            enableStartButton("Cloudflare verification could not load. Please try again.");
+            if (turnstileStatus) turnstileStatus.textContent = "Cloudflare verification could not load. Please refresh and try again.";
             return true;
           }
         });
       } catch (error) {
         turnstileVerificationResolver = null;
-        startButton.onclick = null;
         reject(error);
       }
     });
