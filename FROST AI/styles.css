@@ -1822,8 +1822,10 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 
 
 /* Authentication card must remain completely static. */
-#authScreen .auth-card {
+#authScreen > .auth-card,
+#authScreen > .auth-card * {
   animation: none !important;
+  animation-name: none !important;
   transition: none !important;
   transform: none !important;
   will-change: auto !important;
