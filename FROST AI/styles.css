@@ -1872,7 +1872,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .pre-verification-checkbox input{width:19px;height:19px;margin:0;accent-color:#3694ff;cursor:pointer}
 .pre-verification-checkbox:focus-within{outline:2px solid #3694ff;outline-offset:3px}
 
-/* FROSTGPT intro animation: logo rises, then FrOsT and AI appear; total 5 seconds. */
+/* FROSTGPT intro animation: logo rises, then FrOsT and AI appear; total 6 seconds. */
 .frost-intro {
   --frost-intro-logo-size: clamp(58px, 12vw, 86px);
   --frost-intro-logo-half: clamp(29px, 6vw, 43px);
@@ -1888,7 +1888,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
     radial-gradient(ellipse at 50% 0%, #183452 0%, transparent 58%),
     #101722;
   opacity: 1;
-  animation: frost-intro-exit .45s ease 4.55s forwards;
+  animation: frost-intro-exit .45s ease 5.55s forwards;
 }
 .frost-intro-stage {
   position: relative;
