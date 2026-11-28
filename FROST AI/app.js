@@ -173,10 +173,12 @@ import {
   const supportPage = $("supportPage");
   const supportBackButton = $("supportBackButton");
   let supportVerificationInProgress = false;
+  let supportReturnToApp = false;
 
   async function openSupportWithVerification() {
     if (supportVerificationInProgress) return;
     supportVerificationInProgress = true;
+    supportReturnToApp = Boolean(appElement?.classList.contains("visible"));
     try {
       showTurnstileVerificationPage();
       await runTurnstileVerification();
@@ -225,11 +227,16 @@ import {
 
   supportBackButton?.addEventListener("click", () => {
     if (supportPage) supportPage.hidden = true;
-    if (auth?.currentUser) {
+
+    if (supportReturnToApp) {
+      if (authScreen) authScreen.style.display = "none";
       if (appElement) appElement.classList.add("visible");
-    } else if (authScreen) {
-      authScreen.style.display = "flex";
+    } else {
+      if (appElement) appElement.classList.remove("visible");
+      if (authScreen) authScreen.style.display = "flex";
     }
+
+    supportReturnToApp = false;
   });
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
