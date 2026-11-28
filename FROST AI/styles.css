@@ -2117,29 +2117,59 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 
 
-/* Coordinated FrOsT AI auth-card lockup animation. */
+/* Smooth, individually timed FrOsT AI auth-card lockup animations.
+   Animate only transform and opacity so the browser can composite each layer. */
 #authScreen .auth-card .auth-logo.auth-logo-lockup {
   position: relative;
-  top: 0;
-  animation:
-    frost-auth-lockup-float 3.8s ease-in-out infinite,
-    frost-auth-lockup-glow 3.8s ease-in-out infinite !important;
+  top: auto;
+  animation: none !important;
 }
 
-@keyframes frost-auth-lockup-float {
-  0%, 100% { top: 0; }
-  50% { top: -5px; }
+#authScreen .auth-card .auth-logo-lockup .auth-logo-word-left,
+#authScreen .auth-card .auth-logo-lockup .auth-logo-image,
+#authScreen .auth-card .auth-logo-lockup .auth-logo-word-right {
+  backface-visibility: hidden;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
 }
 
-@keyframes frost-auth-lockup-glow {
-  0%, 100% { filter: drop-shadow(0 0 0 rgba(91, 174, 255, 0)); }
-  50% { filter: drop-shadow(0 5px 13px rgba(91, 174, 255, .22)); }
+#authScreen .auth-card .auth-logo-lockup .auth-logo-word-left {
+  animation: frost-auth-word-drift 4.2s cubic-bezier(.45, 0, .55, 1) -1.2s infinite !important;
+}
+
+#authScreen .auth-card .auth-logo-lockup .auth-logo-image {
+  animation: frost-auth-emblem-motion 5s cubic-bezier(.4, 0, .2, 1) -2.1s infinite !important;
+}
+
+#authScreen .auth-card .auth-logo-lockup .auth-logo-word-right {
+  animation: frost-auth-ai-glide 3.7s cubic-bezier(.45, 0, .55, 1) -.7s infinite !important;
+}
+
+@keyframes frost-auth-word-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .94; }
+  50% { transform: translate3d(0, -5px, 0) scale(1.015); opacity: 1; }
+}
+
+@keyframes frost-auth-emblem-motion {
+  0% { transform: translate3d(0, 2px, 0) rotate(-3deg) scale(.97); opacity: .96; }
+  35% { transform: translate3d(0, -6px, 0) rotate(0deg) scale(1.04); opacity: 1; }
+  68% { transform: translate3d(0, -2px, 0) rotate(4deg) scale(1.01); opacity: .98; }
+  100% { transform: translate3d(0, 2px, 0) rotate(-3deg) scale(.97); opacity: .96; }
+}
+
+@keyframes frost-auth-ai-glide {
+  0%, 100% { transform: translate3d(0, 1px, 0) scale(.99); opacity: .86; }
+  48% { transform: translate3d(0, -4px, 0) scale(1.03); opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #authScreen .auth-card .auth-logo.auth-logo-lockup {
+  #authScreen .auth-card .auth-logo.auth-logo-lockup,
+  #authScreen .auth-card .auth-logo-lockup .auth-logo-word-left,
+  #authScreen .auth-card .auth-logo-lockup .auth-logo-image,
+  #authScreen .auth-card .auth-logo-lockup .auth-logo-word-right {
     animation: none !important;
-    top: 0;
-    filter: none;
+    will-change: auto;
+    transform: none;
+    opacity: 1;
   }
 }
