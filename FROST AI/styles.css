@@ -1590,21 +1590,29 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .voice-call-screen { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 38%, rgba(52,125,255,.17), transparent 38%), var(--background, #090b12); color: var(--text, #fff); }
 .voice-call-content { display: flex; flex-direction: column; align-items: center; text-align: center; width: min(100%, 520px); }
 .voice-call-brand { font-size: 14px; letter-spacing: .08em; opacity: .75; margin-bottom: 42px; }
-.voice-call-orb-wrap { width: 190px; height: 190px; display: grid; place-items: center; margin-bottom: 30px; border-radius: 50%; transition: transform .3s ease; }
-.voice-call-orb { width: 150px; height: 150px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(from 20deg, #4e9cff, #9a72ff, #42d6d0, #4e9cff); box-shadow: 0 0 45px rgba(77,143,255,.38), inset 0 0 22px rgba(255,255,255,.3); animation: frost-orb-float 4s ease-in-out infinite; }
-.voice-call-orb-core { width: 112px; height: 112px; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #d8e9ff, #6a8cff 32%, #273a83 72%, #10172e); box-shadow: inset 0 0 24px rgba(255,255,255,.35), 0 0 32px rgba(90,135,255,.6); }
-.voice-call-orb-wrap.is-listening { transform: scale(1.05); }
-.voice-call-orb-wrap.is-listening .voice-call-orb { animation: frost-orb-listen 1.7s ease-in-out infinite; }
-.voice-call-orb-wrap.is-speaking .voice-call-orb { animation: frost-orb-speak .7s ease-in-out infinite alternate; }
-.voice-call-orb-wrap.is-thinking .voice-call-orb { animation: frost-orb-float 1.4s ease-in-out infinite; }
+.voice-call-orb-wrap { width: 190px; height: 190px; display: grid; place-items: center; margin-bottom: 30px; border-radius: 50%; contain: layout paint; transform: translate3d(0,0,0); will-change: transform; }
+.voice-call-orb { width: 150px; height: 150px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(from 20deg, #4e9cff, #9a72ff, #42d6d0, #4e9cff); box-shadow: 0 0 45px rgba(77,143,255,.38), inset 0 0 22px rgba(255,255,255,.3); transform: translate3d(0,0,0); transform-origin: center; backface-visibility: hidden; will-change: transform, opacity; animation: frost-orb-idle 6s ease-in-out infinite; }
+.voice-call-orb-core { width: 112px; height: 112px; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #d8e9ff, #6a8cff 32%, #273a83 72%, #10172e); box-shadow: inset 0 0 24px rgba(255,255,255,.35), 0 0 32px rgba(90,135,255,.6); transform: translate3d(0,0,0); backface-visibility: hidden; will-change: transform, opacity; animation: frost-core-idle 5s ease-in-out infinite; }
+.voice-call-orb-wrap.is-listening .voice-call-orb { animation: frost-orb-listen 2s cubic-bezier(.4,0,.2,1) infinite; }
+.voice-call-orb-wrap.is-listening .voice-call-orb-core { animation: frost-core-listen 1.35s ease-in-out infinite alternate; }
+.voice-call-orb-wrap.is-speaking .voice-call-orb { animation: frost-orb-speak 1.05s cubic-bezier(.22,.75,.25,1) infinite alternate; }
+.voice-call-orb-wrap.is-speaking .voice-call-orb-core { animation: frost-core-speak .72s ease-in-out infinite alternate; }
+.voice-call-orb-wrap.is-thinking .voice-call-orb { animation: frost-orb-think 2.8s ease-in-out infinite; }
+.voice-call-orb-wrap.is-thinking .voice-call-orb-core { animation: frost-core-think 3.6s linear infinite; }
 .voice-call-content h2 { margin: 0 0 8px; font-size: 25px; }
 .voice-call-content p { min-height: 24px; opacity: .75; }
 .voice-call-controls { margin: 34px 0 22px; }
 .voice-call-end-button { width: 64px; height: 64px; border: 0; border-radius: 50%; color: white; background: #df424b; font-size: 25px; cursor: pointer; box-shadow: 0 8px 28px rgba(223,66,75,.35); }
 .voice-call-content small { opacity: .5; max-width: 340px; line-height: 1.5; }
-@keyframes frost-orb-float { 0%,100% { transform: translateY(0) scale(.98); } 50% { transform: translateY(-7px) scale(1.03); } }
-@keyframes frost-orb-listen { 0%,100% { transform: scale(.96); filter: brightness(.95); } 50% { transform: scale(1.08); filter: brightness(1.2); } }
-@keyframes frost-orb-speak { from { transform: scale(.96); } to { transform: scale(1.1); } }
+@keyframes frost-orb-idle { 0%,100% { transform: translate3d(0,0,0) scale(.985); } 50% { transform: translate3d(0,-5px,0) scale(1.015); } }
+@keyframes frost-core-idle { 0%,100% { transform: translate3d(0,0,0) scale(.98); opacity: .94; } 50% { transform: translate3d(0,0,0) scale(1.025); opacity: 1; } }
+@keyframes frost-orb-listen { 0%,100% { transform: translate3d(0,0,0) scale(.97) rotate(-2deg); } 50% { transform: translate3d(0,-3px,0) scale(1.055) rotate(2deg); } }
+@keyframes frost-core-listen { from { transform: translate3d(0,0,0) scale(.91); opacity: .88; } to { transform: translate3d(0,0,0) scale(1.055); opacity: 1; } }
+@keyframes frost-orb-speak { from { transform: translate3d(0,0,0) scale(.96) rotate(-3deg); } to { transform: translate3d(0,0,0) scale(1.09) rotate(3deg); } }
+@keyframes frost-core-speak { from { transform: translate3d(0,0,0) scale(.88) rotate(4deg); opacity: .84; } to { transform: translate3d(0,0,0) scale(1.08) rotate(-4deg); opacity: 1; } }
+@keyframes frost-orb-think { 0%,100% { transform: translate3d(0,0,0) rotate(0deg) scale(.99); } 50% { transform: translate3d(0,-7px,0) rotate(180deg) scale(1.025); } }
+@keyframes frost-core-think { from { transform: translate3d(0,0,0) rotate(0deg) scale(.96); } to { transform: translate3d(0,0,0) rotate(-360deg) scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .voice-call-orb, .voice-call-orb-core, .voice-call-orb-wrap.is-listening .voice-call-orb, .voice-call-orb-wrap.is-speaking .voice-call-orb, .voice-call-orb-wrap.is-thinking .voice-call-orb, .voice-call-orb-wrap.is-listening .voice-call-orb-core, .voice-call-orb-wrap.is-speaking .voice-call-orb-core, .voice-call-orb-wrap.is-thinking .voice-call-orb-core { animation: none !important; will-change: auto; } }
 @media (max-width: 560px) { .composer-mode-button { padding: 0 8px; } .voice-call-orb-wrap { width: 160px; height: 160px; } .voice-call-orb { width: 130px; height: 130px; } .voice-call-orb-core { width: 96px; height: 96px; } }
 
 
