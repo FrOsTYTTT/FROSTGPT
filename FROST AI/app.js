@@ -67,6 +67,10 @@ import {
   const closeGifPicker = $("closeGifPicker");
 
   const authScreen = $("authScreen");
+  const desktopInfoNotice = $("desktopInfoNotice");
+  if (desktopInfoNotice && window.frostDesktop?.isDesktop) {
+    desktopInfoNotice.hidden = false;
+  }
   const authStatus = $("authStatus");
   const authHeading = $("authHeading");
   const authDescription = $("authDescription");
