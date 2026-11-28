@@ -1551,7 +1551,7 @@ import {
   chatFullNotice.id = "chatFullNotice";
   chatFullNotice.className = "chat-full-notice";
   chatFullNotice.hidden = true;
-  chatFullNotice.innerHTML = '<button type="button" class="chat-full-new-button">New Chat</button><div class="chat-full-copy"><strong>Continue in new chat!</strong><span>Your memory will be saved!</span></div>';
+  chatFullNotice.innerHTML = '<button type="button" class="chat-full-new-button">New Chat!</button><div class="chat-full-copy"><strong>Continue in new chat!</strong><span>Your previous chat memory will carry over.</span></div>';
   const chatFullNewButton = chatFullNotice.querySelector(".chat-full-new-button");
   const composerAreaForLimit = document.querySelector(".composer-area");
   if (chat && composerAreaForLimit && chat.parentNode) chat.parentNode.insertBefore(chatFullNotice, composerAreaForLimit);
@@ -1584,7 +1584,7 @@ import {
   }
 
   function makeContinuationContext(messages) {
-    return (Array.isArray(messages) ? messages : []).slice(-20).map(item => {
+    return (Array.isArray(messages) ? messages : []).slice(-80).map(item => {
       let content = item && item.content;
       if (Array.isArray(content)) {
         content = content.map(part => {
@@ -1596,8 +1596,10 @@ import {
     }).filter(item => item.content.trim());
   }
 
-  function continueConversation(previous) {
+  async function continueConversation(previous) {
     if (!previous) return;
+    // Finish pending writes before copying the old chat into its continuation.
+    await Promise.allSettled([...pendingChatWrites]);
     if (isThinking) stopGenerating();
     stopSpeaking();
     stopVoiceInput();
@@ -2137,12 +2139,11 @@ import {
     }
   }
 
-  function updateVoiceCallVisualState(state, detail = "") {
+  function updateVoiceCallVisualState(state) {
     voiceCallPhase = state;
     const screen = $("voiceCallScreen");
     const orb = $("voiceCallOrbWrap");
     const label = $("voiceCallStatus");
-    const message = $("voiceCallMessage");
     if (!screen || !orb || !label) return;
     orb.classList.toggle("is-listening", state === "listening");
     orb.classList.toggle("is-speaking", state === "speaking");
@@ -2154,17 +2155,6 @@ import {
       : state === "error" ? "Voice call needs attention"
       : state === "reply" ? "FROSTGPT replied"
       : "Call ended";
-    if (message && detail) {
-      message.textContent = detail;
-      message.hidden = false;
-      message.scrollTop = message.scrollHeight;
-    } else if (message && state === "connecting") {
-      message.textContent = "Say something when the microphone is ready.";
-      message.hidden = false;
-    } else if (message && state === "listening") {
-      message.textContent = voiceCallTranscript || "I'm listening. Your words and my replies will appear here.";
-      message.hidden = false;
-    }
   }
 
   function updateVoiceButtons() {
