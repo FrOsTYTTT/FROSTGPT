@@ -94,7 +94,7 @@ function createGoogleOAuthFlow() {
       if (finished) return;
       finished = true;
       clearTimeout(timeout);
-      server.close();
+      if (server.listening) server.close();
       if (error) reject(error);
       else resolve(result);
     }
