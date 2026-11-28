@@ -25,12 +25,20 @@
   <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
 
-  <link rel="stylesheet" href="/styles.css?v=20261127-20">
+  <link rel="stylesheet" href="/styles.css?v=20261127-21">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onload="window.dispatchEvent(new Event('frost-turnstile-ready'))"></script>
 </head>
 
 <body>
   <section id="authScreen">
+    <div class="auth-capabilities" aria-hidden="true">
+      <div class="auth-capability"><span>✦</span> Smart AI Chat</div>
+      <div class="auth-capability"><span>⌘</span> Coding Assistance</div>
+      <div class="auth-capability"><span>◉</span> Image Generation</div>
+      <div class="auth-capability"><span>♫</span> Voice Conversations</div>
+      <div class="auth-capability"><span>▤</span> File Support</div>
+      <div class="auth-capability"><span>↗</span> Creative Writing</div>
+    </div>
     <div class="auth-card">
       <div class="auth-logo">❄️</div>
       <h1>Welcome to FROSTGPT™</h1>
@@ -62,7 +70,7 @@
       </button>
 
       <div id="authStatus" role="status"></div>
-      <div class="auth-small">Created by FrOsTAI · Your selected account provider is used for sign-in.</div>
+      <div class="auth-team-credit">Developed by FrOsT · FROSTGPT Development Team<br>Independent AI project, built with creativity and curiosity.</div>
     </div>
   </section>
 
