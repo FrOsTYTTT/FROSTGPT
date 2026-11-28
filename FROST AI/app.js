@@ -106,10 +106,12 @@ import {
     if (turnstileStatus) turnstileStatus.textContent = "Please click the Cloudflare checkbox to continue.";
   }
 
-  function runTurnstileVerification() {
-    if (!turnstileWidget || !window.turnstile) {
-      return Promise.reject(new Error("Cloudflare verification could not load. Please refresh and try again."));
+  async function runTurnstileVerification() {
+    if (!turnstileWidget) throw new Error("Cloudflare verification page is unavailable.");
+    if (!window.turnstile) {
+      await new Promise(resolve => window.addEventListener("frost-turnstile-ready", resolve, { once: true }));
     }
+    if (!window.turnstile) throw new Error("Cloudflare verification could not load. Please refresh and try again.");
     if (turnstileWidgetId !== null) {
       try { window.turnstile.remove(turnstileWidgetId); } catch {}
       turnstileWidgetId = null;
@@ -149,13 +151,6 @@ import {
     });
   }
 
-  window.addEventListener("frost-turnstile-ready", () => {
-    if (turnstileVerificationInProgress && turnstileWidgetId === null) {
-      runTurnstileVerification().catch(error => {
-        if (turnstileStatus) turnstileStatus.textContent = error.message;
-      });
-    }
-  });
   const appElement = $("app");
   const signOutButton = $("signOutButton");
   const refreshChatsButton = $("refreshChats");
