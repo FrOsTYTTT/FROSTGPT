@@ -26,22 +26,60 @@
     button { cursor:pointer;color:inherit; }
 
     #authScreen {
+      position:relative;
+      isolation:isolate;
       min-height:100vh;
+      min-height:100dvh;
       display:flex;
       align-items:center;
       justify-content:center;
+      overflow:hidden;
       padding:20px;
-      background:radial-gradient(ellipse at top,#183452 0%,transparent 55%),#171717;
+      background:
+        radial-gradient(ellipse at 14% 18%,rgba(42,125,255,.34) 0%,transparent 42%),
+        radial-gradient(ellipse at 86% 78%,rgba(135,64,255,.28) 0%,transparent 43%),
+        radial-gradient(ellipse at 72% 8%,rgba(30,205,220,.16) 0%,transparent 36%),
+        linear-gradient(135deg,#080d19 0%,#101b30 48%,#101020 100%);
+    }
+
+    #authScreen::before,
+    #authScreen::after {
+      content:"";
+      position:absolute;
+      z-index:-1;
+      width:min(58vw,620px);
+      aspect-ratio:1;
+      border-radius:50%;
+      filter:blur(75px);
+      opacity:.42;
+      pointer-events:none;
+    }
+
+    #authScreen::before {
+      top:-34%;
+      left:-18%;
+      background:radial-gradient(circle,rgba(35,126,255,.55),transparent 68%);
+    }
+
+    #authScreen::after {
+      right:-20%;
+      bottom:-42%;
+      background:radial-gradient(circle,rgba(151,75,255,.5),transparent 68%);
     }
 
     .auth-card {
+      position:relative;
+      z-index:1;
       width:100%;
       max-width:420px;
       padding:38px 30px;
-      border:1px solid #3b3b3b;
+      border:1px solid rgba(183,211,255,.2);
       border-radius:22px;
-      background:#212121;
+      background:rgba(15,22,36,.78);
       text-align:center;
+      box-shadow:0 28px 90px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);
+      -webkit-backdrop-filter:blur(22px);
+      backdrop-filter:blur(22px);
     }
 
     .auth-logo { font-size:38px;margin-bottom:12px; }
