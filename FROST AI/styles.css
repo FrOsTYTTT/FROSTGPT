@@ -1709,6 +1709,9 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .turnstile-verification-card p{margin:0;color:#aab7c7;font-size:13px;line-height:1.5}
 .turnstile-section{display:flex;flex-direction:column;align-items:center;gap:12px;margin:24px 0 4px;min-height:82px}
 #frostTurnstileWidget{min-height:65px}
+.turnstile-start-button{min-height:42px;padding:0 20px;border:1px solid #65758a;border-radius:10px;background:#31445a;color:#fff;font:600 13px inherit;cursor:pointer}
+.turnstile-start-button:disabled{cursor:wait;opacity:.65}
+.turnstile-start-button[hidden]{display:none!important}
 #turnstileStatus{min-height:18px;color:#aab6c5;font-size:12px;line-height:1.4;text-align:center}
 
 
