@@ -19,6 +19,7 @@ function createGoogleOAuthFlow() {
     const codeVerifier = base64Url(randomBytes(32));
     const codeChallenge = base64Url(createHash("sha256").update(codeVerifier).digest());
     let finished = false;
+    let redirectUri = "";
 
     const server = http.createServer(async (request, response) => {
       const callbackUrl = new URL(request.url || "/", "http://127.0.0.1");
@@ -107,7 +108,7 @@ function createGoogleOAuthFlow() {
         return;
       }
 
-      const redirectUri = `http://127.0.0.1:${address.port}/oauth2callback`;
+      redirectUri = `http://127.0.0.1:${address.port}/oauth2callback`;
       const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
       authUrl.search = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
