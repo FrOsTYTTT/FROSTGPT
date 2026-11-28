@@ -1842,3 +1842,5 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .support-back-button{position:absolute;top:16px;left:16px;padding:8px 12px;border:1px solid rgba(143,196,255,.24);border-radius:10px;background:rgba(12,24,43,.7);color:#dceaff;cursor:pointer}
 @media(max-width:480px){.support-page-card{padding:58px 22px 30px}.support-page-card p{font-size:14px}.support-page-card h1{font-size:22px}}
 
+
+.support-inline-logo{display:inline-block;width:21px;height:21px;object-fit:contain;vertical-align:-5px;margin:0 3px;border-radius:5px}
