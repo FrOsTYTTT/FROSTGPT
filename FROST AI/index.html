@@ -513,7 +513,7 @@
         <section id="screenShareStage" class="screen-share-stage" hidden>
           <div class="screen-share-stage-heading"><h3>Screen Sharing💻</h3><button id="stopScreenShare" class="plugin-secondary-button" type="button">Stop sharing</button></div>
           <video id="screenSharePreview" autoplay muted playsinline></video>
-          <p>Only the content you selected in your browser’s sharing prompt is shared. Stop sharing at any time.</p>
+          <p>Only the content you selected in your browser’s sharing prompt is shared. FROSTGPT Flash can inspect a still screenshot when you send a message while sharing. It does not continuously stream video to the AI. Stop sharing at any time.</p>
         </section>
         <div id="gmailConnectNotice" class="plugins-notice" hidden role="status">Gmail installation is ready, but account connection needs FROSTGPT™’s Google OAuth web client configuration. No Gmail account has been connected yet.</div>
       </main>
@@ -639,6 +639,22 @@
       const video = byId("screenSharePreview"); if (video) video.srcObject = null;
       byId("screenShareStage").hidden = true; renderPlugins();
     }
+    // Expose a still-frame capture function to chat. Nothing is transmitted
+    // until the user sends a message while screen sharing is active.
+    window.frostgptCaptureSharedScreenFrame = () => {
+      if (!activeScreenStream) return null;
+      const video = byId("screenSharePreview");
+      if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) return null;
+      const maxWidth = 1280;
+      const scale = Math.min(1, maxWidth / video.videoWidth);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) return null;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.68);
+    };
     byId("startScreenShare")?.addEventListener("click", async () => {
       if (!isInstalledPWA()) { byId("screenPluginStatus").textContent = "Install FROSTGPT™ as a PWA to use this plugin."; return; }
       try {
@@ -777,6 +793,6 @@
 
   <script src="/chat.js?v=20261126-1"></script>
   <script src="/classic.js"></script>
-  <script type="module" src="/app.js?v=20261127-50"></script>
+  <script type="module" src="/app.js?v=20261128-screen-share-1"></script>
 </body>
 </html>
