@@ -2486,7 +2486,7 @@ import {
     updateVoiceButtons();
   }
 
-  function splitSpeechIntoChunks(text, maxLength = 1800) {
+  function splitSpeechIntoChunks(text, maxLength = 900) {
     const remaining = String(text || "").trim();
     if (!remaining) return [];
 
@@ -2494,9 +2494,13 @@ import {
     let rest = remaining;
 
     while (rest.length > maxLength) {
-      let splitAt = rest.lastIndexOf(". ", maxLength);
-      splitAt = Math.max(splitAt, rest.lastIndexOf("? ", maxLength), rest.lastIndexOf("! ", maxLength));
-      let splitEnd = splitAt >= Math.floor(maxLength * 0.55) ? splitAt + 1 : -1;
+      // Prefer complete sentence/phrase boundaries so the voice does not
+      // abruptly cut through a thought or flatten a very long utterance.
+      let splitAt = -1;
+      for (const punctuation of [". ", "? ", "! ", "; ", ": ", ", "]) {
+        splitAt = Math.max(splitAt, rest.lastIndexOf(punctuation, maxLength));
+      }
+      let splitEnd = splitAt >= Math.floor(maxLength * 0.5) ? splitAt + 1 : -1;
 
       if (splitEnd < 1) {
         splitAt = rest.lastIndexOf(" ", maxLength);
@@ -2588,7 +2592,7 @@ import {
 
       utterance.onend = () => {
         if (inVoiceCall && voiceCallActive && voiceReplyEnabled) {
-          window.setTimeout(speakNextChunk, 80);
+          window.setTimeout(speakNextChunk, 130);
         } else if (!inVoiceCall) {
           updateVoiceButtons();
         }
