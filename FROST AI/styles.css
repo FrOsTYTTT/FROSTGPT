@@ -1684,7 +1684,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 /* Keep live transcript, assistant reply, and errors visible during calls. */
 .voice-call-message {
   width: min(86vw, 560px);
-  max-height: 24vh;
+  max-height: min(34vh, 300px);
   overflow-y: auto;
   box-sizing: border-box;
   margin: 14px auto 4px;
@@ -1700,6 +1700,7 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   overflow-wrap: anywhere;
 }
 .voice-call-message[hidden] { display: none; }
+@media (max-width: 560px) { .voice-call-message { max-height: 38vh; } }
 
 
 /* Standalone Cloudflare verification page, shown after provider sign-in. */
