@@ -3815,7 +3815,7 @@ import {
         content.appendChild(text);
 
         const looksLikeEmailDraft = message.role === "assistant" &&
-          /(?:^|\\n)\\s*(?:subject\\s*:|to\\s*:)|\\b(?:email draft|draft email|dear [^\\n,]{2,}|best regards|sincerely,)\\b/i.test(message.text);
+          /(?:^|\n)\s*(?:subject\s*:|to\s*:)|\b(?:email draft|draft email|dear [^\n,]{2,}|best regards|sincerely,)\b/i.test(message.text);
         if (looksLikeEmailDraft) {
           const emailAction = document.createElement("button");
           emailAction.type = "button";
