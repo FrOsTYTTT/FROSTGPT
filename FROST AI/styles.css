@@ -2275,6 +2275,15 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 }
 
 
+/* Compact founder-only feature test control */
+#frostgptNewChatFeatureTest{padding:12px!important}
+#frostgptNewChatFeatureTest .new-chat-feature-test-button{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:auto;min-width:0;min-height:32px!important;height:32px;
+  padding:6px 10px!important;border-radius:8px;
+  font-size:12px;line-height:1.2;font-weight:600;
+}
+
 /* Full-chat continuation prompt */
 .chat-full-notice{display:flex;align-items:center;justify-content:center;gap:14px;width:min(900px,calc(100% - 32px));margin:0 auto 12px;padding:12px 16px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text)}
 .chat-full-notice[hidden]{display:none!important}
