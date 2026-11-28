@@ -1601,7 +1601,11 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
 .voice-call-orb-wrap.is-thinking .voice-call-orb-core { animation: frost-core-think 3.6s linear infinite; }
 .voice-call-content h2 { margin: 0 0 8px; font-size: 25px; }
 .voice-call-content p { min-height: 24px; opacity: .75; }
-.voice-call-controls { margin: 34px 0 22px; }
+.voice-call-screen-preview { display: block; width: min(100%, 420px); max-height: 230px; object-fit: contain; margin: 4px 0 8px; border: 1px solid var(--border); border-radius: 14px; background: #05070b; }
+.voice-call-screen-preview[hidden] { display: none !important; }
+.voice-call-controls { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 34px 0 22px; }
+.voice-call-screen-share-button { width: 58px; height: 58px; border: 1px solid var(--border); border-radius: 50%; color: var(--text); background: var(--surface); font-size: 25px; cursor: pointer; }
+.voice-call-screen-share-button.is-sharing { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
 .voice-call-end-button { width: 64px; height: 64px; border: 0; border-radius: 50%; color: white; background: #df424b; font-size: 25px; cursor: pointer; box-shadow: 0 8px 28px rgba(223,66,75,.35); }
 .voice-call-content small { opacity: .5; max-width: 340px; line-height: 1.5; }
 @keyframes frost-orb-idle { 0%,100% { transform: translate3d(0,0,0) scale(.985); } 50% { transform: translate3d(0,-5px,0) scale(1.015); } }
