@@ -2032,27 +2032,27 @@ body.sidebar-resizing *{cursor:col-resize!important;user-select:none!important}
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 15px;
+  min-height: 30px;
+  padding: 0 11px;
   margin: 0;
   border: 1px solid rgba(143,196,255,.34);
   border-radius: 999px;
   background: linear-gradient(135deg, #287bd1, #4855c8);
   color: #fff;
   font: inherit;
-  font-size: 12px;
-  font-weight: 750;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(45,111,210,.2);
+  box-shadow: 0 4px 12px rgba(45,111,210,.16);
   white-space: nowrap;
 }
 .try-out-button:hover { filter: brightness(1.08); }
 .try-out-button:disabled { opacity: .6; cursor: wait; }
 .try-out-note {
-  max-width: 180px;
+  max-width: 155px;
   margin: 0 !important;
   color: #aab7c7 !important;
-  font-size: 10px !important;
+  font-size: 9px !important;
   line-height: 1.3 !important;
   text-align: center !important;
 }
