@@ -37,11 +37,6 @@
       <p>Choose a sign-in provider to continue to your AI workspace.</p>
       <p>We’re all very glad you can use this AI. We even have emotional support messages for people who feel down some days!</p>
 
-      <div class="turnstile-section">
-        <div id="frostTurnstileWidget" aria-label="Cloudflare security verification"></div>
-        <div id="turnstileStatus" role="status" aria-live="polite">Complete the security check to enable sign-in.</div>
-      </div>
-
       <button class="auth-provider-button" id="googleSignInButton" type="button" disabled>
         <svg viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/>
@@ -68,6 +63,18 @@
 
       <div id="authStatus" role="status"></div>
       <div class="auth-small">Created by FrOsTAI · Your selected account provider is used for sign-in.</div>
+    </div>
+  </section>
+
+  <section id="turnstileVerificationScreen" class="turnstile-verification-screen" hidden aria-label="Cloudflare security verification">
+    <div class="turnstile-verification-card">
+      <div class="turnstile-verification-brand">❄ FROSTGPT™</div>
+      <h1>Security verification</h1>
+      <p>Please complete the Cloudflare checkbox below to continue.</p>
+      <div class="turnstile-section">
+        <div id="frostTurnstileWidget" aria-label="Cloudflare security verification"></div>
+        <div id="turnstileStatus" role="status" aria-live="polite">Please click the checkbox to continue.</div>
+      </div>
     </div>
   </section>
 
