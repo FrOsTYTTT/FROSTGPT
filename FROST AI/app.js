@@ -63,6 +63,78 @@ import {
 
   const authScreen = $("authScreen");
   const authStatus = $("authStatus");
+  const turnstileStatus = $("turnstileStatus");
+  const turnstileWidget = $("frostTurnstileWidget");
+  let turnstileWidgetId = null;
+  let turnstileVerified = false;
+
+  function setProviderButtonsEnabled(enabled) {
+    [googleSignInButton, appleSignInButton, githubSignInButton].forEach(button => {
+      if (button) button.disabled = !enabled;
+    });
+  }
+
+  async function verifyTurnstileToken(token) {
+    if (!token || typeof token !== "string" || token.length > 2048) {
+      throw new Error("The security check returned an invalid token.");
+    }
+    const response = await fetch("/api/verify-turnstile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ token })
+    });
+    let result;
+    try { result = await response.json(); }
+    catch { throw new Error("The security verification service returned an invalid response."); }
+    if (!response.ok || result.success !== true) {
+      throw new Error(result.error || "Security verification failed.");
+    }
+  }
+
+  function initializeTurnstile() {
+    if (!turnstileWidget || !window.turnstile || turnstileWidgetId !== null) return;
+    try {
+      turnstileWidgetId = window.turnstile.render(turnstileWidget, {
+        sitekey: "0x4AAAAAAGWcQUNK6tmofMMw",
+        theme: "dark",
+        callback: async token => {
+          if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
+          setProviderButtonsEnabled(false);
+          try {
+            await verifyTurnstileToken(token);
+            turnstileVerified = true;
+            if (turnstileStatus) turnstileStatus.textContent = "✓ Security check complete. Choose a sign-in provider.";
+            setProviderButtonsEnabled(true);
+          } catch (error) {
+            turnstileVerified = false;
+            if (turnstileStatus) turnstileStatus.textContent = "Security check failed. Please try again.";
+            console.warn("FROSTGPT: Turnstile verification failed.", error);
+            setProviderButtonsEnabled(false);
+            if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+          }
+        },
+        "expired-callback": () => {
+          turnstileVerified = false;
+          if (turnstileStatus) turnstileStatus.textContent = "Security check expired. Please complete it again.";
+          setProviderButtonsEnabled(false);
+        },
+        "error-callback": () => {
+          turnstileVerified = false;
+          if (turnstileStatus) turnstileStatus.textContent = "Security check could not load. Please refresh and try again.";
+          setProviderButtonsEnabled(false);
+          return true;
+        }
+      });
+    } catch (error) {
+      console.error("FROSTGPT: Turnstile could not initialize.", error);
+      if (turnstileStatus) turnstileStatus.textContent = "Security check could not load. Please refresh and try again.";
+      setProviderButtonsEnabled(false);
+    }
+  }
+
+  window.addEventListener("frost-turnstile-ready", initializeTurnstile);
+  if (window.turnstile) initializeTurnstile();
+
   const googleSignInButton = $("googleSignInButton");
   const appleSignInButton = $("appleSignInButton");
   const githubSignInButton = $("githubSignInButton");
@@ -3558,6 +3630,17 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
 
     if (!button || button.disabled) return;
 
+    if (!turnstileVerified) {
+      if (turnstileStatus) turnstileStatus.textContent = "Please complete the security check first.";
+      return;
+    }
+
+    // Consume the server-verified one-time approval before opening the provider popup.
+    turnstileVerified = false;
+    setProviderButtonsEnabled(false);
+    if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+    if (turnstileStatus) turnstileStatus.textContent = "Security check used. Complete it again before another sign-in.";
+
     button.disabled = true;
     button.style.opacity = ".6";
     providerVerificationPending = true;
@@ -3645,7 +3728,7 @@ deleteButton.setAttribute("aria-label", "Delete conversation");
         authStatus.textContent = "Authentication Failed, please try again later.";
       }
     } finally {
-      button.disabled = false;
+      button.disabled = !turnstileVerified;
       button.style.opacity = "1";
     }
   }
