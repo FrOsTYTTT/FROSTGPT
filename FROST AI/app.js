@@ -76,6 +76,7 @@ import {
   const turnstileScreen = $("turnstileVerificationScreen");
   const preVerificationScreen = $("preVerificationScreen");
   const preVerificationCheckbox = $("beginTurnstileCheck");
+  const preVerificationStatus = $("preVerificationStatus");
   let turnstileWidgetId = null;
   let turnstileVerificationResolver = null;
   let turnstileVerificationInProgress = false;
@@ -108,7 +109,14 @@ import {
     if (authScreen) authScreen.style.display = "none";
     if (appElement) appElement.classList.remove("visible");
     if (turnstileScreen) turnstileScreen.hidden = true;
-    if (preVerificationCheckbox) preVerificationCheckbox.checked = false;
+    if (preVerificationCheckbox) {
+      preVerificationCheckbox.checked = false;
+      preVerificationCheckbox.disabled = false;
+    }
+    if (preVerificationStatus) {
+      preVerificationStatus.textContent = "";
+      preVerificationStatus.hidden = true;
+    }
     if (preVerificationScreen) preVerificationScreen.hidden = false;
   }
 
@@ -121,8 +129,21 @@ import {
       const onCheckboxChange = () => {
         if (!preVerificationCheckbox.checked) return;
         preVerificationCheckbox.removeEventListener("change", onCheckboxChange);
-        preVerificationScreen.hidden = true;
-        resolve(true);
+        preVerificationCheckbox.disabled = true;
+
+        void (async () => {
+          for (let seconds = 3; seconds > 0; seconds--) {
+            if (preVerificationStatus) {
+              preVerificationStatus.hidden = false;
+              preVerificationStatus.textContent =
+                `Starting Cloudflare verification… ${seconds}`;
+            }
+            await new Promise(done => window.setTimeout(done, 1000));
+          }
+
+          if (preVerificationScreen) preVerificationScreen.hidden = true;
+          resolve(true);
+        })();
       };
 
       preVerificationCheckbox.addEventListener("change", onCheckboxChange);
@@ -161,7 +182,6 @@ import {
       });
     }
     if (!window.turnstile) throw new Error("Cloudflare verification could not load. Please refresh and try again.");
-    const verificationStartedAt = Date.now();
     if (turnstileWidgetId !== null) {
       try { window.turnstile.remove(turnstileWidgetId); } catch {}
       turnstileWidgetId = null;
@@ -180,11 +200,6 @@ import {
             if (turnstileStatus) turnstileStatus.textContent = "Checking your security verification…";
             try {
               await verifyTurnstileToken(token);
-              const minimumWait = Math.max(0, 3000 - (Date.now() - verificationStartedAt));
-              if (minimumWait > 0) {
-                if (turnstileStatus) turnstileStatus.textContent = "Security check complete. Finishing up…";
-                await new Promise(resolve => window.setTimeout(resolve, minimumWait));
-              }
               const pending = turnstileVerificationResolver;
               turnstileVerificationResolver = null;
               if (pending) pending.resolve(true);
