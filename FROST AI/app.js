@@ -2676,7 +2676,7 @@ import {
                 applyingVoiceTranscript = false;
               }
               const selectedProvider = settings.flashProvider;
-              voiceCallTranscript = [voiceCallTranscript, `You: ${transcript}`, "FROSTGPT: Thinking..."].filter(Boolean).join("\\n\\n");
+              voiceCallTranscript = [voiceCallTranscript, `You: ${transcript}`, "FROSTGPT: Thinking..."].filter(Boolean).join("\n\n");
               updateVoiceCallVisualState("thinking", voiceCallTranscript);
               setStatus("Sending your voice message to FROSTGPT...");
               void sendMessage({ provider: selectedProvider });
